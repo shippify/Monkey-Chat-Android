@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">MonkeyChatAndroid</string>
+    <string name="chat_name">Monkey Chat Sample</string>
+    <string name="register">Register to Monkey</string>
+    <string name="label_fullname">Enter your fullname</string>
+    <string name="button_continuar">Continue</string>
+</resources>
