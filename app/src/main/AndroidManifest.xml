@@ -2,6 +2,11 @@
 <manifest package="com.criptext.monkeychatandroid"
           xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -28,6 +33,16 @@
             android:name=".RegisterActivity"
             android:label="@string/register">
         </activity>
+
+        <!-- Crop Image -->
+        <activity
+            android:name="com.soundcloud.android.crop.CropImageActivity"
+            android:theme="@style/CustomTheme"/>
+
+        <!-- Photo View -->
+        <activity
+            android:name="com.criptext.monkeykitui.photoview.PhotoViewActivity"
+            android:theme="@style/Theme.CustomTranslucent"/>
     </application>
 
 </manifest>

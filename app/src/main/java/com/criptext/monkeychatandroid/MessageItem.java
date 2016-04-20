@@ -1,6 +1,7 @@
 package com.criptext.monkeychatandroid;
 
 import com.criptext.monkeykitui.recycler.MonkeyItem;
+import com.google.gson.JsonObject;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -18,6 +19,10 @@ public class MessageItem implements MonkeyItem {
     private String duration;
     /*PHOTO*/
     private String placeHolderFilePath;
+
+    private JsonObject params;
+    private JsonObject props;
+    private boolean isDownloading;
 
     public MessageItem(String senderId, String messageId, String messageContent, long timestamp,
                        boolean isIncoming, MonkeyItemType itemType){
@@ -42,6 +47,34 @@ public class MessageItem implements MonkeyItem {
 
     public void setPlaceHolderFilePath(String placeHolderFilePath) {
         this.placeHolderFilePath = placeHolderFilePath;
+    }
+
+    public void setMessageContent(String messageContent) {
+        this.messageContent = messageContent;
+    }
+
+    public JsonObject getParams() {
+        return params;
+    }
+
+    public void setParams(JsonObject params) {
+        this.params = params;
+    }
+
+    public JsonObject getProps() {
+        return props;
+    }
+
+    public void setProps(JsonObject props) {
+        this.props = props;
+    }
+
+    public boolean isDownloading() {
+        return isDownloading;
+    }
+
+    public void setDownloading(boolean downloading) {
+        isDownloading = downloading;
     }
 
     @NotNull

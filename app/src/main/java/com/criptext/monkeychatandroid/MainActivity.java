@@ -1,10 +1,12 @@
 package com.criptext.monkeychatandroid;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -16,6 +18,8 @@ import android.net.Uri;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -24,6 +28,7 @@ import android.util.Log;
 import android.widget.ArrayAdapter;
 
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MessageTypes;
 import com.criptext.lib.MonkeyKit;
 import com.criptext.lib.MonkeyKitDelegate;
 import com.criptext.monkeykitui.input.ButtonsListeners;
@@ -82,6 +87,8 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
     private SharedPreferences prefs;
     private String mySessionID;
+
+    private int RECORD_REQUEST_CODE=123;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -202,7 +209,8 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
      */
 
     private void sendMessage(String text){
-        MOKMessage mokMessage= MonkeyKit.instance().sendMessage(text, mySessionID, "Test Push Message", new JsonObject());
+
+        MOKMessage mokMessage= MonkeyKit.instance().persistMessageAndSend(text, mySessionID, "Test Push Message", new JsonObject());
         long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
         MessageItem item = new MessageItem(mySessionID, mokMessage.getMessage_id(), text, timestamp, false,
                 MonkeyItem.MonkeyItemType.text);
@@ -228,6 +236,38 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
             //monkeyItem.setStatus ??
             monkeyItem.setStatus(MonkeyItem.OutgoingMessageStatus.delivered);
             adapter.notifyDataSetChanged();
+        }
+    }
+
+    private void processIncomingMessage(MOKMessage message, boolean refresh){
+
+        MonkeyItem.MonkeyItemType type = MonkeyItem.MonkeyItemType.text;
+        if (message.getProps().has("file_type")) {
+            if(Integer.parseInt(message.getProps().get("file_type").getAsString())==1)
+                type = MonkeyItem.MonkeyItemType.audio;
+            else if(Integer.parseInt(message.getProps().get("file_type").getAsString())==3)
+                type = MonkeyItem.MonkeyItemType.photo;
+        }
+
+        MessageItem item = new MessageItem(mySessionID, message.getMessage_id(), message.getMsg(),
+                message.getDatetimeorder(), true, type);
+        item.setParams(message.getParams());
+        item.setProps(message.getProps());
+
+        switch (type){
+            case audio:
+                item.setDuration("10");
+                item.setMessageContent(getCacheDir()+"/"+message.getMsg());
+                break;
+            case photo:
+                item.setMessageContent(getCacheDir()+"/"+message.getMsg());
+                break;
+        }
+
+        monkeyMessages.add(item);
+        if(refresh) {
+            adapter.notifyDataSetChanged();
+            recycler.scrollToPosition(monkeyMessages.size() - 1);
         }
     }
 
@@ -285,21 +325,26 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
     private void sendAudioFile() {
 
-        File file = new File(mAudioFileName);
-        if (file.exists()) {
-            long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
-            MessageItem item = new MessageItem("0", "" + timestamp,
-                    mAudioFileName, timestamp, false,
-                    MonkeyItem.MonkeyItemType.audio);
-            item.setDuration("00:10");
-            monkeyMessages.add(item);
-            adapter.notifyDataSetChanged();
-            recycler.scrollToPosition(monkeyMessages.size() - 1);
+        if(mAudioFileName!=null) {
+            File file = new File(mAudioFileName);
+            if (file.exists()) {
+                long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
+                JsonObject params = new JsonObject();
+                params.addProperty("length","10");
+                MOKMessage mokMessage = MonkeyKit.instance().persistFileMessageAndSend(mAudioFileName, mySessionID,
+                        MessageTypes.FileTypes.Audio, params, "Test Push Message");
+                MessageItem item = new MessageItem(mySessionID, mokMessage.getMessage_id(),
+                        mAudioFileName, timestamp, false, MonkeyItem.MonkeyItemType.audio);
+                item.setDuration("00:10");
+                monkeyMessages.add(item);
+                adapter.notifyDataSetChanged();
+                recycler.scrollToPosition(monkeyMessages.size() - 1);
+            }
         }
     }
 
     /***
-     * IMAGE RECORD STUFFS
+     * IMAGE STUFFS
      ****/
 
     private void selectImage() {
@@ -444,17 +489,22 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
                     }
                 }
 
-                long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
-                MessageItem item = new MessageItem("0", "" + timestamp,
-                        getTempFile().getAbsolutePath(), timestamp, false,
-                        MonkeyItem.MonkeyItemType.photo);
-                monkeyMessages.add(item);
-                adapter.notifyDataSetChanged();
-                recycler.scrollToPosition(monkeyMessages.size() - 1);
+                sendImage();
 
                 break;
             }
         }
+    }
+
+    private void sendImage(){
+        MOKMessage mokMessage = MonkeyKit.instance().persistFileMessageAndSend(getTempFile().getAbsolutePath(), mySessionID,
+                MessageTypes.FileTypes.Photo, new JsonObject(), "Test Push Message");
+        long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
+        MessageItem item = new MessageItem(mySessionID, mokMessage.getMessage_id(),
+                getTempFile().getAbsolutePath(), timestamp, false,MonkeyItem.MonkeyItemType.photo);
+        monkeyMessages.add(item);
+        adapter.notifyDataSetChanged();
+        recycler.scrollToPosition(monkeyMessages.size() - 1);
     }
 
     /***
@@ -485,6 +535,17 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     @Override
     public void onFileDownloadRequested(int position, @NotNull MonkeyItem item) {
 
+        MessageItem messageItem = (MessageItem)searchMessage(item.getMessageId());
+        if(MonkeyKit.instance()!=null && messageItem!=null && !messageItem.isDownloading()) {
+            messageItem.setDownloading(true);
+            MonkeyKit.instance().downloadFile(messageItem.getMessageText(), messageItem.getProps(),
+                    mySessionID, new Runnable() {
+                        @Override
+                        public void run() {
+                            adapter.notifyDataSetChanged();
+                        }
+                    });
+        }
     }
 
     /******
@@ -540,17 +601,24 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     public void onMessageRecieved(MOKMessage message) {
 
         if(message.getSid().equals(mySessionID)){
-
+            processIncomingMessage(message,true);
             MonkeyKit.instance().setLastTimeSynced(Long.parseLong(message.getDatetime()));
-
-            long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
-            MessageItem item = new MessageItem(mySessionID, message.getMessage_id(), message.getMsg(), timestamp, true,
-                    MonkeyItem.MonkeyItemType.text);
-            monkeyMessages.add(item);
-            adapter.notifyDataSetChanged();
-            recycler.scrollToPosition(monkeyMessages.size() - 1);
         }
 
+    }
+
+    @Override
+    public void onMessageBatchReady(ArrayList<MOKMessage> messages) {
+        setActionBarTitle(2);
+        for (int i=0;i<messages.size();i++) {
+            if(i == messages.size()-1) {
+                processIncomingMessage(messages.get(i), true);
+                MonkeyKit.instance().setLastTimeSynced(Long.parseLong(messages.get(messages.size() - 1).getDatetime()));
+            }
+            else{
+                processIncomingMessage(messages.get(i), false);
+            }
+        }
     }
 
     @Override
@@ -583,12 +651,5 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         if(notification.getMessage_id()!=null && notification.getMessage_id().length()>0 && !notification.getMessage_id().equals("0")){
             MonkeyKit.instance().setLastTimeSynced(Long.parseLong(notification.getDatetime()));
         }
-    }
-
-    @Override
-    public void onMessageBatchReady(ArrayList<MOKMessage> messages) {
-        setActionBarTitle(2);
-        if(messages.size() > 0)
-            MonkeyKit.instance().setLastTimeSynced(Long.parseLong(messages.get(messages.size() - 1).getDatetime()));
     }
 }
