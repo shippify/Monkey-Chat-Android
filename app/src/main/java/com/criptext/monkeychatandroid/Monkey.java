@@ -11,8 +11,8 @@ import com.criptext.lib.MonkeyKit;
 
 public class Monkey {
 
-    public static String APP_ID = "idkgwf6ghcmyfvvrxqiwwmi";
-    public static String APP_KEY = "9da5bbc32210ed6501de82927056b8d2";
+    public static String APP_ID = "";
+    public static String APP_KEY = "";
 
     public static void startMonkeyService(Context c, String name, String sessionid, String CRIPTEXT_APP_ID, String CRIPTEXT_APP_KEY){
         if(!isMyServiceRunning(MyServiceClass.class, c)){
