@@ -18,13 +18,13 @@ public class WelcomeActivity extends AppCompatActivity {
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
         if(prefs.getBoolean("isRegistered",false)){
-            Monkey.startMonkeyService(WelcomeActivity.this, prefs.getString("fullname",""),
-                    prefs.getString("sessionid",""),Monkey.APP_ID, Monkey.APP_KEY);
+            MonkeyChat.startMonkeyService(WelcomeActivity.this, prefs.getString("fullname",""),
+                    prefs.getString("sessionid",""), MonkeyChat.APP_ID, MonkeyChat.APP_KEY);
             startActivity(new Intent(WelcomeActivity.this, MainActivity.class));
-            finish();
         }
         else{
             startActivity(new Intent(WelcomeActivity.this, RegisterActivity.class));
         }
+        finish();
     }
 }

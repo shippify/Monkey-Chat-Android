@@ -8,7 +8,6 @@ import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 
@@ -33,7 +32,7 @@ public class RegisterActivity extends AppCompatActivity {
         v.setVisibility(View.GONE);
         progressBar.setVisibility(View.VISIBLE);
         MonkeyInit mStart = new MonkeyInit(RegisterActivity.this, null,
-                Monkey.APP_ID, Monkey.APP_KEY,
+                MonkeyChat.APP_ID, MonkeyChat.APP_KEY,
                 editTextName.getText().toString()){
             @Override
             public void onSessionOK(String sessionID){
