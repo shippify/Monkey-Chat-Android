@@ -1,8 +1,6 @@
 package com.criptext.monkeychatandroid;
 
-import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -23,9 +21,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.MenuInflater;
-import android.widget.ArrayAdapter;
-import android.widget.EditText;
-
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.lib.MonkeyKit;
@@ -33,9 +28,10 @@ import com.criptext.lib.MonkeyKitDelegate;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.MessageModel;
-import com.criptext.monkeykitui.input.ButtonsListeners;
-import com.criptext.monkeykitui.input.InputView;
-import com.criptext.monkeykitui.input.RecordingListeners;
+import com.criptext.monkeykitui.input.MediaInputView;
+import com.criptext.monkeykitui.input.listeners.OnAttachmentButtonClickListener;
+import com.criptext.monkeykitui.input.listeners.OnSendButtonClickListener;
+import com.criptext.monkeykitui.input.listeners.RecordingListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.MonkeyAdapter;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
@@ -59,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
     MonkeyAdapter adapter;
     RecyclerView recycler;
-    InputView inputView;
+    MediaInputView inputView;
     ArrayList<MonkeyItem> monkeyMessages;
     AudioPlaybackHandler audioHandler;
 
@@ -106,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
             MonkeyKit.instance().addDelegate(this);
         }
 
-        inputView = (InputView) findViewById(R.id.inputView);
+        inputView = (MediaInputView) findViewById(R.id.inputView);
         recycler = (RecyclerView) findViewById(R.id.recycler);
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         mySessionID = prefs.getString("sessionid","");
@@ -126,38 +122,43 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         recycler.setLayoutManager(linearLayoutManager);
         recycler.setAdapter(adapter);
 
-        inputView.setOnRecordListener(new RecordingListeners() {
+        inputView.setRecordingListener(new RecordingListener() {
             @Override
             public void onStartRecording() {
-                super.onStartRecording();
                 startRecording();
             }
 
             @Override
             public void onStopRecording() {
-                super.onStopRecording();
                 stopRecording();
                 sendAudioFile();
             }
 
             @Override
             public void onCancelRecording() {
-                super.onCancelRecording();
                 cancelRecording();
             }
         });
 
-        inputView.setOnButtonsClickedListener(new ButtonsListeners() {
-
+        inputView.setActionString(new String [] {"Take a Photo", "Choose Photo"});
+        inputView.setOnAttachmentButtonClickListener(new OnAttachmentButtonClickListener() {
             @Override
-            public void onAttachmentButtonClicked() {
-                super.onAttachmentButtonClicked();
-                selectImage();
+            public void onAttachmentButtonClickListener(int item) {
+                mPhotoFileName = (System.currentTimeMillis()/1000) + TEMP_PHOTO_FILE_NAME;
+                switch (item){
+                    case 0:
+                        takePicture();
+                        break;
+                    case 1:
+                        Crop.pickImage(MainActivity.this);
+                        break;
+                }
             }
+        });
 
+        inputView.setOnSendButtonClickListener(new OnSendButtonClickListener() {
             @Override
-            public void onSendButtonClicked(String text) {
-                super.onSendButtonClicked(text);
+            public void onSendButtonClick(String text) {
                 sendMessage(text);
             }
         });
@@ -255,9 +256,8 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
         MessageItem item = new MessageItem(mySessionID, mySessionID, mokMessage.getMessage_id(), text, timestamp, false,
                 MonkeyItem.MonkeyItemType.text);
-        monkeyMessages.add(item);
-        adapter.notifyDataSetChanged();
-        recycler.scrollToPosition(monkeyMessages.size() - 1);
+        adapter.smoothlyAddNewItem(item, recycler);
+
     }
 
     private MonkeyItem searchMessage(String messageId){
@@ -362,9 +362,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
                 MessageItem item = new MessageItem(mySessionID, mySessionID, mokMessage.getMessage_id(),
                         mAudioFileName, timestamp, false, MonkeyItem.MonkeyItemType.audio);
                 item.setDuration(""+MonkeyChat.milliSecondsToTimer(seconds));
-                monkeyMessages.add(item);
-                adapter.notifyDataSetChanged();
-                recycler.scrollToPosition(monkeyMessages.size() - 1);
+                adapter.smoothlyAddNewItem(item, recycler);
             }
         }
     }
@@ -372,33 +370,6 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     /***
      * IMAGE STUFFS
      ****/
-
-    private void selectImage() {
-
-        mPhotoFileName = (System.currentTimeMillis() / 1000) + TEMP_PHOTO_FILE_NAME;
-
-        final String[] items = new String[]{"Take a Photo", "Choose Photo"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.select_dialog_item, items);
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-            }
-        });
-        builder.setAdapter(adapter, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int item) {
-                if (item == 0) {
-                    takePicture();
-                } else if (item == 1) {
-                    Crop.pickImage(MainActivity.this);
-                }
-                dialog.dismiss();
-            }
-        }).show();
-
-    }
 
     public void takePicture() {
 
@@ -528,9 +499,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
         MessageItem item = new MessageItem(mySessionID, mySessionID, mokMessage.getMessage_id(),
                 getTempFile().getAbsolutePath(), timestamp, false,MonkeyItem.MonkeyItemType.photo);
-        monkeyMessages.add(item);
-        adapter.notifyDataSetChanged();
-        recycler.scrollToPosition(monkeyMessages.size() - 1);
+        adapter.smoothlyAddNewItem(item, recycler);
     }
 
     /***

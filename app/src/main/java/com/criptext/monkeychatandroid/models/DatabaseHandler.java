@@ -93,11 +93,11 @@ public class DatabaseHandler {
             case audio:
                 if(item.getParams().has("length"))
                     item.setDuration(MonkeyChat.milliSecondsToTimer(item.getParams().get("length").getAsLong()));
-                if(!item.getMessageText().contains(context.getCacheDir().toString()))
+                if(!item.getMessageText().contains("/"))
                     item.setMessageContent(context.getCacheDir()+"/"+message.getMsg());
                 break;
             case photo:
-                if(!item.getMessageText().contains(context.getCacheDir().toString()))
+                if(!item.getMessageText().contains("/"))
                     item.setMessageContent(context.getCacheDir()+"/"+message.getMsg());
                 break;
         }
