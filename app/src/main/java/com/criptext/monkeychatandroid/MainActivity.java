@@ -1,25 +1,12 @@
 package com.criptext.monkeychatandroid;
 
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Color;
-import android.graphics.Matrix;
-import android.media.ExifInterface;
-import android.media.MediaMetadataRetriever;
-import android.media.MediaPlayer;
-import android.media.MediaRecorder;
-import android.net.Uri;
-import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.MenuInflater;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
@@ -29,22 +16,15 @@ import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.MessageModel;
 import com.criptext.monkeykitui.input.MediaInputView;
-import com.criptext.monkeykitui.input.listeners.OnAttachmentButtonClickListener;
-import com.criptext.monkeykitui.input.listeners.OnSendButtonClickListener;
-import com.criptext.monkeykitui.input.listeners.RecordingListener;
+import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.MonkeyAdapter;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 import com.criptext.monkeykitui.recycler.audio.AudioPlaybackHandler;
 import com.google.gson.JsonObject;
-import com.soundcloud.android.crop.Crop;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -59,35 +39,8 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     ArrayList<MonkeyItem> monkeyMessages;
     AudioPlaybackHandler audioHandler;
 
-    String mAudioFileName = null;
-    String mPhotoFileName = null;
-    File mPhotoFile = null;
-    MediaRecorder mRecorder = null;
-
-    public static final Uri CONTENT_URI = Uri.parse("content://com.criptext.monkeychatandroid/");
-    public static final String TEMP_PHOTO_FILE_NAME = "temp_photo.jpg";
-    public static final String TEMP_AUDIO_FILE_NAME = "temp_audio.3gp";
-
-    public enum RequestType {openGallery, takePicture, editPhoto, cropPhoto}
-
-    private int orientationImage;
-
-    int playingItemPosition = -1;
-    boolean playingAudio = false;
-    Runnable playerRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (playingAudio) {
-                adapter.notifyItemChanged(playingItemPosition);
-                recycler.postDelayed(this, 500);
-            }
-        }
-    };
-
     private SharedPreferences prefs;
     private String mySessionID;
-
-    private int RECORD_REQUEST_CODE=123;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,17 +55,9 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
             MonkeyKit.instance().addDelegate(this);
         }
 
-        inputView = (MediaInputView) findViewById(R.id.inputView);
         recycler = (RecyclerView) findViewById(R.id.recycler);
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         mySessionID = prefs.getString("sessionid","");
-
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            mPhotoFile = new File(Environment.getExternalStorageDirectory(), TEMP_PHOTO_FILE_NAME);
-        } else {
-            mPhotoFile = new File(getFilesDir(), TEMP_PHOTO_FILE_NAME);
-        }
 
         monkeyMessages = new ArrayList<MonkeyItem>();
         adapter = new MonkeyAdapter(this, monkeyMessages);
@@ -122,47 +67,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         recycler.setLayoutManager(linearLayoutManager);
         recycler.setAdapter(adapter);
 
-        inputView.setRecordingListener(new RecordingListener() {
-            @Override
-            public void onStartRecording() {
-                startRecording();
-            }
-
-            @Override
-            public void onStopRecording() {
-                stopRecording();
-                sendAudioFile();
-            }
-
-            @Override
-            public void onCancelRecording() {
-                cancelRecording();
-            }
-        });
-
-        inputView.setActionString(new String [] {"Take a Photo", "Choose Photo"});
-        inputView.setOnAttachmentButtonClickListener(new OnAttachmentButtonClickListener() {
-            @Override
-            public void onAttachmentButtonClickListener(int item) {
-                mPhotoFileName = (System.currentTimeMillis()/1000) + TEMP_PHOTO_FILE_NAME;
-                switch (item){
-                    case 0:
-                        takePicture();
-                        break;
-                    case 1:
-                        Crop.pickImage(MainActivity.this);
-                        break;
-                }
-            }
-        });
-
-        inputView.setOnSendButtonClickListener(new OnSendButtonClickListener() {
-            @Override
-            public void onSendButtonClick(String text) {
-                sendMessage(text);
-            }
-        });
-
+        initInputView();
         audioHandler = new AudioPlaybackHandler(adapter, recycler);
         loadMessagesFromDB();
     }
@@ -194,20 +99,6 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         super.onStart();
     }
 
-    public void setActionBarTitle(int state){
-
-        if(getSupportActionBar()==null)
-            return;
-
-        if(state==1){//Connecting
-            getSupportActionBar().setTitle("Connecting...");
-        }else if(state==2){//Connected
-            getSupportActionBar().setTitle(getResources().getString(R.string.chat_name));
-        }else if(state==3){//Without internet
-            getSupportActionBar().setTitle("Waiting for network...");
-        }
-    }
-
     @Override
     public boolean onCreateOptionsMenu(android.view.Menu menu) {
 
@@ -235,6 +126,64 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
      * MY OWN METHODS
      */
 
+    public void initInputView(){
+        inputView = (MediaInputView) findViewById(R.id.inputView);
+        if(inputView!=null) {
+            inputView.setInputListener(new InputListener() {
+                @Override
+                public void onNewItem(@NotNull MonkeyItem item) {
+
+                    JsonObject params = new JsonObject();
+                    MOKMessage mokMessage;
+                    switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
+                        case audio:
+                            params = new JsonObject();
+                            params.addProperty("length",""+item.getAudioDuration());
+                            mokMessage = MonkeyKit.instance().persistFileMessageAndSend(item.getFilePath(), mySessionID,
+                                    MessageTypes.FileTypes.Audio, params, "Test Push Message");
+                            break;
+                        case photo:
+                            mokMessage = MonkeyKit.instance().persistFileMessageAndSend(item.getFilePath(), mySessionID,
+                                    MessageTypes.FileTypes.Photo, new JsonObject(), "Test Push Message");
+                            break;
+                        default:
+                            mokMessage = MonkeyKit.instance().persistMessageAndSend(item.getMessageText(), mySessionID, "Test Push Message", params);
+                            break;
+                    }
+
+                    MessageItem newItem = new MessageItem(mySessionID, mySessionID, mokMessage.getMessage_id(),
+                            item.getMessageText(), item.getMessageTimestamp(), item.isIncomingMessage(),
+                            MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
+
+                    switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
+                        case audio:
+                            newItem.setDuration(item.getAudioDuration());
+                            newItem.setMessageContent(item.getFilePath());
+                            break;
+                        case photo:
+                            newItem.setMessageContent(item.getFilePath());
+                            break;
+                    }
+                    adapter.smoothlyAddNewItem(newItem, recycler); // Add to recyclerView
+                }
+            });
+        }
+    }
+
+    public void setActionBarTitle(int state){
+
+        if(getSupportActionBar()==null)
+            return;
+
+        if(state==1){//Connecting
+            getSupportActionBar().setTitle("Connecting...");
+        }else if(state==2){//Connected
+            getSupportActionBar().setTitle(getResources().getString(R.string.chat_name));
+        }else if(state==3){//Without internet
+            getSupportActionBar().setTitle("Waiting for network...");
+        }
+    }
+
     private void loadMessagesFromDB(){
 
         final RealmResults<MessageModel> result = DatabaseHandler.getMessages(mySessionID, mySessionID);
@@ -247,16 +196,6 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
                 adapter.notifyDataSetChanged();
             }
         });
-
-    }
-
-    private void sendMessage(String text){
-
-        MOKMessage mokMessage= MonkeyKit.instance().persistMessageAndSend(text, mySessionID, "Test Push Message", new JsonObject());
-        long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
-        MessageItem item = new MessageItem(mySessionID, mySessionID, mokMessage.getMessage_id(), text, timestamp, false,
-                MonkeyItem.MonkeyItemType.text);
-        adapter.smoothlyAddNewItem(item, recycler);
 
     }
 
@@ -290,119 +229,6 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         }
     }
 
-    /***
-     * AUDIO RECORD STUFFS
-     ****/
-
-    private void startRecording() {
-
-        try {
-            mAudioFileName = getCacheDir().toString() + "/" + (System.currentTimeMillis() / 1000) + TEMP_AUDIO_FILE_NAME;
-            mRecorder = new MediaRecorder();
-            mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            mRecorder.setOutputFile(mAudioFileName);
-            mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-            //TO MAKE AUDIO LOW QUALITY
-            mRecorder.setAudioSamplingRate(22050);//8khz-92khz
-            mRecorder.setAudioEncodingBitRate(22050);//8000
-            mRecorder.prepare();
-            mRecorder.start();
-            mRecorder.setOnErrorListener(new MediaRecorder.OnErrorListener() {
-
-                @Override
-                public void onError(MediaRecorder mr, int what, int extra) {
-                    if (what == MediaPlayer.MEDIA_ERROR_SERVER_DIED) {
-                        mr.release();
-                    }
-                }
-            });
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    private void stopRecording() {
-        try {
-            if (mRecorder != null) {
-                mRecorder.stop();
-                mRecorder.release();
-                mRecorder = null;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void cancelRecording() {
-        stopRecording();
-        File file = new File(mAudioFileName);
-        if (file.exists())
-            file.delete();
-    }
-
-    private void sendAudioFile() {
-
-        if(mAudioFileName!=null) {
-            File file = new File(mAudioFileName);
-            if (file.exists()) {
-
-                Uri uri = Uri.parse(mAudioFileName);
-                MediaMetadataRetriever mmr = new MediaMetadataRetriever();
-                mmr.setDataSource(this,uri);
-                String durationStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-                int seconds = Integer.parseInt(durationStr);
-
-                long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
-                JsonObject params = new JsonObject();
-                params.addProperty("length",""+seconds);
-                MOKMessage mokMessage = MonkeyKit.instance().persistFileMessageAndSend(mAudioFileName, mySessionID,
-                        MessageTypes.FileTypes.Audio, params, "Test Push Message");
-                MessageItem item = new MessageItem(mySessionID, mySessionID, mokMessage.getMessage_id(),
-                        mAudioFileName, timestamp, false, MonkeyItem.MonkeyItemType.audio);
-                item.setDuration(""+MonkeyChat.milliSecondsToTimer(seconds));
-                adapter.smoothlyAddNewItem(item, recycler);
-            }
-        }
-    }
-
-    /***
-     * IMAGE STUFFS
-     ****/
-
-    public void takePicture() {
-
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        try {
-            Uri mImageCaptureUri;
-            String state = Environment.getExternalStorageState();
-            if (Environment.MEDIA_MOUNTED.equals(state)) {
-                mImageCaptureUri = Uri.fromFile(getTempFile());
-            } else {
-				/*
-				 * The solution is taken from here: http://stackoverflow.com/questions/10042695/how-to-get-camera-result-as-a-uri-in-data-folder
-				 */
-                mImageCaptureUri = CONTENT_URI;
-            }
-            intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, mImageCaptureUri);
-            intent.putExtra("return-data", true);
-            startActivityForResult(intent, RequestType.takePicture.ordinal());
-        } catch (ActivityNotFoundException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public File getTempFile() {
-
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            return new File(Environment.getExternalStorageDirectory(), mPhotoFileName);
-        } else {
-            return new File(getFilesDir(), mPhotoFileName);
-        }
-    }
-
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -411,116 +237,14 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
             return;
         }
 
-        if (requestCode == Crop.REQUEST_PICK)
-            requestCode = RequestType.openGallery.ordinal();
-        if (requestCode == Crop.REQUEST_CROP)
-            requestCode = RequestType.cropPhoto.ordinal();
+        if(inputView!=null && inputView.getCameraHandler()!=null)
+            inputView.getCameraHandler().onActivityResult(requestCode,resultCode, data);
 
-        Uri destination = Uri.fromFile(getTempFile());
-
-        switch (RequestType.values()[requestCode]) {
-            case openGallery: {
-                try {
-                    ExifInterface ei = new ExifInterface(getTempFile().getAbsolutePath());
-                    orientationImage = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-                } catch (IOException e) {
-                    Log.e("error", "Exif error");
-                }
-                Crop.of(data.getData(), destination).start(this);
-                break;
-            }
-            case takePicture: {
-                try {
-                    ExifInterface ei = new ExifInterface(getTempFile().getAbsolutePath());
-                    orientationImage = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-                } catch (IOException e) {
-                    Log.e("error", "Exif error");
-                }
-                Crop.of(destination, destination).start(this);
-                break;
-            }
-            case cropPhoto: {
-
-                int rotation = 0;
-                if (orientationImage == 0) {
-                    try {
-                        ExifInterface ei = new ExifInterface(getTempFile().getAbsolutePath());
-                        orientationImage = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-                    } catch (IOException e) {
-                        Log.e("error", "Exif error");
-                    }
-                }
-                if (orientationImage != 0) {
-                    switch (orientationImage) {
-                        case 3: { // ORIENTATION_ROTATE_180
-                            rotation = 180;
-                        }
-                        break;
-                        case 6: { // ORIENTATION_ROTATE_90
-                            rotation = 90;
-                        }
-                        break;
-                        case 8: { // ORIENTATION_ROTATE_270
-                            rotation = 270;
-                        }
-                        break;
-                    }
-                }
-                if (rotation != 0) {
-                    Bitmap bmp = BitmapFactory.decodeFile(getTempFile().getAbsolutePath());
-                    Matrix matrix = new Matrix();
-                    matrix.postRotate(rotation);
-                    Bitmap rotatedImg = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix, true);
-                    bmp.recycle();
-
-                    try {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        rotatedImg.compress(Bitmap.CompressFormat.JPEG, 100, bos);
-                        byte[] bitmapdata = bos.toByteArray();
-                        FileOutputStream fos = new FileOutputStream(getTempFile());
-                        fos.write(bitmapdata);
-                        fos.flush();
-                        fos.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                sendImage();
-
-                break;
-            }
-        }
-    }
-
-    private void sendImage(){
-        MOKMessage mokMessage = MonkeyKit.instance().persistFileMessageAndSend(getTempFile().getAbsolutePath(), mySessionID,
-                MessageTypes.FileTypes.Photo, new JsonObject(), "Test Push Message");
-        long timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 48;
-        MessageItem item = new MessageItem(mySessionID, mySessionID, mokMessage.getMessage_id(),
-                getTempFile().getAbsolutePath(), timestamp, false,MonkeyItem.MonkeyItemType.photo);
-        adapter.smoothlyAddNewItem(item, recycler);
     }
 
     /***
      * OVERRIDE METHODS
      ****/
-
-    @Override
-    public int getMemberColor(@NotNull String sessionId) {
-        return Color.WHITE;
-    }
-
-    @NotNull
-    @Override
-    public String getMenberName(@NotNull String sessionId) {
-        return "Unknown";
-    }
-
-    @Override
-    public boolean isGroupChat() {
-        return false;
-    }
 
     @Override
     public boolean isOnline() {

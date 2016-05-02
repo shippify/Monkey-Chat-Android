@@ -2,7 +2,9 @@ package com.criptext.monkeychatandroid.models;
 
 import android.content.Context;
 
+import com.criptext.monkeychatandroid.MonkeyChat;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
+import com.criptext.monkeykitui.util.Utils;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -31,7 +33,7 @@ public class MessageItem implements MonkeyItem {
     private OutgoingMessageStatus status;
     private MonkeyItemType itemType;
     /*AUDIO*/
-    private String duration;
+    private long duration;
     /*PHOTO*/
     private String placeHolderFilePath;
 
@@ -49,7 +51,7 @@ public class MessageItem implements MonkeyItem {
         this.isIncoming = isIncoming;
         this.itemType = itemType;
         this.placeHolderFilePath = "";
-        this.duration = "00:00";
+        this.duration = 0;
         this.status = OutgoingMessageStatus.sending;
         this.isDownloading = false;
 
@@ -90,9 +92,9 @@ public class MessageItem implements MonkeyItem {
         this.status = status;
     }
 
-    public void setDuration(String durationText) {
-        this.duration = durationText;
-        model.setDuration(durationText);
+    public void setDuration(long duration) {
+        this.duration = duration;
+        model.setDuration(duration);
     }
 
     public void setPlaceHolderFilePath(String placeHolderFilePath) {
@@ -165,12 +167,6 @@ public class MessageItem implements MonkeyItem {
 
     @NotNull
     @Override
-    public Object getDataObject() {
-        return null;
-    }
-
-    @NotNull
-    @Override
     public String getMessageText() {
         return messageContent;
     }
@@ -193,7 +189,7 @@ public class MessageItem implements MonkeyItem {
     }
 
     @Override
-    public String getAudioDuration() {
+    public long getAudioDuration() {
         return duration;
     }
 

@@ -92,7 +92,7 @@ public class DatabaseHandler {
         switch (type){
             case audio:
                 if(item.getParams().has("length"))
-                    item.setDuration(MonkeyChat.milliSecondsToTimer(item.getParams().get("length").getAsLong()));
+                    item.setDuration(item.getParams().get("length").getAsLong());
                 if(!item.getMessageText().contains("/"))
                     item.setMessageContent(context.getCacheDir()+"/"+message.getMsg());
                 break;

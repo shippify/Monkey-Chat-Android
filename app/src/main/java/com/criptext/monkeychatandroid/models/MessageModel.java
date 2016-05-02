@@ -21,7 +21,7 @@ public class MessageModel extends RealmObject {
     private Integer itemType;
 
     /*AUDIO*/
-    private String duration;
+    private long duration;
     /*PHOTO*/
     private String placeHolderFilePath;
 
@@ -43,7 +43,7 @@ public class MessageModel extends RealmObject {
         setIncoming(isIncoming);
         setItemType(itemType.ordinal());
         setStatus(0);
-        setDuration("00:00");
+        setDuration(0);
         setPlaceHolderFilePath("");
         setDownloading(false);
         setParams("");
@@ -106,11 +106,11 @@ public class MessageModel extends RealmObject {
         this.itemType = itemType;
     }
 
-    public String getDuration() {
+    public long getDuration() {
         return duration;
     }
 
-    public void setDuration(String duration) {
+    public void setDuration(long duration) {
         this.duration = duration;
     }
 

@@ -40,6 +40,7 @@ public class RegisterActivity extends AppCompatActivity {
                 prefs.edit().putString("sessionid",sessionID).apply();
                 prefs.edit().putString("fullname",editTextName.getText().toString());
                 startActivity(new Intent(RegisterActivity.this,MainActivity.class));
+                finish();
             }
 
             @Override
