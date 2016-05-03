@@ -108,9 +108,29 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+
+        mAudioManager.setMode(AudioManager.MODE_NORMAL);
+        if(audioHandler!=null && audioHandler.getPlayingAudio()) {
+            audioHandler.getAudioHolder().updatePlayPauseButton(false);
+            audioHandler.getPlayer().pause();
+            audioHandler.getAdapter().notifyDataSetChanged();
+        }
+    }
+
+    @Override
     protected void onStop() {
-        audioHandler.releasePlayer();
+
         super.onStop();
+
+        audioHandler.releasePlayer();
+
+        if(isProximityOn){
+            mAudioManager.setMode(AudioManager.MODE_NORMAL);
+            isProximityOn=false;
+            ((LinearLayout)findViewById(R.id.layoutBlack)).setVisibility(View.GONE);
+        }
     }
 
     @Override
@@ -249,6 +269,24 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         }
     }
 
+    public MediaPlayer.OnCompletionListener localCompletionForProximity=new MediaPlayer.OnCompletionListener() {
+
+        @Override
+        public void onCompletion(MediaPlayer mp) {
+            try {
+                audioHandler.getAudioSeekBar().setProgress(0);
+                audioHandler.getAudioHolder().updatePlayPauseButton(false);
+                audioHandler.getAudioHolder().setAudioDurationText(0);
+                audioHandler.getPlayer().seekTo(0);
+                audioHandler.notifyPlaybackStopped();
+                audioHandler.restartListeners();
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    };
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -271,59 +309,45 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
         if (event.values[0] < mSensor.getMaximumRange()) {
 
-            if(mPlayer!=null && isplaying){
-                mPlayer.reset();
+            if(audioHandler!=null && audioHandler.getPlayingAudio()){
+                audioHandler.getPlayer().reset();
                 try {
-                    ViewHolder holder = (ViewHolder)getMessageHolder(audio_play);
-                    actualPositionAudio=holder.seek_bar.getProgress();
-                    mPlayer.release();
-                    mPlayer=new MediaPlayer();
-                    mPlayer.setDataSource(actualAudioPATH);
-                    mPlayer.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
-                    mPlayer.prepare();
-                    mPlayer.start();
-                    holder.seek_bar.setProgress(ThreadWrite.actualPositionAudio);
-                    mPlayer.seekTo(ThreadWrite.actualPositionAudio);
-                    mPlayer.setOnCompletionListener(localCompletionForProximity);
+                    audioHandler.getPlayer().release();
+                    audioHandler.createNewPlayer();
+                    audioHandler.getPlayer().setDataSource(audioHandler.getCurrentlyPlayingItem().getItem().getFilePath());
+                    audioHandler.getPlayer().setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+                    audioHandler.getPlayer().prepare();
+                    audioHandler.getPlayer().start();
+                    audioHandler.getPlayer().setOnCompletionListener(localCompletionForProximity);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
                 setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
                 isProximityOn=true;
                 ((LinearLayout)findViewById(R.id.layoutBlack)).setVisibility(View.VISIBLE);
-                prevBrightness = layout.screenBrightness;
-                layout.screenBrightness = 0.1F;
-                getWindow().setAttributes(layout);
             }
 
         } else {
 
-            if(mPlayer!=null && isProximityOn){
-                mPlayer.reset();
+            if(audioHandler!=null && isProximityOn){
+                audioHandler.getPlayer().reset();
                 try {
-                    ViewHolder holder = (ViewHolder)getMessageHolder(audio_play);
-                    actualPositionAudio=holder.seek_bar.getProgress();
-                    mPlayer.release();
-                    mPlayer=new MediaPlayer();
-                    mPlayer.setDataSource(actualAudioPATH);
-                    mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-                    mPlayer.prepare();
-                    if(isplaying)
-                        mPlayer.start();
-                    holder.seek_bar.setProgress(ThreadWrite.actualPositionAudio);
-                    mPlayer.seekTo(ThreadWrite.actualPositionAudio);
-                    mPlayer.setOnCompletionListener(localCompletionForProximity);
+                    audioHandler.getPlayer().release();
+                    audioHandler.createNewPlayer();
+                    audioHandler.getPlayer().setDataSource(audioHandler.getCurrentlyPlayingItem().getItem().getFilePath());
+                    audioHandler.getPlayer().setAudioStreamType(AudioManager.STREAM_MUSIC);
+                    audioHandler.getAudioHolder().updatePlayPauseButton(false);
+                    audioHandler.getPlayer().setOnCompletionListener(localCompletionForProximity);
+                    audioHandler.getAdapter().notifyDataSetChanged();
+                    audioHandler.restartListeners();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
                 mAudioManager.setMode(AudioManager.MODE_NORMAL);
                 isProximityOn=false;
                 ((LinearLayout)findViewById(R.id.layoutBlack)).setVisibility(View.GONE);
-                layout.screenBrightness = prevBrightness;
-                getWindow().setAttributes(layout);
             }
         }
-
     }
 
     @Override

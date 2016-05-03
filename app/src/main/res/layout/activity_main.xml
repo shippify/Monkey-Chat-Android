@@ -19,4 +19,12 @@
         android:layout_height="100dp"
         android:layout_alignParentBottom="true"/>
 
+    <LinearLayout
+        android:id="@+id/layoutBlack"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@android:color/black"
+        android:visibility="gone"/>
+
 </RelativeLayout>

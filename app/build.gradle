@@ -36,7 +36,7 @@ dependencies {
     compile ('com.criptext:monkeyKit:1.2.3@aar') {
         transitive = true;
     }
-    compile ('com.criptext.monkeykitui:monkeykitui:1.5.4@aar') {
+    compile ('com.criptext.monkeykitui:monkeykitui:1.5.5@aar') {
         transitive = true;
     }
 }
