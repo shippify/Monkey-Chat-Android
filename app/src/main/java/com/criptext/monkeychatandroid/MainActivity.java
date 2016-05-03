@@ -1,13 +1,23 @@
 package com.criptext.monkeychatandroid;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.MenuInflater;
+import android.view.View;
+import android.widget.LinearLayout;
+
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.lib.MonkeyKit;
@@ -31,7 +41,7 @@ import java.util.Iterator;
 import io.realm.RealmChangeListener;
 import io.realm.RealmResults;
 
-public class MainActivity extends AppCompatActivity implements ChatActivity, MonkeyKitDelegate {
+public class MainActivity extends AppCompatActivity implements ChatActivity, MonkeyKitDelegate, SensorEventListener {
 
     MonkeyAdapter adapter;
     RecyclerView recycler;
@@ -41,6 +51,10 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
     private SharedPreferences prefs;
     private String mySessionID;
+    private boolean isProximityOn=false;
+    private SensorManager mSensorManager;
+    private Sensor mSensor;
+    private AudioManager mAudioManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +72,11 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         recycler = (RecyclerView) findViewById(R.id.recycler);
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         mySessionID = prefs.getString("sessionid","");
+
+        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_FASTEST);
 
         monkeyMessages = new ArrayList<MonkeyItem>();
         adapter = new MonkeyAdapter(this, monkeyMessages);
@@ -95,8 +114,9 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
+    protected void onDestroy() {
+        super.onDestroy();
+        mSensorManager.unregisterListener(this);
     }
 
     @Override
@@ -247,6 +267,71 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
      ****/
 
     @Override
+    public void onSensorChanged(SensorEvent event) {
+
+        if (event.values[0] < mSensor.getMaximumRange()) {
+
+            if(mPlayer!=null && isplaying){
+                mPlayer.reset();
+                try {
+                    ViewHolder holder = (ViewHolder)getMessageHolder(audio_play);
+                    actualPositionAudio=holder.seek_bar.getProgress();
+                    mPlayer.release();
+                    mPlayer=new MediaPlayer();
+                    mPlayer.setDataSource(actualAudioPATH);
+                    mPlayer.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
+                    mPlayer.prepare();
+                    mPlayer.start();
+                    holder.seek_bar.setProgress(ThreadWrite.actualPositionAudio);
+                    mPlayer.seekTo(ThreadWrite.actualPositionAudio);
+                    mPlayer.setOnCompletionListener(localCompletionForProximity);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
+                isProximityOn=true;
+                ((LinearLayout)findViewById(R.id.layoutBlack)).setVisibility(View.VISIBLE);
+                prevBrightness = layout.screenBrightness;
+                layout.screenBrightness = 0.1F;
+                getWindow().setAttributes(layout);
+            }
+
+        } else {
+
+            if(mPlayer!=null && isProximityOn){
+                mPlayer.reset();
+                try {
+                    ViewHolder holder = (ViewHolder)getMessageHolder(audio_play);
+                    actualPositionAudio=holder.seek_bar.getProgress();
+                    mPlayer.release();
+                    mPlayer=new MediaPlayer();
+                    mPlayer.setDataSource(actualAudioPATH);
+                    mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                    mPlayer.prepare();
+                    if(isplaying)
+                        mPlayer.start();
+                    holder.seek_bar.setProgress(ThreadWrite.actualPositionAudio);
+                    mPlayer.seekTo(ThreadWrite.actualPositionAudio);
+                    mPlayer.setOnCompletionListener(localCompletionForProximity);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                mAudioManager.setMode(AudioManager.MODE_NORMAL);
+                isProximityOn=false;
+                ((LinearLayout)findViewById(R.id.layoutBlack)).setVisibility(View.GONE);
+                layout.screenBrightness = prevBrightness;
+                getWindow().setAttributes(layout);
+            }
+        }
+
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+    @Override
     public boolean isOnline() {
         return true;
     }
@@ -377,4 +462,5 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
             MonkeyKit.instance().setLastTimeSynced(Long.parseLong(notification.getDatetime()));
         }
     }
+
 }
