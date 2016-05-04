@@ -68,3 +68,4 @@ MonkeySDK and Monkey UIKIT use libraries inside his projects. So when you declar
 In order to understand the use of MonkeySDK you can follow the instructions here:
 https://github.com/Criptext/MonkeyKitAndroid/
 
+Don't forget to check our best practices at the moment of create an app [here](wiki/Best-practices-creating-your-app).
