@@ -7,6 +7,12 @@ repositories {
     maven {
         url 'https://dl.bintray.com/criptext/maven'
     }
+    maven { url "https://jitpack.io" }
+
+}
+
+configurations.all {
+    resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
 }
 
 android {
@@ -36,7 +42,9 @@ dependencies {
     compile ('com.criptext:monkeyKit:1.2.3@aar') {
         transitive = true;
     }
-    compile ('com.criptext.monkeykitui:monkeykitui:1.5.7@aar') {
+    compile 'com.github.GAumala.MonkeyUIAndroid:monkeykitui:jitpack-SNAPSHOT'
+    /*compile ('com.criptext.monkeykitui:monkeykitui:1.5.7@aar') {
         transitive = true;
-    }
+
+    }*/
 }

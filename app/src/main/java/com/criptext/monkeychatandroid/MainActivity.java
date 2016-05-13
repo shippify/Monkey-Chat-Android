@@ -1,13 +1,7 @@
 package com.criptext.monkeychatandroid;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
@@ -15,8 +9,6 @@ import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.MenuInflater;
-import android.view.View;
-import android.widget.LinearLayout;
 
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
@@ -41,7 +33,7 @@ import java.util.Iterator;
 import io.realm.RealmChangeListener;
 import io.realm.RealmResults;
 
-public class MainActivity extends AppCompatActivity implements ChatActivity, MonkeyKitDelegate, SensorEventListener {
+public class MainActivity extends AppCompatActivity implements ChatActivity, MonkeyKitDelegate {
 
     MonkeyAdapter adapter;
     RecyclerView recycler;
@@ -51,10 +43,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
     private SharedPreferences prefs;
     private String mySessionID;
-    private boolean isProximityOn=false;
-    private SensorManager mSensorManager;
-    private Sensor mSensor;
-    private AudioManager mAudioManager;
+    private  SensorHandler sensorHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,11 +62,6 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         mySessionID = prefs.getString("sessionid","");
 
-        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
-        mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_FASTEST);
-
         monkeyMessages = new ArrayList<MonkeyItem>();
         adapter = new MonkeyAdapter(this, monkeyMessages);
 
@@ -88,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
         initInputView();
         audioHandler = new AudioPlaybackHandler(adapter, recycler);
+        sensorHandler = new SensorHandler(audioHandler, this);
         loadMessagesFromDB();
     }
 
@@ -110,33 +95,27 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     @Override
     protected void onPause() {
         super.onPause();
-
-        mAudioManager.setMode(AudioManager.MODE_NORMAL);
-        if(audioHandler!=null && audioHandler.getPlayingAudio()) {
-            audioHandler.getAudioHolder().updatePlayPauseButton(false);
-            audioHandler.getPlayer().pause();
-            audioHandler.getAdapter().notifyDataSetChanged();
-        }
+        sensorHandler.onPause();
     }
 
     @Override
     protected void onStop() {
 
         super.onStop();
-
         audioHandler.releasePlayer();
-
-        if(isProximityOn){
-            mAudioManager.setMode(AudioManager.MODE_NORMAL);
-            isProximityOn=false;
-            ((LinearLayout)findViewById(R.id.layoutBlack)).setVisibility(View.GONE);
-        }
+        sensorHandler.onStop();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mSensorManager.unregisterListener(this);
+        sensorHandler.onDestroy();
+    }
+
+    @Override
+    protected void onStart(){
+        super.onStart();
+        audioHandler.initPlayer();
     }
 
     @Override
@@ -273,17 +252,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
         @Override
         public void onCompletion(MediaPlayer mp) {
-            try {
-                audioHandler.getAudioSeekBar().setProgress(0);
-                audioHandler.getAudioHolder().updatePlayPauseButton(false);
-                audioHandler.getAudioHolder().setAudioDurationText(0);
-                audioHandler.getPlayer().seekTo(0);
-                audioHandler.notifyPlaybackStopped();
-                audioHandler.restartListeners();
-            }
-            catch (Exception e){
-                e.printStackTrace();
-            }
+
         }
     };
 
@@ -303,57 +272,6 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     /***
      * OVERRIDE METHODS
      ****/
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-
-        if (event.values[0] < mSensor.getMaximumRange()) {
-
-            if(audioHandler!=null && audioHandler.getPlayingAudio()){
-                audioHandler.getPlayer().reset();
-                try {
-                    audioHandler.getPlayer().release();
-                    audioHandler.createNewPlayer();
-                    audioHandler.getPlayer().setDataSource(audioHandler.getCurrentlyPlayingItem().getItem().getFilePath());
-                    audioHandler.getPlayer().setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
-                    audioHandler.getPlayer().prepare();
-                    audioHandler.getPlayer().start();
-                    audioHandler.getPlayer().setOnCompletionListener(localCompletionForProximity);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
-                isProximityOn=true;
-                ((LinearLayout)findViewById(R.id.layoutBlack)).setVisibility(View.VISIBLE);
-            }
-
-        } else {
-
-            if(audioHandler!=null && isProximityOn){
-                audioHandler.getPlayer().reset();
-                try {
-                    audioHandler.getPlayer().release();
-                    audioHandler.createNewPlayer();
-                    audioHandler.getPlayer().setDataSource(audioHandler.getCurrentlyPlayingItem().getItem().getFilePath());
-                    audioHandler.getPlayer().setAudioStreamType(AudioManager.STREAM_MUSIC);
-                    audioHandler.getAudioHolder().updatePlayPauseButton(false);
-                    audioHandler.getPlayer().setOnCompletionListener(localCompletionForProximity);
-                    audioHandler.getAdapter().notifyDataSetChanged();
-                    audioHandler.restartListeners();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                mAudioManager.setMode(AudioManager.MODE_NORMAL);
-                isProximityOn=false;
-                ((LinearLayout)findViewById(R.id.layoutBlack)).setVisibility(View.GONE);
-            }
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-    }
 
     @Override
     public boolean isOnline() {
