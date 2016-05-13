@@ -1,7 +1,6 @@
 *.iml
 /local.properties
-/.idea/workspace.xml
-/.idea/libraries
+/.idea
 .DS_Store
 # Built application files
 *.apk
@@ -35,3 +34,4 @@ proguard/
 
 # Android Studio captures folder
 captures/
+
