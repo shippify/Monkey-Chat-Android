@@ -16,6 +16,7 @@ import com.criptext.lib.MonkeyKit;
 import com.criptext.lib.MonkeyKitDelegate;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
+import com.criptext.monkeychatandroid.models.MessageLoader;
 import com.criptext.monkeychatandroid.models.MessageModel;
 import com.criptext.monkeykitui.input.MediaInputView;
 import com.criptext.monkeykitui.input.listeners.InputListener;
@@ -39,6 +40,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     RecyclerView recycler;
     MediaInputView inputView;
     ArrayList<MonkeyItem> monkeyMessages;
+    MessageLoader messageLoader;
     AudioPlaybackHandler audioHandler;
 
     private SharedPreferences prefs;
@@ -64,6 +66,8 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
         monkeyMessages = new ArrayList<MonkeyItem>();
         adapter = new MonkeyAdapter(this, monkeyMessages);
+        messageLoader = new MessageLoader(mySessionID, mySessionID);
+        messageLoader.setAdapter(adapter);
 
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
         linearLayoutManager.setStackFromEnd(true);
@@ -73,7 +77,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         initInputView();
         audioHandler = new AudioPlaybackHandler(adapter, recycler);
         sensorHandler = new SensorHandler(audioHandler, this);
-        loadMessagesFromDB();
+        messageLoader.loadNewPage();
     }
 
     @Override
@@ -203,21 +207,6 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         }
     }
 
-    private void loadMessagesFromDB(){
-
-        final RealmResults<MessageModel> result = DatabaseHandler.getMessages(mySessionID, mySessionID);
-        result.addChangeListener(new RealmChangeListener() {
-            @Override
-            public void onChange() {
-                result.removeChangeListener(this);
-                ArrayList<MonkeyItem> messageModels = MessageItem.insertSortCopy(result);
-                monkeyMessages.addAll(messageModels);
-                adapter.notifyDataSetChanged();
-            }
-        });
-
-    }
-
     private MonkeyItem searchMessage(String messageId){
         Iterator<MonkeyItem> iterator = monkeyMessages.iterator();
         while(iterator.hasNext()) {
@@ -297,7 +286,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
     @Override
     public void onLoadMoreData(int i) {
-
+        messageLoader.loadNewPage();
     }
 
     /******

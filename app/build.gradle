@@ -42,7 +42,7 @@ dependencies {
     compile ('com.criptext:monkeyKit:1.2.3@aar') {
         transitive = true;
     }
-    compile 'com.github.GAumala.MonkeyUIAndroid:monkeykitui:jitpack-SNAPSHOT'
+    compile 'com.github.GAumala.MonkeyUIAndroid:monkeykitui:dev-SNAPSHOT'
     /*compile ('com.criptext.monkeykitui:monkeykitui:1.5.7@aar') {
         transitive = true;
 

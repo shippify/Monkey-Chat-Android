@@ -195,7 +195,7 @@ public class MessageItem implements MonkeyItem {
 
     /**CUSTOM FUNCTIONS**/
 
-    public static ArrayList<MonkeyItem> insertSortCopy(RealmResults<MessageModel> realmlist){
+    public static ArrayList<MonkeyItem> insertSortCopy(List<MessageModel> realmlist){
 
         ArrayList<MonkeyItem> arrayList = new ArrayList<>();
         int total = realmlist.size();
