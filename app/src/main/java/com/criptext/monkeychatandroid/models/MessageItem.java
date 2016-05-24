@@ -32,6 +32,7 @@ public class MessageItem implements MonkeyItem {
     private boolean isIncoming;
     private OutgoingMessageStatus status;
     private MonkeyItemType itemType;
+    private int myItemType;
     /*AUDIO*/
     private long duration;
     /*PHOTO*/
@@ -50,6 +51,23 @@ public class MessageItem implements MonkeyItem {
         this.timestamp = timestamp;
         this.isIncoming = isIncoming;
         this.itemType = itemType;
+        this.placeHolderFilePath = "";
+        this.duration = 0;
+        this.status = OutgoingMessageStatus.sending;
+        this.isDownloading = false;
+
+        model = new MessageModel(senderId, recieverId, messageId, messageContent, timestamp, isIncoming, itemType);
+    }
+
+    public MessageItem(String senderId, String recieverId, String messageId, String messageContent, long timestamp,
+                       boolean isIncoming, int itemType){
+        this.senderSessionId = senderId;
+        this.recieverSessionId = recieverId;
+        this.messageId = messageId;
+        this.messageContent = messageContent;
+        this.timestamp = timestamp;
+        this.isIncoming = isIncoming;
+        this.myItemType = itemType;
         this.placeHolderFilePath = "";
         this.duration = 0;
         this.status = OutgoingMessageStatus.sending;
@@ -162,7 +180,10 @@ public class MessageItem implements MonkeyItem {
 
     @Override
     public int getMessageType() {
-        return itemType.ordinal();
+        if(itemType!=null)
+            return itemType.ordinal();
+        else
+            return myItemType;
     }
 
     @NotNull

@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.MediaPlayer;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -14,16 +15,18 @@ import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.lib.MonkeyKit;
 import com.criptext.lib.MonkeyKitDelegate;
+import com.criptext.monkeychatandroid.location.MyAdapter;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.MessageLoader;
-import com.criptext.monkeychatandroid.models.MessageModel;
 import com.criptext.monkeykitui.input.MediaInputView;
+import com.criptext.monkeykitui.input.children.AttachmentButton;
 import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.MonkeyAdapter;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
-import com.criptext.monkeykitui.recycler.audio.AudioPlaybackHandler;
+import com.criptext.monkeykitui.recycler.audio.DefaultVoiceNotePlayer;
+import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
 import com.google.gson.JsonObject;
 
 import org.jetbrains.annotations.NotNull;
@@ -31,17 +34,14 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import io.realm.RealmChangeListener;
-import io.realm.RealmResults;
-
 public class MainActivity extends AppCompatActivity implements ChatActivity, MonkeyKitDelegate {
 
-    MonkeyAdapter adapter;
+    MyAdapter adapter;
     RecyclerView recycler;
     MediaInputView inputView;
     ArrayList<MonkeyItem> monkeyMessages;
     MessageLoader messageLoader;
-    AudioPlaybackHandler audioHandler;
+    VoiceNotePlayer voiceNotePlayer;
 
     private SharedPreferences prefs;
     private String mySessionID;
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         mySessionID = prefs.getString("sessionid","");
 
         monkeyMessages = new ArrayList<MonkeyItem>();
-        adapter = new MonkeyAdapter(this, monkeyMessages);
+        adapter = new MyAdapter(this, monkeyMessages);
         messageLoader = new MessageLoader(mySessionID, mySessionID);
         messageLoader.setAdapter(adapter);
 
@@ -75,8 +75,8 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         recycler.setAdapter(adapter);
 
         initInputView();
-        audioHandler = new AudioPlaybackHandler(adapter, recycler);
-        sensorHandler = new SensorHandler(audioHandler, this);
+        voiceNotePlayer = new DefaultVoiceNotePlayer(adapter, recycler);
+        sensorHandler = new SensorHandler(voiceNotePlayer, this);
         messageLoader.loadNewPage();
     }
 
@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     protected void onStop() {
 
         super.onStop();
-        audioHandler.releasePlayer();
+        voiceNotePlayer.releasePlayer();
         sensorHandler.onStop();
     }
 
@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     @Override
     protected void onStart(){
         super.onStart();
-        audioHandler.initPlayer();
+        voiceNotePlayer.initPlayer();
     }
 
     @Override
@@ -187,6 +187,20 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
                             newItem.setMessageContent(item.getFilePath());
                             break;
                     }
+                    adapter.smoothlyAddNewItem(newItem, recycler); // Add to recyclerView
+                }
+            });
+            inputView.getAttachmentHandler().addNewAttachmentButton(new AttachmentButton() {
+                @NonNull
+                @Override
+                public String getTitle() {
+                    return "Send Location";
+                }
+
+                @Override
+                public void clickButton() {
+                    MessageItem newItem = new MessageItem(mySessionID, mySessionID, "-"+System.currentTimeMillis(),
+                            "Location", System.currentTimeMillis(), false, 8);
                     adapter.smoothlyAddNewItem(newItem, recycler); // Add to recyclerView
                 }
             });

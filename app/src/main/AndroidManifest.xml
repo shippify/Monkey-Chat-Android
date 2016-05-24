@@ -47,6 +47,10 @@
         <!-- Edit Image -->
         <activity
             android:name="com.criptext.monkeykitui.input.photoEditor.PhotoEditorActivity" />
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBl2bCdQaQFj1AebhFSYSsHB1GzKfhXUu4"/>
     </application>
 
 </manifest>

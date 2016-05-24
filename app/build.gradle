@@ -43,6 +43,7 @@ dependencies {
         transitive = true;
     }
     compile 'com.github.GAumala.MonkeyUIAndroid:monkeykitui:dev-SNAPSHOT'
+    compile 'com.google.android.gms:play-services-maps:9.0.0'
     /*compile ('com.criptext.monkeykitui:monkeykitui:1.5.7@aar') {
         transitive = true;
 

@@ -50,6 +50,23 @@ public class MessageModel extends RealmObject {
         setProps("");
     }
 
+    public MessageModel(String senderId, String recieverId, String messageId, String messageContent, long timestamp,
+                        boolean isIncoming, int itemType){
+        setSenderSessionId(senderId);
+        setRecieverSessionId(recieverId);
+        setMessageId(messageId);
+        setMessageContent(messageContent);
+        setTimestamp(timestamp);
+        setIncoming(isIncoming);
+        setItemType(itemType);
+        setStatus(0);
+        setDuration(0);
+        setPlaceHolderFilePath("");
+        setDownloading(false);
+        setParams("");
+        setProps("");
+    }
+
     public String getMessageId() {
         return messageId;
     }
