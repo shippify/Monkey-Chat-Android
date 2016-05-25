@@ -17,22 +17,19 @@ import com.criptext.lib.MonkeyKitDelegate;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.MessageLoader;
-import com.criptext.monkeychatandroid.models.MessageModel;
 import com.criptext.monkeykitui.input.MediaInputView;
 import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.MonkeyAdapter;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
-import com.criptext.monkeykitui.recycler.audio.AudioPlaybackHandler;
+import com.criptext.monkeykitui.recycler.audio.DefaultVoiceNotePlayer;
+import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
 import com.google.gson.JsonObject;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-
-import io.realm.RealmChangeListener;
-import io.realm.RealmResults;
 
 public class MainActivity extends AppCompatActivity implements ChatActivity, MonkeyKitDelegate {
 
@@ -41,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     MediaInputView inputView;
     ArrayList<MonkeyItem> monkeyMessages;
     MessageLoader messageLoader;
-    AudioPlaybackHandler audioHandler;
+    VoiceNotePlayer voiceNotePlayer;
 
     private SharedPreferences prefs;
     private String mySessionID;
@@ -75,8 +72,8 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         recycler.setAdapter(adapter);
 
         initInputView();
-        audioHandler = new AudioPlaybackHandler(adapter, recycler);
-        sensorHandler = new SensorHandler(audioHandler, this);
+        voiceNotePlayer = new DefaultVoiceNotePlayer(adapter, recycler);
+        sensorHandler = new SensorHandler(voiceNotePlayer, this);
         messageLoader.loadNewPage();
     }
 
@@ -106,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     protected void onStop() {
 
         super.onStop();
-        audioHandler.releasePlayer();
+        voiceNotePlayer.releasePlayer();
         sensorHandler.onStop();
     }
 
@@ -119,7 +116,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     @Override
     protected void onStart(){
         super.onStart();
-        audioHandler.initPlayer();
+        voiceNotePlayer.initPlayer();
     }
 
     @Override
