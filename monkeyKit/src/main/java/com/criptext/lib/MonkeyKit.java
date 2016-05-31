@@ -1017,11 +1017,10 @@ public abstract class MonkeyKit extends Service {
     }
 
     /************************************************************************/
-    public static void subscribePushHttp(String token, String sessionId, String urlUser, String urlPass){
+    public static void subscribePushHttp(String token, String sessionId, String urlUser, String urlPass) throws JSONException,
+        IOException {
         // Create a new HttpClient and Post Header
         HttpClient httpclient = newMonkeyHttpClient();
-
-        try {
 
             HttpPost httppost = newMonkeyHttpPost(URL + "/push/subscribe", urlUser, urlPass);
 
@@ -1038,11 +1037,6 @@ public abstract class MonkeyKit extends Service {
             JSONObject finalResult = getHttpResponseJson(httpclient, httppost, params.toString());
             Log.d("subscribePushHttp", finalResult.toString());
 
-        } catch (JSONException ex) {
-            ex.printStackTrace();
-        } catch (IOException ex){
-            ex.printStackTrace();
-        }
     }
 
     /************************************************************************/
