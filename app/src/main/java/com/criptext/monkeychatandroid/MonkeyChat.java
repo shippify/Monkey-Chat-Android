@@ -18,11 +18,14 @@ import io.realm.RealmSchema;
 
 public class MonkeyChat extends Application{
 
-    public static String APP_ID = "idkgwf6ghcmyfvvrxqiwwmi";
-    public static String APP_KEY = "9da5bbc32210ed6501de82927056b8d2";
+
     public String MONKEY_REALM = "SampleApp.MonkeyKitRealm";
     private Realm monkeyRealm;
     private static MonkeyChat singleton;
+
+    public static String MONKEY_ID = "MonkeyChat.MonkeyId";
+    public static String IS_REGISTERED = "MonkeyChat.IsRegistered";
+    public static String FULLNAME = "MonkeyChat.FullName";
 
     @Override
     public void onCreate() {

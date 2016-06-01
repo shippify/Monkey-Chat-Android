@@ -32,13 +32,15 @@ public class RegisterActivity extends AppCompatActivity {
         v.setVisibility(View.GONE);
         progressBar.setVisibility(View.VISIBLE);
         MonkeyInit mStart = new MonkeyInit(RegisterActivity.this, null,
-                MonkeyChat.APP_ID, MonkeyChat.APP_KEY,
+                SensitiveData.APP_ID, SensitiveData.APP_KEY,
                 editTextName.getText().toString()){
             @Override
             public void onSessionOK(String sessionID){
-                prefs.edit().putBoolean("isRegistered",true).apply();
-                prefs.edit().putString("sessionid",sessionID).apply();
-                prefs.edit().putString("fullname",editTextName.getText().toString());
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putBoolean(MonkeyChat.IS_REGISTERED,true);
+                editor.putString(MonkeyChat.MONKEY_ID,sessionID);
+                editor.putString(MonkeyChat.FULLNAME,editTextName.getText().toString());
+                editor.commit();
                 startActivity(new Intent(RegisterActivity.this,MainActivity.class));
                 finish();
             }

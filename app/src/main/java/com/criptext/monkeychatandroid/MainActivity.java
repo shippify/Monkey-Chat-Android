@@ -8,12 +8,16 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.MenuInflater;
 
+import com.criptext.ClientData;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
+import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.lib.MonkeyKit;
 import com.criptext.lib.MonkeyKitDelegate;
+import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.MessageLoader;
@@ -41,7 +45,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     VoiceNotePlayer voiceNotePlayer;
 
     private SharedPreferences prefs;
-    private String mySessionID;
+    private String myMonkeyID;
     private  SensorHandler sensorHandler;
 
     @Override
@@ -49,6 +53,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        
         if(MonkeyKit.instance()==null){
             finish();
             startActivity(new Intent(MainActivity.this, WelcomeActivity.class));
@@ -57,13 +62,15 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
             MonkeyKit.instance().addDelegate(this);
         }
 
-        recycler = (RecyclerView) findViewById(R.id.recycler);
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        mySessionID = prefs.getString("sessionid","");
+        myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
+        if(MonkeyRegistrationService.Companion.checkPlayServices(this))
+                registerWithGCM();
 
+        recycler = (RecyclerView) findViewById(R.id.recycler);
         monkeyMessages = new ArrayList<MonkeyItem>();
         adapter = new MonkeyAdapter(this, monkeyMessages);
-        messageLoader = new MessageLoader(mySessionID, mySessionID);
+        messageLoader = new MessageLoader(myMonkeyID, myMonkeyID);
         messageLoader.setAdapter(adapter);
 
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
@@ -91,6 +98,15 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
         if(MonkeyKit.instance()!=null)
             MonkeyKit.instance().sendSync(MonkeyKit.instance().getLastTimeSynced());
+    }
+
+    public void registerWithGCM(){
+        Intent intent = new Intent(this, SampleRegistrationService.class);
+        intent.putExtra(ClientData.Companion.getAPP_ID_KEY(), SensitiveData.APP_ID);
+        intent.putExtra(ClientData.Companion.getAPP_KEY_KEY(), SensitiveData.APP_KEY);
+        intent.putExtra(ClientData.Companion.getMONKEY_ID_KEY(), myMonkeyID);
+        startService(intent);
+        Log.d("MainActivity", "Registering with GCM");
     }
 
     @Override
@@ -159,19 +175,19 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
                         case audio:
                             params = new JsonObject();
                             params.addProperty("length",""+item.getAudioDuration());
-                            mokMessage = MonkeyKit.instance().persistFileMessageAndSend(item.getFilePath(), mySessionID,
+                            mokMessage = MonkeyKit.instance().persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
                                     MessageTypes.FileTypes.Audio, params, "Test Push Message");
                             break;
                         case photo:
-                            mokMessage = MonkeyKit.instance().persistFileMessageAndSend(item.getFilePath(), mySessionID,
+                            mokMessage = MonkeyKit.instance().persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
                                     MessageTypes.FileTypes.Photo, new JsonObject(), "Test Push Message");
                             break;
                         default:
-                            mokMessage = MonkeyKit.instance().persistMessageAndSend(item.getMessageText(), mySessionID, "Test Push Message", params);
+                            mokMessage = MonkeyKit.instance().persistMessageAndSend(item.getMessageText(), myMonkeyID, "Test Push Message", params);
                             break;
                     }
 
-                    MessageItem newItem = new MessageItem(mySessionID, mySessionID, mokMessage.getMessage_id(),
+                    MessageItem newItem = new MessageItem(myMonkeyID, myMonkeyID, mokMessage.getMessage_id(),
                             item.getMessageText(), item.getMessageTimestamp(), item.isIncomingMessage(),
                             MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
 
@@ -226,7 +242,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
     private void processIncomingMessage(MOKMessage message, boolean refresh){
 
-        monkeyMessages.add(DatabaseHandler.createMessage(message, this, mySessionID, true));
+        monkeyMessages.add(DatabaseHandler.createMessage(message, this, myMonkeyID, true));
 
         if(refresh) {
             adapter.notifyDataSetChanged();
@@ -272,7 +288,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
             messageItem.setDownloading(true);
             DatabaseHandler.updateMessageDownloadingStatus(messageItem.model, true);
             MonkeyKit.instance().downloadFile(messageItem.getMessageText(), messageItem.getProps(),
-                    mySessionID, new Runnable() {
+                    myMonkeyID, new Runnable() {
                         @Override
                         public void run() {
                             adapter.notifyDataSetChanged();
@@ -338,7 +354,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     @Override
     public void onMessageRecieved(MOKMessage message) {
 
-        if(message.getSid().equals(mySessionID)){
+        if(message.getSid().equals(myMonkeyID)){
             processIncomingMessage(message,true);
             MonkeyKit.instance().setLastTimeSynced(Long.parseLong(message.getDatetime()));
         }

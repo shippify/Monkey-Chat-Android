@@ -1297,13 +1297,18 @@ public abstract class MonkeyKit extends Service {
 
         JSONObject args=new JSONObject();
         JSONObject json=new JSONObject();
+        JSONObject pushObject = new JSONObject();
+
         try {
+            pushObject.put("key", "text");
+            pushObject.put("value", pushMessage.replace("\\\\", "\\"));
+
             args.put("id", idnegative);
             args.put("sid", this.sessionid);
             args.put("rid", sessionIDTo);
             args.put("msg", aesutil.encrypt(elmensaje));
             args.put("type", MessageTypes.MOKText);
-            args.put("push", pushMessage.replace("\\\\", "\\"));
+            args.put("push", pushObject.toString());
             if (params != null)
                 args.put("params", params.toString());
             if (props != null)
