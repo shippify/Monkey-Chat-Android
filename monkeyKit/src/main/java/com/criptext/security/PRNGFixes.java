@@ -1,4 +1,4 @@
-package com.criptext.lib;
+package com.criptext.security;
 /*
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will Google be held liable for any damages

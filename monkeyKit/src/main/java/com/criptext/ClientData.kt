@@ -8,19 +8,22 @@ import android.content.Intent
 
 class ClientData {
     lateinit var fullname: String
-    var monkeyId: String? = null
+    private set
+    lateinit var monkeyId: String
+    private set
 
     lateinit var appId: String
+    private set
     lateinit var appKey: String
+    private set
 
-    constructor (fullname: String, urlUser: String,  urlPass: String) {
+    val password: String
+    get() = "$appId:$appKey"
+
+    constructor(fullname: String, urlUser: String,  urlPass: String, monkeyId: String){
         this.fullname = fullname
         this.appId = urlUser
         this.appKey = urlPass
-    }
-
-    constructor(fullname: String, urlUser: String,  urlPass: String, monkeyId: String):
-        this(fullname, urlUser, urlPass){
         this.monkeyId = monkeyId
     }
 
@@ -44,7 +47,12 @@ class ClientData {
         else
             throwMissingAppKeyException()
 
-        monkeyId = intent.getStringExtra(MONKEY_ID_KEY)
+        val intentMonkeyId = intent.getStringExtra(MONKEY_ID_KEY)
+        if(intentMonkeyId != null)
+            monkeyId = intentMonkeyId
+        else
+            throwMissingMonkeyIdException()
+
     }
 
     companion object {
@@ -58,13 +66,14 @@ class ClientData {
                     " a valid user full name in your intent's extras. Use ClientData.FULLNAME_KEY as key")
         }
         fun throwMissingAppIdException(){
-            throw IllegalArgumentException("App Id not found. You must include a string with" +
-                    " a valid app id in your intent's extras. Use ClientData.APP_ID_KEY as key")
+            throw IllegalArgumentException("App ID not found. You must include a string with" +
+                    " a valid App ID in your intent's extras. Use ClientData.APP_ID_KEY as key")
         }
 
         fun throwMissingMonkeyIdException(){
-            throw IllegalArgumentException("Monkey Id not found. You must include a string with" +
-                    " a valid monkey id in your intent's extras. Use ClientData.MONKEY_ID_KEY as key")
+            throw IllegalArgumentException("Monkey ID not found. You must include a string with" +
+                    " a valid monkey id in your intent's extras. Use ClientData.MONKEY_ID_KEY as key. " +
+                    "If you don't have a Monkey ID yet, use MonkeyInit class to get one from the server.")
         }
 
         fun throwMissingAppKeyException(){

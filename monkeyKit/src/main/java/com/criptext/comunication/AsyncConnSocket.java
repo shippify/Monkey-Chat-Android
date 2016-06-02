@@ -8,12 +8,14 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
-import com.criptext.lib.AESUtil;
-import com.criptext.lib.MonkeyKit;
+import com.criptext.ClientData;
+import com.criptext.MonkeyKitSocketService;
+import com.criptext.security.AESUtil;
 import com.criptext.lib.KeyStoreCriptext;
 import com.criptext.socket.DarkStarClient;
 import com.criptext.socket.DarkStarListener;
 import com.criptext.socket.DarkStarSocketClient;
+import com.criptext.socket.SecureSocketService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -22,8 +24,6 @@ import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Timer;
-
-import javax.crypto.BadPaddingException;
 
 public class AsyncConnSocket implements ComServerDelegate{
 
@@ -42,17 +42,14 @@ public class AsyncConnSocket implements ComServerDelegate{
 	public Handler mainMessageHandler;
 	public Handler socketMessageHandler;
 	private Runnable lastAction = null;
+	private SecureSocketService service;
 	//TIMEOUT
-	private Timer longTimer;
-	private int retries;
-	private final int timeout = 2000;
 
 	public AsyncConnSocket(String sessionId, String urlPassword, Handler mainMessageHandler) {
 		this.sessionId=sessionId;
 		this.urlPassword=urlPassword;
 		this.mainMessageHandler=mainMessageHandler;
 		socketStatus = Status.sinIniciar;
-		this.retries = 0;
 	}
 
 	public AsyncConnSocket(String sessionId, String urlPassword, Handler mainMessageHandler, Runnable r) {
@@ -61,7 +58,14 @@ public class AsyncConnSocket implements ComServerDelegate{
 		this.mainMessageHandler=mainMessageHandler;
 		this.lastAction = r;
 		socketStatus = Status.sinIniciar;
-		this.retries = 0;
+	}
+
+	public AsyncConnSocket(ClientData cdata, Handler messageHandler, SecureSocketService service){
+		this.sessionId = cdata.getMonkeyId();
+		this.urlPassword = cdata.getPassword();
+		this.mainMessageHandler = messageHandler;
+		this.socketStatus = Status.sinIniciar;
+		this.service = service;
 	}
 
 
@@ -87,7 +91,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 						if(isConnected()){
 							socketStatus = Status.desconectado;
 							socketClient.logout(true);
-                            MonkeyKit.instance().destroyMonkeyKit();
+							stop();
 							this.getLooper().quit();
 						}
 					}
@@ -140,9 +144,9 @@ public class AsyncConnSocket implements ComServerDelegate{
 	public void conexionRecursiva(){
 
 		socketStatus = Status.reconectando;
-		userServerListener=new ComServerListener((ComServerDelegate) this);//central.criptext.com
-		socketClient = new DarkStarSocketClient(MonkeyKit.URL.substring(8),1139,(DarkStarListener)userServerListener);
-		retries = 0;
+		userServerListener=new ComServerListener((ComServerDelegate) this);
+		socketClient = new DarkStarSocketClient(MonkeyKitSocketService.Companion.getBaseURL(),
+				1139,(DarkStarListener)userServerListener);
 		Thread connThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -153,7 +157,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 						socketClient.connect();
 						AsyncConnSocket.this.socketClient.login(AsyncConnSocket.this.sessionId, urlPassword);
 
-						Thread.sleep(timeout);
+						Thread.sleep(2000);
 					}
 
 
@@ -190,7 +194,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	private void processBatch(int protocol, JsonObject args, JsonParser parser){
 		System.out.println("MOK PROTOCOL SYNC");
 		JsonObject props = new JsonObject(), params = new JsonObject();
-        MonkeyKit.instance().watchdog.didResponseGet=true;
+        service.notifySyncSuccess();
 		MOKMessage remote;
         if(args.get("type").getAsInt() == 1) {
             JsonArray array = args.get("messages").getAsJsonArray();
@@ -255,12 +259,12 @@ public class AsyncConnSocket implements ComServerDelegate{
 
             if (args.get("remaining_messages").getAsInt() > 0) {
 				if(protocol == MessageTypes.MOKProtocolSync)
-                	MonkeyKit.instance().sendSync(lastTimeSynced);
+                	service.sendSync(lastTimeSynced);
 				else if(protocol == MessageTypes.MOKProtocolGet)
-					MonkeyKit.instance().sendGet(lastMessageId);
+					service.sendGet(lastMessageId);
             }
             else{
-                MonkeyKit.instance().portionsMessages=15;
+                service.setPortionsMessages(15);
             }
         } else {
             //PARSE GROUPS UPDATES
@@ -282,26 +286,14 @@ public class AsyncConnSocket implements ComServerDelegate{
 			if(socketStatus != Status.desconectado)
 				socketStatus = Status.conectado;
 			JsonObject args = socketMessage.getArgs().getAsJsonObject();
-
-			/**if(cmd == ComMessageProtocol.MESSAGE_LIST){
-				JsonArray array = args.get("messages").getAsJsonArray();
-				for(int i=0; i<array.size(); i++){
-					JsonElement jsonMessage = array.get(i);
-					JsonObject currentMessage = jsonMessage.getAsJsonObject();
-					buildMessage(MessageTypes.MOKProtocolMessage, currentMessage);
-				}
-			}
-			else{*/
-				System.out.println("parsing message: " + args.toString() + " cmd: " + cmd);
-				buildMessage(cmd, args);
-			//}
+            System.out.println("parsing message: " + args.toString() + " cmd: " + cmd);
+            buildMessage(cmd, args);
 		}
 		else{
 			//LLEGARON MUCHOS MENSAJES POR ENDE LLAMO UPDATES CON VALORES MENORES
-			MonkeyKit.instance().portionsMessages--;
-			if(MonkeyKit.instance().portionsMessages<1)
-				MonkeyKit.instance().portionsMessages=1;
-			MonkeyKit.instance().sendSync(MonkeyKit.instance().lastTimeSynced);
+			int msgQuantity = Math.max(service.getPortionsMessages() - 1, 1);
+			service.setPortionsMessages(msgQuantity);
+			service.sendSync(service.getLastTimeSynced());
 		}
 	}
 
@@ -333,8 +325,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	 * 	MOKProtocolMessageHasKeys
 	 */
 	public int decryptMOKMessage(MOKMessage remote){
-        String claves= KeyStoreCriptext.getString(MonkeyKit.instance().getApplicationContext()
-                , remote.getSid());
+        String claves= KeyStoreCriptext.getString(service.getAppContext(), remote.getSid());
         if(claves.compareTo("")==0 && !remote.getSid().startsWith("legacy:")){
             System.out.println("MONKEY - NO TENGO CLAVES DE AMIGO LAS MANDO A PEDIR");
             return MessageTypes.MOKProtocolMessageNoKeys;
@@ -375,17 +366,17 @@ public class AsyncConnSocket implements ComServerDelegate{
         if(what == MessageTypes.MOKProtocolMessageHasKeys) {
             return remote;
         } else if(what == MessageTypes.MOKProtocolMessageNoKeys) {
-            MonkeyKit.instance().requestKeyBySession(remote.getSid());
+            service.requestKeyBySession(remote.getSid());
             Log.d("BatchGET", "Got Keys for " + remote.getSid() + ". Apply recursion");
 			return getKeysAndDecryptMOKMessage(remote, true);
         } else if(what == MessageTypes.MOKProtocolMessageWrongKeys){
-            String claves= KeyStoreCriptext.getString(MonkeyKit.instance().getApplicationContext()
+            String claves= KeyStoreCriptext.getString(service.getAppContext()
                   , remote.getSid());
-            String newClaves = MonkeyKit.instance().requestKeyBySession(remote.getSid());
+            String newClaves = service.requestKeyBySession(remote.getSid());
             if(newClaves != null && !newClaves.equals(claves))
                 return getKeysAndDecryptMOKMessage(remote, false);
             else if (newClaves != null){
-				String newMsg = MonkeyKit.instance().requestTextWithLatestKeys(remote.getMsg());
+				String newMsg = service.requestTextWithLatestKeys(remote.getMsg());
 				if(newMsg != null) {
 					remote.setMsg(newMsg);
 					return getKeysAndDecryptMOKMessage(remote, true);
@@ -558,8 +549,6 @@ public class AsyncConnSocket implements ComServerDelegate{
 			Message msg = mainMessageHandler.obtainMessage();
 			msg.what=MessageTypes.MessageSocketDisconnected;
 			mainMessageHandler.sendMessage(msg);
-			//if(MonkeyKit.instance() != null)
-			//	MonkeyKit.instance().reconnectSocket(null);
 		}
 
 	}
@@ -665,9 +654,11 @@ public class AsyncConnSocket implements ComServerDelegate{
 		return socketStatus;
 	}
 
-	public void removeContext(){
+	public void stop(){
 		if(handlerThread != null)
 			handlerThread.quit();
+		mainMessageHandler = null;
+		socketMessageHandler = null;
 
 	}
 

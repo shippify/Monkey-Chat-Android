@@ -39,6 +39,9 @@ import com.criptext.comunication.Compressor;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.database.CriptextDBHandler;
+import com.criptext.security.AESUtil;
+import com.criptext.security.RSAUtil;
+import com.criptext.security.RandomStringBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -377,7 +380,7 @@ public abstract class MonkeyKit extends Service {
 
                 try{
                     localJSONObject1.put("session_id", sessionid);
-                    localJSONObject1.put("public_key", "-----BEGIN PUBLIC KEY-----\n"+rsaUtil.pubKeyStr+"\n-----END PUBLIC KEY-----");
+                    localJSONObject1.put("public_key", "-----BEGIN PUBLIC KEY-----\n"+rsaUtil.getPublicKey()+"\n-----END PUBLIC KEY-----");
                     //System.out.println("-----BEGIN PUBLIC KEY-----\n" + rsaUtil.pubKeyStr + "\n-----END PUBLIC KEY-----");
 
                     Map<String, Object> params = new HashMap<String, Object>();
@@ -1861,7 +1864,7 @@ public abstract class MonkeyKit extends Service {
             if(watchdog == null) {
                 watchdog = new Watchdog();
             }
-            watchdog.didResponseGet = false;
+            watchdog.synced = false;
             Log.d("Watchdog", "Watchdog ready sending Get");
             watchdog.start();
 
@@ -1912,7 +1915,7 @@ public abstract class MonkeyKit extends Service {
             if(watchdog == null) {
                 watchdog = new Watchdog();
             }
-            watchdog.didResponseGet = false;
+            watchdog.synced = false;
             Log.d("Watchdog", "Watchdog ready sending Sync");
             watchdog.start();
 
@@ -2060,7 +2063,7 @@ public abstract class MonkeyKit extends Service {
      */
     public void destroyMonkeyKit(){
         if(asynConnSocket != null) {
-            asynConnSocket.removeContext();
+            asynConnSocket.stop();
             asynConnSocket.socketMessageHandler = null;
         }
 

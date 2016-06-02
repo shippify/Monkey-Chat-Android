@@ -5,6 +5,9 @@ import android.os.AsyncTask;
 import android.util.Base64;
 import android.util.Log;
 
+import com.criptext.security.AESUtil;
+import com.criptext.security.RSAUtil;
+
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -16,11 +19,23 @@ import java.io.UnsupportedEncodingException;
 import java.lang.ref.WeakReference;
 
 /**
- * Objeto usado para registrar con MonkeyKit. Se debe inicializar con el constructor pasandole el
- * APP_ID, PASS y nombre completo del usuario. Despues al llamar a start() se generan llaves AES y
- * se pide un MonkeyId con /user/session/ y luego se entregan las llaves con /user/connect. Al
- * finalizar se llama onSessionOK(), ese callback te permite obtener tu session listo para usar
- * Monkey.
+ *
+ * MonkeyInit handles all the HTTP requests needed to register with MonkeyKit. Constructor must receive
+ * APP ID, APP KEY and the user's fullname and a context reference. If user already has a Monkey ID (due
+ * to the fact that he/she has already registered in the past. Your app is responsible for figuring
+ * this out), that id should also be passed to the constructor.
+ * After calling start() 2 things can happen depending on whether the user already has a Monkey ID or
+ * not:
+ * If the user doesn't have a MonkeyID (This is the first time he/she registers with your app)
+ * then a new Monkey ID is generated with /user/Session/ and then AES keys are generated and sent to
+ * MonkeyKit server. After the server confirms that the keys were successfully delivered, the onSessionOK
+ * callback is executed.
+ * If they user did have a MonkeyID (It's a returning user, or he/she is registering in a new device)
+ * then that MonkeyID is sent to the MonkeyKit server. The server's response contains the AES keys that
+ * user had previously been using which is essential to decrypt older messages. after storing the AES
+ * key the onSessionOK callback is executed.
+ * In the onSessionOK callback your app should persist the user's MonkeyID. This finishes preparatios
+ * for messaging.
  * Created by gesuwall on 2/10/16.
  */
 public class MonkeyInit {
@@ -143,8 +158,8 @@ public class MonkeyInit {
         JSONObject localJSONObject1 = new JSONObject();
 
         localJSONObject1.put("session_id", sessionId);
-        localJSONObject1.put("public_key", "-----BEGIN PUBLIC KEY-----\n" + rsaUtil.pubKeyStr + "\n-----END PUBLIC KEY-----");
-        System.out.println("-----BEGIN PUBLIC KEY-----\n" + rsaUtil.pubKeyStr + "\n-----END PUBLIC KEY-----");
+        localJSONObject1.put("public_key", "-----BEGIN PUBLIC KEY-----\n" + rsaUtil.getPublicKey() + "\n-----END PUBLIC KEY-----");
+        //System.out.println("-----BEGIN PUBLIC KEY-----\n" + rsaUtil.pubKeyStr + "\n-----END PUBLIC KEY-----");
         JSONObject params = new JSONObject();
         params.put("data", localJSONObject1.toString());
         Log.d("userSyncMS", "Req: " + params.toString());

@@ -14,7 +14,7 @@ public class Watchdog {
     private final Handler handler;
     private Runnable runnable;
     private boolean working;
-    public boolean didResponseGet = true;
+    public boolean synced = true;
 
     public Watchdog() {
         this.handler = new Handler();
@@ -48,8 +48,8 @@ public class Watchdog {
             @Override
             public void run() {
                 final JSONArray array = getPendingMessages();
-                Log.i("Watchdog", "There are " + array.length() + " messages to send and didResponseGet " + didResponseGet);
-                if (array.length() > 0 || !didResponseGet) {
+                Log.i("Watchdog", "There are " + array.length() + " messages to send and synced " + synced);
+                if (array.length() > 0 || !synced) {
                     MonkeyKit.instance().sendDisconectOnPull();
                     new Handler().postDelayed(new Runnable() {
                                           @Override

@@ -1,4 +1,4 @@
-package com.criptext.lib;
+package com.criptext.security;
 
 import java.io.UnsupportedEncodingException;
 import java.security.KeyFactory;
@@ -33,7 +33,15 @@ public class RSAUtil {
     public RSAUtil(){
 
     }
-	
+
+	public String getPrivateKey(){
+		return privKeyStr;
+	}
+
+	public String getPublicKey(){
+		return pubKeyStr;
+	}
+
 	public String encrypt(String original) {
 		
 		try {

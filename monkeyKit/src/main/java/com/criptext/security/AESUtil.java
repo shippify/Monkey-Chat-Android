@@ -1,21 +1,19 @@
-package com.criptext.lib;
+package com.criptext.security;
 
 import java.security.AlgorithmParameters;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import com.criptext.comunication.Base64Coder;
 import com.criptext.comunication.NewBase64;
+import com.criptext.lib.KeyStoreCriptext;
 
 import android.content.Context;
 import android.util.Base64;
@@ -255,7 +253,7 @@ public class AESUtil {
         return new String(decryptedTextBytes);
     }
    
-    public String generateSalt() {
+    private String generateSalt() {
         SecureRandom random = new SecureRandom();
         byte bytes[] = new byte[20];
         random.nextBytes(bytes);
@@ -276,7 +274,7 @@ public class AESUtil {
         return iv;
     }
 
-    public static String stripGarbage(String s) {
+    private static String stripGarbage(String s) {
 		
 		StringBuilder sb = new StringBuilder(s.length());
 		for (int i = 0; i < s.length(); i++) {
@@ -301,21 +299,4 @@ public class AESUtil {
 		}
 		return sb.toString();
 	}
-    
-    //ANTES CREABA EL AES KEY ASI:
-    /*
-	salt = generateSalt();      
-    byte[] saltBytes = salt.getBytes("UTF-8");
-     
-    // Derive the key
-    SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-    PBEKeySpec spec = new PBEKeySpec(
-            password.toCharArray(), 
-            saltBytes, 
-            pswdIterations, 
-            keySize
-            );
-
-    SecretKey secretKey = factory.generateSecret(spec);
-    */
 }

@@ -1,4 +1,4 @@
-package com.criptext.lib;
+package com.criptext.security;
 
 import java.security.SecureRandom;
 
