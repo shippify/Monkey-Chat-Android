@@ -3,9 +3,8 @@ package com.criptext.comunication;
 import android.os.Handler;
 import android.os.Message;
 
-import com.criptext.MonkeyKitSocketService;
 import com.criptext.lib.KeyStoreCriptext;
-import com.criptext.lib.MonkeyKit;
+import com.criptext.socket.SecureSocketService;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -15,10 +14,10 @@ import java.util.ArrayList;
  * Created by gesuwall on 6/2/16.
  */
 public class MOKMessageHandler extends Handler {
-    private WeakReference<MonkeyKitSocketService> serviceRef;
+    private WeakReference<SecureSocketService> serviceRef;
 
-        public MOKMessageHandler(MonkeyKitSocketService service){
-            serviceRef = new WeakReference<MonkeyKitSocketService>(service);
+        public MOKMessageHandler(SecureSocketService service){
+            serviceRef = new WeakReference<>(service);
         }
 
         public void handleMessage(Message msg) {
@@ -30,7 +29,7 @@ public class MOKMessageHandler extends Handler {
 
             //if(message != null && message.getMsg() != null)
             //Log.d("MonkeyHandler", "message: " + message.getMsg() + " tipo: " + msg.what);
-            final MonkeyKitSocketService service = serviceRef.get();
+            final SecureSocketService service = serviceRef.get();
             if(service != null)
                 switch (msg.what) {
                     case MessageTypes.MOKProtocolMessage:
@@ -61,16 +60,8 @@ public class MOKMessageHandler extends Handler {
                         service.executeInDelegate(CBTypes.onMessageReceived, new Object[]{message});
                         break;
                     case MessageTypes.MOKProtocolMessageNoKeys:
-                        service.addMessageToDecrypt(message);
-                        service.sendOpenConversation(message.getSid());
-                        break;
                     case MessageTypes.MOKProtocolMessageWrongKeys:
-                        service.addMessageToDecrypt(message);
-                        int numTries = KeyStoreCriptext.getInt(service,
-                                "tries:"+message.getMessage_id());
-                        KeyStoreCriptext.putInt(service,
-                                "tries:" + message.getMessage_id(), numTries + 1);
-                        service.sendOpenConversation(message.getSid());
+                        service.requestKeysForMessage(message);
                         break;
                     case MessageTypes.MOKProtocolAck:
                         try {
@@ -82,7 +73,7 @@ public class MOKMessageHandler extends Handler {
                         }
                         break;
                     case MessageTypes.MOKProtocolOpen:{
-                        if(KeyStoreCriptext.getString(service, message.getRid()).compareTo("")==0)
+                        if(KeyStoreCriptext.getString(service.getContext(), message.getRid()).compareTo("")==0)
                             service.sendOpenConversation(message.getRid());
                         else
                             System.out.println("MONKEY - llego open pero ya tengo las claves");

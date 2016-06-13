@@ -22,12 +22,13 @@ class AsyncAESInitializer(socketService: SecureSocketService, internal var monke
         try {
             return AESUtil(socketServiceRef.get().context, monkeyID)
         } catch (ex: Exception) {
+            ex.printStackTrace()
             return null
         }
 
     }
 
-    override fun onPostExecute(aesUtil: AESUtil) {
+    override fun onPostExecute(aesUtil: AESUtil?) {
         val service = socketServiceRef.get()
         service?.startSocketConnection(aesUtil)
     }

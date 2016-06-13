@@ -1,25 +1,34 @@
 package com.criptext.socket
 
 import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.AsyncTask
 import android.util.Base64
 import android.util.Log
 import com.criptext.ClientData
+import com.criptext.comunication.CBTypes
+import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
+import com.criptext.database.CriptextDBHandler
 import com.criptext.http.MonkeyHttpClient
+import com.criptext.http.OpenConversationTask
 import com.criptext.lib.KeyStoreCriptext
+import com.criptext.lib.MonkeyKitDelegate
 import com.criptext.security.AESUtil
-import org.apache.http.HttpResponse
+import com.google.gson.JsonObject
 import org.apache.http.client.ClientProtocolException
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.params.BasicHttpParams
 import org.apache.http.params.HttpConnectionParams
-import org.apache.http.params.HttpParams
 import org.json.JSONException
 import org.json.JSONObject
 import org.json.JSONTokener
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
+import java.util.*
+
 
 /**
  * Created by gesuwall on 6/1/16.
@@ -28,6 +37,7 @@ import java.io.InputStreamReader
 interface SecureSocketService {
     var portionsMessages: Int
     var lastTimeSynced: Long
+    var delegate: MonkeyKitDelegate?
 
     fun startSocketConnection()
 
@@ -35,7 +45,7 @@ interface SecureSocketService {
 
     fun isSocketConnected(): Boolean
 
-    fun sendJsonThroughSocket(json:JSONObject)
+    fun sendJsonThroughSocket(json: JsonObject)
 
     fun startWatchdog()
 
@@ -43,20 +53,101 @@ interface SecureSocketService {
 
     fun decryptAES(encryptedText: String): String
 
+    /**
+     * sends a message to a bound client, so that the client can process it and update its UI.
+     * @param type the type of the message
+     * @param obj An object that may be a MOKMessage or a list of messages depending on the type
+     */
+    fun executeInDelegate(type: CBTypes, info: Array<Any>){
+        when(type){
+            CBTypes.onSocketConnected -> {
+                delegate?.onSocketConnected()
+                sendSync(lastTimeSynced)
+            }
+            CBTypes.onMessageReceived -> {
+                val message = info[0] as MOKMessage
+                val tipo = CriptextDBHandler.getMonkeyActionType(message);
+                if(tipo == MessageTypes.blMessageAudio ||
+                    tipo == MessageTypes.blMessagePhoto ||
+                    tipo == MessageTypes.blMessageDocument ||
+                    tipo == MessageTypes.blMessageScreenCapture ||
+                    tipo == MessageTypes.blMessageShareAFriend ||
+                    tipo == MessageTypes.blMessageDefault)
+                    storeMessage(message, true, Runnable {
+                        delegate?.onMessageRecieved(message)
+                    })
+            }
+
+            CBTypes.onMessageBatchReady -> {
+                val batch = info[0] as ArrayList<MOKMessage>;
+                storeMessageBatch(batch, Runnable {
+                            delegate?.onMessageBatchReady(batch);
+                });
+            }
+        }
+    }
+
+    /**
+     * Adds a message to a list of messages that haven't been decrypted yet because the necessary
+     * keys are missing. Once the key is received, all of those messages are decrypted, stored in
+     * the database and any bound client are notified afterwards.
+     * @param encrypted message that has not been decrypted yet.
+     */
+    fun addMessageToDecrypt(encrypted: MOKMessage)
+
+    /**
+     * Notifies the MonkeyKit server that the current user has opened an UI with conversation with
+     * another user or a group. The server will notify the other party and will return any necessary
+     * keys for decrypting messages sent by the other party.
+     *
+     * This method can also be used to retrieve any missing AES keys.
+     */
+    fun sendOpenConversation(conversationID: String){
+
+    }
+
+    fun requestKeysForMessage(encryptedMessage: MOKMessage){
+
+        fun filter(list: MutableList<MOKMessage>, predicate: (MOKMessage) -> Boolean): List<MOKMessage>{
+            val filtered = mutableListOf<MOKMessage>()
+            var cont = 0
+            for(item in list){
+                if(predicate.invoke(item)){
+                    filtered.add(list.removeAt(cont))
+                }
+                cont++
+            }
+
+            return filtered.toList()
+        }
+
+
+            //val idPredicate: (MOKMessage) -> Boolean =  { it -> it.sid == first.sid }
+            //val sameConversationMsgs = filter(pendingMessages, idPredicate)
+            val task = OpenConversationTask(this, encryptedMessage)
+            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, encryptedMessage.sid) //LAME
+    }
+
+    /**
+     * Removes a message encoded in a string from a list of messages that have not been delivered yet
+     * so that MonkeyKit won't try to resend it anymore.
+     */
+    fun removePendingMessage(stringMsg: String)
+
     fun sendSync(lastTimeSync: Long){
         try {
 
-           val args = JSONObject();
-           val json = JSONObject();
+           val args = JsonObject();
+           val json = JsonObject();
 
-            args.put("since", lastTimeSync);
+            args.addProperty("since", lastTimeSync);
 
             if(lastTimeSync == 0L) {
-                args.put("groups", 1);
+                args.addProperty("groups", 1);
             }
-            args.put("qty", ""+ portionsMessages);
-            json.put("args", args);
-            json.put("cmd", MessageTypes.MOKProtocolSync);
+            args.addProperty("qty", ""+ portionsMessages);
+            json.add("args", args);
+            json.addProperty("cmd", MessageTypes.MOKProtocolSync);
 
             if(isSocketConnected()){
                 System.out.println("MONKEY - Enviando Sync:"+json.toString());
@@ -79,16 +170,16 @@ interface SecureSocketService {
 
         try {
 
-            val args = JSONObject();
-            val json = JSONObject();
+            val args = JsonObject();
+            val json = JsonObject();
 
-            args.put("messages_since", since);
+            args.addProperty("messages_since", since);
             if(since.equals("0")) {
-                args.put("groups", 1);
+                args.addProperty("groups", 1);
             }
-            args.put("qty", "" + portionsMessages);
-            json.put("args", args);
-            json.put("cmd", MessageTypes.MOKProtocolGet);
+            args.addProperty("qty", "" + portionsMessages);
+            json.add("args", args);
+            json.addProperty("cmd", MessageTypes.MOKProtocolGet);
 
             if(isSocketConnected())
                 sendJsonThroughSocket(json)
@@ -127,7 +218,7 @@ interface SecureSocketService {
             val finalResult = MonkeyHttpClient.getResponse(httpclient, httppost, params.toString());
             Log.d("OpenConversation", finalResult.toString());
             val newKeys = decryptAES(finalResult.getJSONObject("data").getString("convKey"));
-            KeyStoreCriptext.putString(context, sessionIdTo, newKeys);
+            KeyStoreCriptext.putStringBlocking(context, sessionIdTo, newKeys);
             return newKeys;
 
         } catch (ex: JSONException) {
@@ -193,16 +284,43 @@ interface SecureSocketService {
 
         return null;
     }
+
     val context: Context
 
     val appContext: Context
 
     val serviceClientData: ClientData
 
+    /**
+     * Guarda un mensaje de MonkeyKit en la base de datos. La implementacion de este metodo deberia de
+     * ser asincrona para mejorar el rendimiento del servicio. MonkeyKit llamara a este metodo cada
+     * vez que reciba un mensaje para guardarlo.
+     * @param message
+     * @param incoming
+     * @param runnable Este runnable debe ejecutarse despues de guardar el mensaje
+     */
+    abstract fun storeMessage(message: MOKMessage, incoming: Boolean, runnable: Runnable)
+
+    /**
+     * Guarda un grupo de mensajes de MonkeyKit que se recibieron despues de un sync en la base de datos.
+     * Es sumamente importante implementar esto de forma asincrona porque potencialmente, podrian
+     * llegar cientos de mensajes, haciendo la operacion sumamente costosa.
+     * @param messages
+     * @param runnable Este runnable debe ejecutarse despues de guardar el batch de mensajes
+     */
+    abstract fun storeMessageBatch(messages: ArrayList<MOKMessage>, runnable: Runnable);
+
+
     companion object {
 
         val baseURL = "monkey.criptext.com"
         val httpsURL = "https://" + baseURL
+
+        fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>, clientData: ClientData) {
+            val intent = Intent(context, service)
+            clientData.fillIntent(intent)
+            context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
 
     }
 

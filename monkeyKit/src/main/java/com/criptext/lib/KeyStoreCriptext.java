@@ -16,6 +16,10 @@ public class KeyStoreCriptext {
         prefs.edit().putString(key,KeyStoreCriptext.encryptString(value)).apply();
     }
 
+    public static void putStringBlocking(Context context, String key, String value){
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        prefs.edit().putString(key,KeyStoreCriptext.encryptString(value)).commit();
+    }
     public static String getString(Context context,String key){
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         String value = prefs.getString(key,"");
@@ -30,6 +34,15 @@ public class KeyStoreCriptext {
         prefs.edit().putInt(key, value).apply();
     }
 
+    public static void putIntBlocking(Context context, String key, int value){
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        prefs.edit().putInt(key, value).commit();
+    }
+
+    public static void delIntBlocking(Context context, String key){
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        prefs.edit().remove(key).commit();
+    }
     public static int getInt(Context context,String key){
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         return prefs.getInt(key,0);

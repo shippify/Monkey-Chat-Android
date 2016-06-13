@@ -921,35 +921,28 @@ public abstract class MonkeyKit extends Service {
                 String convKey=json.getString("convKey");
                 String desencriptConvKey=aesutil.decrypt(convKey);
 
-                KeyStoreCriptext.putString(getContext(), json.getString("session_to"), desencriptConvKey);
+                String conversationId = json.getString("session_to");
+                KeyStoreCriptext.putString(getContext(), conversationId, desencriptConvKey);
 
                 //SI HAY MENSAJES QUE NO SE HAN PODIDO DESENCRIPTAR
-                if(messagesToSendAfterOpen.size()>0){
-                    List<MOKMessage> messagesToDelete=new ArrayList<MOKMessage>();
-                    for(int i=0;i<messagesToSendAfterOpen.size();i++){
-                        actual_message=messagesToSendAfterOpen.get(i);
-                        if(actual_message.getSid().compareTo(json.getString("session_to"))==0){
-                            int numTries=KeyStoreCriptext.getInt(getContext(),"tries:"+actual_message.getMessage_id());
-                            System.out.println("MONKEY - mensaje en espera de procesar, numTries:" + numTries);
-                            if(numTries<=1){
-                                procesarMokMessage(actual_message, desencriptConvKey);
-                                messagesToDelete.add(actual_message);
-                            }
-                            else if(numTries==2){
-                                sendOpenSecure(actual_message.getMessage_id());
-                            }
-                            else{
-                                System.out.println("MONKEY - descarto el mensaje al intento #"+numTries);
-                            }
+                for(int i=messagesToSendAfterOpen.size() - 1; i > -1 ; i--){
+                    actual_message=messagesToSendAfterOpen.get(i);
+                    if(actual_message.getSid().compareTo(conversationId)==0){
+                        int numTries=KeyStoreCriptext.getInt(getContext(),"tries:"+actual_message.getMessage_id());
+                        System.out.println("MONKEY - mensaje en espera de procesar, numTries:" + numTries);
+                        if(numTries<=1){
+                            procesarMokMessage(actual_message, desencriptConvKey);
+                            messagesToSendAfterOpen.remove(actual_message);
+                        }
+                        else if(numTries==2){ //YA INTENTE CON LAS LLAVES DEL SERVER Y NO FUNCIONO
+                            sendOpenSecure(actual_message.getMessage_id());
+                        }
+                        else{
+                            System.out.println("MONKEY - descarto el mensaje al intento #"+numTries);
                         }
                     }
-                    //BORReeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeO DE LA LISTA
-                    for(int i=0;i<messagesToDelete.size();i++){
-                        System.out.println("MONKEY - Borrando de la lista");
-                        messagesToSendAfterOpen.remove(messagesToDelete.get(i));
-                    }
                 }
-            }
+                }
             catch (BadPaddingException e){
                 e.printStackTrace();
                 if(actual_message!=null) {
@@ -963,8 +956,7 @@ public abstract class MonkeyKit extends Service {
                 e.printStackTrace();
             }
         }
-        else{
-        }
+
     }
 
     /************************************************************************/

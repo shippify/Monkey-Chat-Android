@@ -9,7 +9,6 @@ import android.os.Message;
 import android.util.Log;
 
 import com.criptext.ClientData;
-import com.criptext.MonkeyKitSocketService;
 import com.criptext.security.AESUtil;
 import com.criptext.lib.KeyStoreCriptext;
 import com.criptext.socket.DarkStarClient;
@@ -23,7 +22,6 @@ import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Timer;
 
 public class AsyncConnSocket implements ComServerDelegate{
 
@@ -145,7 +143,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 
 		socketStatus = Status.reconectando;
 		userServerListener=new ComServerListener((ComServerDelegate) this);
-		socketClient = new DarkStarSocketClient(MonkeyKitSocketService.Companion.getBaseURL(),
+		socketClient = new DarkStarSocketClient(SecureSocketService.Companion.getBaseURL(),
 				1139,(DarkStarListener)userServerListener);
 		Thread connThread = new Thread(new Runnable() {
 			@Override
@@ -194,7 +192,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	private void processBatch(int protocol, JsonObject args, JsonParser parser){
 		System.out.println("MOK PROTOCOL SYNC");
 		JsonObject props = new JsonObject(), params = new JsonObject();
-        service.notifySyncSuccess();
+        //service.notifySyncSuccess();
 		MOKMessage remote;
         if(args.get("type").getAsInt() == 1) {
             JsonArray array = args.get("messages").getAsJsonArray();
@@ -576,6 +574,23 @@ public class AsyncConnSocket implements ComServerDelegate{
 	/*****************************/
 
 	public void sendMessage(JSONObject params){
+		try{
+			if(socketMessageHandler!=null){
+				Message msg = socketMessageHandler.obtainMessage();
+				msg.obj =params.toString();
+				System.out.println("MONKEY - AsyncConnSocket - enviando mensaje");
+				socketMessageHandler.sendMessage(msg);
+			}
+			else {
+				System.out.println("MONKEY - AsyncConnSocket - socketMessageHandler es null");
+				fireInTheHole();
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+
+	public void sendMessage(JsonObject params){
 		try{
 			if(socketMessageHandler!=null){
 				Message msg = socketMessageHandler.obtainMessage();

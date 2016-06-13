@@ -6,84 +6,72 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import com.criptext.comunication.AsyncConnSocket
-import com.criptext.comunication.CBTypes
-import com.criptext.comunication.MOKMessage
-import com.criptext.comunication.MOKMessageHandler
+import com.criptext.comunication.*
+import com.criptext.lib.MonkeyKitDelegate
 import com.criptext.lib.Watchdog
 import com.criptext.security.AESUtil
 import com.criptext.security.AsyncAESInitializer
 import com.criptext.socket.SecureSocketService
+import com.google.gson.JsonObject
+import okhttp3.OkHttpClient
 import org.json.JSONObject
+import java.util.*
 
 /**
  * Created by gesuwall on 5/25/16.
  */
 
-class MonkeyKitSocketService : Service(), SecureSocketService {
-
+abstract class MonkeyKitSocketService : MsgSenderService(), SecureSocketService {
 
     override var portionsMessages: Int = 15
     override var lastTimeSynced: Long = 0L
 
-    private lateinit var clientData: ClientData
-    private lateinit var aesutil: AESUtil
-    private var watchdog: Watchdog? = null
-    private lateinit var asyncConnSocket: AsyncConnSocket
+    private var socketInitialized = false
+
 
     val messageHandler: MOKMessageHandler by lazy {
         MOKMessageHandler(this)
     }
 
+
+    fun downloadFile(fileName: String, props: String, monkeyId: String, runnable: Runnable){
+        //TODO DOWNLOAD FILE
+    }
+
+
     override fun onBind(intent: Intent?): IBinder? {
-        clientData = ClientData(intent!!)
-        val asyncAES = AsyncAESInitializer(this, clientData.monkeyId)
-        return MonkeyBinder()
+        if(delegate == null) {
+            clientData = ClientData(intent!!)
+            val asyncAES = AsyncAESInitializer(this, clientData.monkeyId)
+            asyncAES.execute()
+            return MonkeyBinder()
+        }
+
+        return null
     }
 
-    /**
-     * sends a message to a bound client, so that the client can process it and update its UI.
-     * @param type the type of the message
-     * @param obj An object that may be a MOKMessage or a list of messages depending on the type
-     */
-    fun executeInDelegate(type: CBTypes, obj: Any){
-
-    }
-
-    /**
-     * Adds a message to a list of messages that haven't been decrypted yet because the necessary
-     * keys are missing. Once the key is received, all of those messages are decrypted, stored in
-     * the database and any bound client are notified afterwards.
-     * @param encrypted message that has not been decrypted yet.
-     */
-    fun addMessageToDecrypt(encrypted: MOKMessage){
-
-    }
-
-    /**
-     * Notifies the MonkeyKit server that the current user has opened an UI with conversation with
-     * another user or a group. The server will notify the other party and will return any necessary
-     * keys for decrypting messages sent by the other party.
-     *
-     * This method can also be used to retrieve any missing AES keys.
-     */
-    fun sendOpenConversation(conversationID: String){
-
-    }
-
-    /**
-     * Removes a message encoded in a string from a list of messages that have not been delivered yet
-     * so that MonkeyKit won't try to resend it anymore.
-     */
-    fun removePendingMessage(stringMsg: String){
-
+    override fun onUnbind(intent: Intent?): Boolean {
+        asyncConnSocket.sendLogout()
+        return super.onUnbind(intent)
     }
 
     inner class MonkeyBinder : Binder() {
-        fun getService() : MonkeyKitSocketService {
+
+        fun getService(delegate: MonkeyKitDelegate): MonkeyKitSocketService{
+            this@MonkeyKitSocketService.delegate = delegate
             return this@MonkeyKitSocketService;
         }
+
     }
+    override fun addMessageToDecrypt(encrypted: MOKMessage) {
+        //TODO ADD UNDECRYPTED MAYBE?
+    }
+
+    override var delegate: MonkeyKitDelegate? = null
+        get() = field
+        set(value) {
+            field = value
+        }
 
     override fun startSocketConnection(aesUtil: AESUtil?) {
         if(aesUtil != null) {
@@ -94,6 +82,8 @@ class MonkeyKitSocketService : Service(), SecureSocketService {
 
     override fun startSocketConnection() {
         asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
+        asyncConnSocket.conectSocket()
+        socketInitialized = true
     }
 
     override val context: Context
@@ -107,25 +97,11 @@ class MonkeyKitSocketService : Service(), SecureSocketService {
 
     override fun decryptAES(encryptedText: String) = aesutil.decrypt(encryptedText)
 
-    override fun startWatchdog(){
-        if(watchdog == null) {
-                watchdog = Watchdog();
-            }
-            watchdog!!.synced = false;
-            Log.d("Watchdog", "Watchdog ready sending Sync");
-            watchdog!!.start();
-    }
-
-    override fun isSocketConnected() = asyncConnSocket.isConnected
-
-    override fun sendJsonThroughSocket(json: JSONObject) {
-        asyncConnSocket.sendMessage(json)
-    }
+    override fun isSocketConnected(): Boolean = socketInitialized && asyncConnSocket.isConnected
 
     override fun notifySyncSuccess() {
         watchdog?.synced = true
     }
-
 
 
 }

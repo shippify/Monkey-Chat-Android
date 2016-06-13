@@ -55,6 +55,12 @@ class ClientData {
 
     }
 
+    fun fillIntent(intent: Intent){
+        intent.putExtra(ClientData.FULLNAME_KEY, fullname)
+        intent.putExtra(ClientData.MONKEY_ID_KEY, monkeyId)
+        intent.putExtra(ClientData.APP_ID_KEY, appId)
+        intent.putExtra(ClientData.APP_KEY_KEY, appKey)
+    }
     companion object {
         val FULLNAME_KEY = "MonkeyKit.fullname"
         val APP_ID_KEY = "MonkeyKit.appId"
@@ -80,5 +86,6 @@ class ClientData {
             throw IllegalArgumentException("App Id not found. You must include a string with" +
                     " a valid app id in your intent's extras. Use ClientData.APP_ID_KEY as key")
         }
+
     }
 }

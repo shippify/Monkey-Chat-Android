@@ -6,6 +6,8 @@ import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
+import com.criptext.ClientData;
+
 public class WelcomeActivity extends AppCompatActivity {
 
     private SharedPreferences prefs;
@@ -18,9 +20,11 @@ public class WelcomeActivity extends AppCompatActivity {
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
         if(prefs.getBoolean(MonkeyChat.IS_REGISTERED,false)){
-            MonkeyChat.startMonkeyService(WelcomeActivity.this, prefs.getString(MonkeyChat.FULLNAME, null),
-                    prefs.getString(MonkeyChat.MONKEY_ID, null), SensitiveData.APP_ID, SensitiveData.APP_KEY);
-            startActivity(new Intent(WelcomeActivity.this, MainActivity.class));
+            Intent mainIntent =new Intent(this,MainActivity.class);
+            ClientData cdata = new ClientData(prefs.getString(MonkeyChat.FULLNAME, null), SensitiveData.APP_ID, SensitiveData.APP_KEY,
+                        prefs.getString(MonkeyChat.MONKEY_ID, null));
+            cdata.fillIntent(mainIntent);
+            startActivity(mainIntent);
         }
         else{
             startActivity(new Intent(WelcomeActivity.this, RegisterActivity.class));

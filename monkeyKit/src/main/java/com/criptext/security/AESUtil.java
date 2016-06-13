@@ -85,13 +85,74 @@ public class AESUtil {
 
         //System.out.println("strIV:***" + strIV + "***");
     }
-    
+
+    public AESUtil(String keyAndIV){
+
+        if(keyAndIV == null || keyAndIV.length() < 3 || keyAndIV.indexOf(':') == -1)
+            throw new IllegalArgumentException("keyAndIV string must have this pattern <key>:<iv>");
+        try {
+            System.out.println("AES - SI TIENE KEY");
+            //SI TIENE KEY
+            String[] array = keyAndIV.split(":");
+            strKey = array[0];
+            strIV = array[1];
+            SecretKeySpec secret = new SecretKeySpec(Base64.decode(strKey.getBytes("UTF-8"), Base64.NO_WRAP), "AES");
+
+            cipherENC = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipherDEC = Cipher.getInstance("AES/CBC/PKCS5Padding");
+
+            AlgorithmParameters params = cipherENC.getParameters();
+            cipherENC.init(Cipher.ENCRYPT_MODE, secret, new IvParameterSpec(Base64.decode(strIV.getBytes("UTF-8"), Base64.NO_WRAP)));
+            cipherDEC.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(Base64.decode(strIV.getBytes("UTF-8"), Base64.NO_WRAP)));
+        } catch (Exception ex){
+            ex.printStackTrace();
+        }
+
+    }
+
+    static void generateNewKeys(Context context, String monkeyId){
+
+        if (monkeyId == null || monkeyId.isEmpty()) {
+            throw new IllegalArgumentException("MonkeyId can't be empty or null. If you don't have a Monkey ID " +
+                    "use MonkeyInit class");
+        }
+        try {
+            SecretKeySpec secret;
+            System.out.println("AES - GENERATING NEW KEYS");
+            //NO TIENE KEY
+            PRNGFixes.apply();
+            String newCryptoSafeString = newCryptoSafeString();
+            secret = new SecretKeySpec(newCryptoSafeString.getBytes("UTF-8"), "AES");
+            String  strKey = Base64.encodeToString(newCryptoSafeString.getBytes("UTF-8"), Base64.NO_WRAP);
+            Cipher cipherENC = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            Cipher cipherDEC = Cipher.getInstance("AES/CBC/PKCS5Padding");
+
+            AlgorithmParameters params = cipherENC.getParameters();
+            byte[] ivBytes;
+            if(params!=null)
+                ivBytes = params.getParameterSpec(IvParameterSpec.class).getIV();
+            else {
+                System.out.println("AES - AlgorithmParameters is null");
+                ivBytes = iv();
+            }
+
+            String strIV = Base64.encodeToString(ivBytes,Base64.NO_WRAP);
+
+            cipherENC.init(Cipher.ENCRYPT_MODE, secret, new IvParameterSpec(ivBytes));
+            cipherDEC.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(ivBytes));
+
+            KeyStoreCriptext.putStringBlocking(context, monkeyId, strKey + ":" + strIV);
+
+        } catch(Exception ex){
+            ex.printStackTrace();
+        }
+    }
     /***/
     
     static final char[] values = new char[]{'2','3','4','5','6','7','8','9','c','v','b','n','m',
         'a','s','d','f','g','h','j','k','l','q','w','e','r','t','y','u','i','o','p'}; 
     
-    public String newCryptoSafeString(){
+    public static String newCryptoSafeString(){
   	  SecureRandom random = new SecureRandom();
   	  byte[] bytes = new byte[32];
   	  random.nextBytes(bytes);

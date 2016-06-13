@@ -12,9 +12,11 @@ import android.util.Log;
 import android.view.MenuInflater;
 
 import com.criptext.ClientData;
+import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.gcm.MonkeyRegistrationService;
+import com.criptext.lib.MKDelegateActivity;
 import com.criptext.lib.MonkeyKit;
 import com.criptext.lib.MonkeyKitDelegate;
 import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
@@ -35,7 +37,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class MainActivity extends AppCompatActivity implements ChatActivity, MonkeyKitDelegate {
+public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     MonkeyAdapter adapter;
     RecyclerView recycler;
@@ -54,14 +56,6 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         setContentView(R.layout.activity_main);
 
         
-        if(MonkeyKit.instance()==null){
-            finish();
-            startActivity(new Intent(MainActivity.this, WelcomeActivity.class));
-        }
-        else{
-            MonkeyKit.instance().addDelegate(this);
-        }
-
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
         if(MonkeyRegistrationService.Companion.checkPlayServices(this))
@@ -84,21 +78,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
         messageLoader.loadNewPage();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
 
-        if(MonkeyKit.instance()!=null && MonkeyKit.instance().isInialized() && !MonkeyKit.instance().monkeyIsConnected()) {
-            MonkeyKit.instance().onResume();
-            setActionBarTitle(1);
-        }
-        else{
-            setActionBarTitle(2);
-        }
-
-        if(MonkeyKit.instance()!=null)
-            MonkeyKit.instance().sendSync(MonkeyKit.instance().getLastTimeSynced());
-    }
 
     public void registerWithGCM(){
         Intent intent = new Intent(this, SampleRegistrationService.class);
@@ -169,21 +149,27 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
                 @Override
                 public void onNewItem(@NotNull MonkeyItem item) {
 
+                    final MonkeyKitSocketService socketService = getService();
+                    if (socketService == null) {
+                        Log.e("MainActivity", "Can't send message. service is null");
+                        return;
+                    }
+
                     JsonObject params = new JsonObject();
                     MOKMessage mokMessage;
                     switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
                         case audio:
                             params = new JsonObject();
                             params.addProperty("length",""+item.getAudioDuration());
-                            mokMessage = MonkeyKit.instance().persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
+                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
                                     MessageTypes.FileTypes.Audio, params, "Test Push Message");
                             break;
                         case photo:
-                            mokMessage = MonkeyKit.instance().persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
+                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
                                     MessageTypes.FileTypes.Photo, new JsonObject(), "Test Push Message");
                             break;
                         default:
-                            mokMessage = MonkeyKit.instance().persistMessageAndSend(item.getMessageText(), myMonkeyID, "Test Push Message", params);
+                            mokMessage = socketService.persistMessageAndSend(item.getMessageText(), myMonkeyID, params, "Test Push Message");
                             break;
                     }
 
@@ -259,7 +245,7 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     };
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void onActivityResult (int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode != RESULT_OK) {
@@ -284,10 +270,11 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     public void onFileDownloadRequested(int position, @NotNull MonkeyItem item) {
 
         MessageItem messageItem = (MessageItem)searchMessage(item.getMessageId());
-        if(MonkeyKit.instance()!=null && messageItem!=null && !messageItem.isDownloading()) {
+        final MonkeyKitSocketService socketService = getService();
+        if(socketService !=null && messageItem != null && !messageItem.isDownloading()) {
             messageItem.setDownloading(true);
             DatabaseHandler.updateMessageDownloadingStatus(messageItem.model, true);
-            MonkeyKit.instance().downloadFile(messageItem.getMessageText(), messageItem.getProps(),
+            socketService.downloadFile(messageItem.getMessageText(), messageItem.getProps().toString(),
                     myMonkeyID, new Runnable() {
                         @Override
                         public void run() {
@@ -354,9 +341,10 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     @Override
     public void onMessageRecieved(MOKMessage message) {
 
+        final MonkeyKitSocketService socketService = getService();
         if(message.getSid().equals(myMonkeyID)){
             processIncomingMessage(message,true);
-            MonkeyKit.instance().setLastTimeSynced(Long.parseLong(message.getDatetime()));
+            socketService.setLastTimeSynced(Long.parseLong(message.getDatetime()));
         }
 
     }
@@ -364,10 +352,11 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
     @Override
     public void onMessageBatchReady(ArrayList<MOKMessage> messages) {
         setActionBarTitle(2);
+        final MonkeyKitSocketService socketService = getService();
         for (int i=0;i<messages.size();i++) {
             if(i == messages.size()-1) {
                 processIncomingMessage(messages.get(i), true);
-                MonkeyKit.instance().setLastTimeSynced(Long.parseLong(messages.get(messages.size() - 1).getDatetime()));
+                socketService.setLastTimeSynced(Long.parseLong(messages.get(messages.size() - 1).getDatetime()));
             }
             else{
                 processIncomingMessage(messages.get(i), false);
@@ -390,8 +379,9 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
     @Override
     public void onDeleteRecieved(MOKMessage message) {
+        final MonkeyKitSocketService socketService = getService();
         if(message.getMessage_id()!=null && message.getMessage_id().length()>0 && !message.getMessage_id().equals("0")){
-            MonkeyKit.instance().setLastTimeSynced(Long.parseLong(message.getDatetime()));
+            socketService.setLastTimeSynced(Long.parseLong(message.getDatetime()));
         }
     }
 
@@ -402,9 +392,34 @@ public class MainActivity extends AppCompatActivity implements ChatActivity, Mon
 
     @Override
     public void onNotificationReceived(MOKMessage notification) {
+        final MonkeyKitSocketService socketService = getService();
         if(notification.getMessage_id()!=null && notification.getMessage_id().length()>0 && !notification.getMessage_id().equals("0")){
-            MonkeyKit.instance().setLastTimeSynced(Long.parseLong(notification.getDatetime()));
+            socketService.setLastTimeSynced(Long.parseLong(notification.getDatetime()));
         }
     }
 
+    @NotNull
+    @Override
+    public ClientData getClientData() {
+        return new ClientData(getIntent());
+    }
+
+    @NotNull
+    @Override
+    public Class<?> getServiceClassName() {
+        return MyServiceClass.class;
+    }
+
+    @Override
+    public void onBoundToService() {
+        if(getService().isSocketConnected()) {
+            //MonkeyKit.instance().onResume();
+            setActionBarTitle(1);
+        }
+        else{
+            setActionBarTitle(2);
+        }
+
+
+    }
 }
