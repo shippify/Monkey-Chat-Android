@@ -162,14 +162,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                             params = new JsonObject();
                             params.addProperty("length",""+item.getAudioDuration());
                             mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
-                                    MessageTypes.FileTypes.Audio, params, "Test Push Message");
+                                    MessageTypes.FileTypes.Audio, "Test Push Message", params);
                             break;
                         case photo:
                             mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
-                                    MessageTypes.FileTypes.Photo, new JsonObject(), "Test Push Message");
+                                    MessageTypes.FileTypes.Photo, "Test Push Message", new JsonObject());
                             break;
                         default:
-                            mokMessage = socketService.persistMessageAndSend(item.getMessageText(), myMonkeyID, params, "Test Push Message");
+                            mokMessage = socketService.persistMessageAndSend(item.getMessageText(), myMonkeyID, "Test Push Message", params);
                             break;
                     }
 
@@ -367,6 +367,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     public void onAcknowledgeRecieved(MOKMessage message) {
 
+        Log.d("MainActivity", "Ack received");
         int tipo = Integer.parseInt(message.getType());
         switch (tipo) {
             case 1:

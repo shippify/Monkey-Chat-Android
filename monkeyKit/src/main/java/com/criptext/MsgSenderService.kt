@@ -9,6 +9,7 @@ import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.AsyncConnSocket
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
+import com.criptext.lib.KotlinWatchdog
 import com.criptext.lib.Watchdog
 import com.criptext.security.AESUtil
 import com.criptext.security.RandomStringBuilder
@@ -24,10 +25,10 @@ import java.util.*
 abstract class MsgSenderService() : Service() , SecureSocketService {
     protected lateinit var clientData: ClientData
     protected lateinit var aesutil: AESUtil
-    protected var watchdog: Watchdog? = null
+    protected var watchdog: KotlinWatchdog? = null
     protected lateinit var asyncConnSocket: AsyncConnSocket
 
-    val pendingMessages: MutableList<MOKMessage>
+    val pendingMessages: MutableList<JsonObject>
 
     init {
         pendingMessages = mutableListOf();
@@ -35,17 +36,31 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
 
      override fun startWatchdog(){
         if(watchdog == null) {
-                watchdog = Watchdog();
-            }
-            watchdog!!.synced = false;
-            Log.d("Watchdog", "Watchdog ready sending Sync");
+            watchdog = KotlinWatchdog(this);
             watchdog!!.start();
+        }
+        Log.d("Watchdog", "Watchdog ready");
     }
 
-    private fun addPendingMessage(id: String, message: String){
-        val prefs = getSharedPreferences(transitionMessagesPrefs, 0);
-        val editor = prefs!!.edit();
-        editor.putString(id, message).apply();
+    fun resendPendingMessages(){
+        val messages = pendingMessages.toList()
+        for(msg in messages)
+            sendJsonThroughSocket(msg)
+    }
+
+    fun getJsonMessageId(json: JsonObject) = json.get("args").asJsonObject.get("id").asString
+
+    fun removePendingMessage(id: String){
+        val index = pendingMessages.binarySearch { n ->
+            id.compareTo(getJsonMessageId(n))
+        }
+        if(index > 0) {
+            pendingMessages.removeAt(index)
+            if(pendingMessages.isEmpty()) {
+                watchdog?.cancel()
+                watchdog = null
+            }
+        }
     }
 
     /**
@@ -57,15 +72,8 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
     private fun addMessageToWatchdog(json: JsonObject) {
         val args = json.getAsJsonObject("args");
         try {
-            addPendingMessage(args.get("id").toString(), json.toString());
-            if (watchdog == null) {
-                watchdog = Watchdog();
-                Log.d("Watchdog", "Watchdog ready sending Message");
-                watchdog!!.start();
-            } else if (!watchdog!!.isWorking) {
-                Log.d("Watchdog", "Watchdog ready sending Message");
-                watchdog!!.start();
-            }
+            pendingMessages.add(json);
+            startWatchdog()
         }catch (ex: Exception){
             ex.printStackTrace();
         }
@@ -136,6 +144,16 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
         asyncConnSocket.sendMessage(json);
     }
 
+    /**
+     * Disconnect the socket immediately. Useful for reconnecting.
+     */
+    fun forceDisconnect(){
+        if(isSocketConnected()){
+            asyncConnSocket.sendDisconectFromPull()
+            delegate?.onSocketDisconnected()
+        }
+    }
+
     private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: String,
                             params: JsonObject, persist: Boolean): MOKMessage{
 
@@ -186,28 +204,20 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
 
     }
 
-    override fun removePendingMessage(msgID: String) {
-        val prefs = getSharedPreferences(transitionMessagesPrefs, 0);
-        val editor = prefs.edit();
-        editor.remove(msgID).apply();
-    }
-
-
-
     fun uploadFile(json: JSONObject, message: MOKMessage){
         //TODO UPLOAD WITH OKHTTP
     }
 
     fun persistFileMessageAndSend(pathToFile: String, sessionIDTo: String, file_type: Int,
-                                  gsonParamsMessage: JsonObject, pushMessage: String): MOKMessage{
+                                  pushMessage: String, gsonParamsMessage: JsonObject): MOKMessage{
         //TODO PERSIST FILE & SEND
         return MOKMessage();
     }
 
     fun persistMessageAndSend(messageText: String, sessionIDTo: String,
-                              gsonParamsMessage: JsonObject, pushMessage: String): MOKMessage{
+                              pushMessage: String, gsonParamsMessage: JsonObject): MOKMessage{
         //TODO PERSIST FILE & SEND
-        return MOKMessage();
+        return sendMessage(messageText, sessionIDTo, pushMessage, gsonParamsMessage, true);
     }
 
     companion object {

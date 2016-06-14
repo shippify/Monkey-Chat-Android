@@ -128,12 +128,6 @@ interface SecureSocketService {
             task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, encryptedMessage.sid) //LAME
     }
 
-    /**
-     * Removes a message encoded in a string from a list of messages that have not been delivered yet
-     * so that MonkeyKit won't try to resend it anymore.
-     */
-    fun removePendingMessage(stringMsg: String)
-
     fun sendSync(lastTimeSync: Long){
         try {
 

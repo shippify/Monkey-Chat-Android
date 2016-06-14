@@ -9,6 +9,7 @@ import android.os.Message;
 import android.util.Log;
 
 import com.criptext.ClientData;
+import com.criptext.MsgSenderService;
 import com.criptext.security.AESUtil;
 import com.criptext.lib.KeyStoreCriptext;
 import com.criptext.socket.DarkStarClient;
@@ -22,6 +23,7 @@ import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class AsyncConnSocket implements ComServerDelegate{
 
@@ -91,6 +93,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 							socketClient.logout(true);
 							stop();
 							this.getLooper().quit();
+							Log.d("AsyncConnSocket", "Logged Out.");
 						}
 					}
 					if(msg.obj.toString().compareTo("logout")==0){
@@ -138,6 +141,8 @@ public class AsyncConnSocket implements ComServerDelegate{
 		conexionRecursiva();
 
 	}
+
+
 
 	public void conexionRecursiva(){
 
@@ -544,9 +549,11 @@ public class AsyncConnSocket implements ComServerDelegate{
 			//REMOTE LOGOUT DESDE EL SOCKET
 			socketStatus = Status.desconectado;
 			System.out.println("FAIL LOGIN - Desconectado del Socket!");
-			Message msg = mainMessageHandler.obtainMessage();
-			msg.what=MessageTypes.MessageSocketDisconnected;
-			mainMessageHandler.sendMessage(msg);
+			if(mainMessageHandler != null) {
+				Message msg = mainMessageHandler.obtainMessage();
+				msg.what = MessageTypes.MessageSocketDisconnected;
+				mainMessageHandler.sendMessage(msg);
+			}
 		}
 
 	}

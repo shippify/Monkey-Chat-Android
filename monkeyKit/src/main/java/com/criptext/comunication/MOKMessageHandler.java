@@ -2,7 +2,9 @@ package com.criptext.comunication;
 
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
+import com.criptext.MsgSenderService;
 import com.criptext.lib.KeyStoreCriptext;
 import com.criptext.socket.SecureSocketService;
 
@@ -14,9 +16,9 @@ import java.util.ArrayList;
  * Created by gesuwall on 6/2/16.
  */
 public class MOKMessageHandler extends Handler {
-    private WeakReference<SecureSocketService> serviceRef;
+    private WeakReference<MsgSenderService> serviceRef;
 
-        public MOKMessageHandler(SecureSocketService service){
+        public MOKMessageHandler(MsgSenderService service){
             serviceRef = new WeakReference<>(service);
         }
 
@@ -28,8 +30,8 @@ public class MOKMessageHandler extends Handler {
             }
 
             //if(message != null && message.getMsg() != null)
-            //Log.d("MonkeyHandler", "message: " + message.getMsg() + " tipo: " + msg.what);
-            final SecureSocketService service = serviceRef.get();
+            Log.d("MOKMonkeyHandler", "message: " + " tipo: " + msg.what);
+            final MsgSenderService service = serviceRef.get();
             if(service != null)
                 switch (msg.what) {
                     case MessageTypes.MOKProtocolMessage:
@@ -65,8 +67,8 @@ public class MOKMessageHandler extends Handler {
                         break;
                     case MessageTypes.MOKProtocolAck:
                         try {
-                            System.out.println("ack 205");
-                            service.removePendingMessage(message.getMsg());
+                            System.out.println("MOK ack 205");
+                            service.removePendingMessage(message.getMessage_id());
                             service.executeInDelegate(CBTypes.onAcknowledgeReceived, new Object[]{message});
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -91,6 +93,9 @@ public class MOKMessageHandler extends Handler {
                     }
                     case MessageTypes.MessageSocketDisconnected:{
                         service.executeInDelegate(CBTypes.onSocketDisconnected, new Object[]{""});//new Object[]{""}
+                        //If socket disconnected and this handler is still alive we should reconnect
+                        //immediately.
+                        service.startSocketConnection();
                         break;
                     }
                     case MessageTypes.MOKProtocolGet: {
