@@ -1,16 +1,11 @@
 package com.criptext
 
 import android.app.Service
-import android.content.SharedPreferences
-import android.content.SharedPreferences.Editor
 import android.util.Log
-import com.criptext.ClientData
-import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.AsyncConnSocket
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
 import com.criptext.lib.KotlinWatchdog
-import com.criptext.lib.Watchdog
 import com.criptext.security.AESUtil
 import com.criptext.security.RandomStringBuilder
 import com.criptext.socket.SecureSocketService
@@ -39,22 +34,33 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
             watchdog = KotlinWatchdog(this);
             watchdog!!.start();
         }
-        Log.d("Watchdog", "Watchdog ready");
     }
 
+    /**
+     * Makes a copy of the current state of the pendingMessages list and sends through the socket
+     * all the contained messages.
+     */
     fun resendPendingMessages(){
         val messages = pendingMessages.toList()
         for(msg in messages)
             sendJsonThroughSocket(msg)
     }
 
+    /**
+     * get the id of a message
+     */
     fun getJsonMessageId(json: JsonObject) = json.get("args").asJsonObject.get("id").asString
 
+    /**
+     * Uses binary search to remove a message from the pending messages list.
+     * @param id id of the message to remove
+     */
     fun removePendingMessage(id: String){
         val index = pendingMessages.binarySearch { n ->
             id.compareTo(getJsonMessageId(n))
         }
-        if(index > 0) {
+
+        if(index > -1) {
             pendingMessages.removeAt(index)
             if(pendingMessages.isEmpty()) {
                 watchdog?.cancel()
@@ -64,19 +70,13 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
     }
 
     /**
-     * Agrega un mensaje a la base de datos del watchdog. Si el watchdog no esta corriendo, lo
-     * inicia.
+     * Ads a message to the list of pending messages and starts the watchdog.
      * @param json mensaje a guardar
      * @throws JSONException
      */
     private fun addMessageToWatchdog(json: JsonObject) {
-        val args = json.getAsJsonObject("args");
-        try {
-            pendingMessages.add(json);
-            startWatchdog()
-        }catch (ex: Exception){
-            ex.printStackTrace();
-        }
+        pendingMessages.add(json);
+        startWatchdog()
     }
 
     /**
@@ -151,6 +151,9 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
         if(isSocketConnected()){
             asyncConnSocket.sendDisconectFromPull()
             delegate?.onSocketDisconnected()
+        } else {
+            Log.d("forceDisconnect", "${asyncConnSocket.socketStatus}")
+            startSocketConnection();
         }
     }
 

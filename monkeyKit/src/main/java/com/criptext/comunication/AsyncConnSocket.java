@@ -146,8 +146,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 
 	public void conexionRecursiva(){
 
-		socketStatus = Status.reconectando;
-		userServerListener=new ComServerListener((ComServerDelegate) this);
+		socketStatus = Status.reconectando; userServerListener=new ComServerListener((ComServerDelegate) this);
 		socketClient = new DarkStarSocketClient(SecureSocketService.Companion.getBaseURL(),
 				1139,(DarkStarListener)userServerListener);
 		Thread connThread = new Thread(new Runnable() {
@@ -167,10 +166,10 @@ public class AsyncConnSocket implements ComServerDelegate{
 					Handler handler = new Handler(Looper.getMainLooper());
 					handler.post(new Runnable() {
 						public void run() {
-							System.out.println("SOCKET IS CONNECTED AND HAS LAST ACTION? "+lastAction);
 							fireInTheHole();
-							if(lastAction != null)
-								lastAction.run();
+							//connection is successful, let's resend all pending messages
+							if(service instanceof MsgSenderService)
+								((MsgSenderService)service).resendPendingMessages();
 
 						}
 					});

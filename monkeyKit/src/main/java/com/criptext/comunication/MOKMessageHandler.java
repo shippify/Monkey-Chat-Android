@@ -68,7 +68,9 @@ public class MOKMessageHandler extends Handler {
                     case MessageTypes.MOKProtocolAck:
                         try {
                             System.out.println("MOK ack 205");
-                            service.removePendingMessage(message.getMessage_id());
+                            //The acknowledge message has the id of the successfully sent message in
+                            //the Msg field. We'll use that to update our pending messages list.
+                            service.removePendingMessage(message.getMsg());
                             service.executeInDelegate(CBTypes.onAcknowledgeReceived, new Object[]{message});
                         } catch (Exception e) {
                             e.printStackTrace();

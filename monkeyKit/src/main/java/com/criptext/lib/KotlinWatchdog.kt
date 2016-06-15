@@ -34,21 +34,24 @@ class KotlinWatchdog(service: MsgSenderService){
             return
         }
         else
-            Log.d("Watchdog", "Watchdog start");
             runnable = Runnable {
                 val service = serviceRef.get()
                 if(!cancelled) {
                     service?.forceDisconnect()
-                    handler.postDelayed(runnable, BASE_TIMEOUT + Math.pow(2.0, attempts).toLong());
+                    val newTimeout = BASE_TIMEOUT + Math.pow(2.0, attempts).toLong() * 1000L
+                    handler.postDelayed(runnable, newTimeout);
                 };
             };
+
+        handler.postDelayed(runnable, BASE_TIMEOUT);
     }
 
     fun cancel(){
         cancelled = true
     }
+
     companion object {
-        private val BASE_TIMEOUT = 4000;
+        private val BASE_TIMEOUT = 4000L;
     }
 
 }

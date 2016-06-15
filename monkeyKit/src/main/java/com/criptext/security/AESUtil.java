@@ -17,7 +17,8 @@ import com.criptext.lib.KeyStoreCriptext;
 
 import android.content.Context;
 import android.util.Base64;
- 
+import android.util.Log;
+
 public class AESUtil {
  
     private static final String password = "criptext";
@@ -79,6 +80,7 @@ public class AESUtil {
             //System.out.println("AES - SI TIENE IV - ***"+KeyStoreCriptext.getString(context, sessionId).split(":")[1]+"***");
             //SI TIENE KEY
             strIV = RSAUtil.stripGarbage(KeyStoreCriptext.getString(context, sessionId).split(":")[1]);
+            Log.d("AESUtil", "generated key: " + strKey + " IV: " + strIV);
             cipherENC.init(Cipher.ENCRYPT_MODE, secret, new IvParameterSpec(Base64.decode(strIV.getBytes("UTF-8"), Base64.NO_WRAP)));
             cipherDEC.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(Base64.decode(strIV.getBytes("UTF-8"), Base64.NO_WRAP)));
         }

@@ -19,13 +19,7 @@ class AsyncAESInitializer(socketService: SecureSocketService, internal var monke
     }
 
     override fun doInBackground(vararg voids: Void): AESUtil? {
-        try {
             return AESUtil(socketServiceRef.get().context, monkeyID)
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            return null
-        }
-
     }
 
     override fun onPostExecute(aesUtil: AESUtil?) {
