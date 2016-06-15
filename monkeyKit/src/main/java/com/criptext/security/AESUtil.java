@@ -45,7 +45,7 @@ public class AESUtil {
             strKey=Base64.encodeToString(newCryptoSafeString.getBytes("UTF-8"),Base64.NO_WRAP);
         }
         else{
-            System.out.println("AES - SI TIENE KEY");
+            System.out.println("AES - YA TIENE KEY EN KEYSTORE");
             //SI TIENE KEY
             strKey=key.split(":")[0];
             secret = new SecretKeySpec(Base64.decode(strKey.getBytes("UTF-8"), Base64.NO_WRAP), "AES");

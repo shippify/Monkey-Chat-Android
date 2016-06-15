@@ -6,6 +6,7 @@ import com.criptext.comunication.AsyncConnSocket
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
 import com.criptext.lib.KotlinWatchdog
+import com.criptext.lib.PendingMessageStore
 import com.criptext.security.AESUtil
 import com.criptext.security.RandomStringBuilder
 import com.criptext.socket.SecureSocketService
@@ -44,6 +45,10 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
         val messages = pendingMessages.toList()
         for(msg in messages)
             sendJsonThroughSocket(msg)
+    }
+
+    fun addPendingMessages(messages: List<JsonObject>){
+        pendingMessages.addAll(0, messages)
     }
 
     /**
@@ -221,6 +226,20 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
                               pushMessage: String, gsonParamsMessage: JsonObject): MOKMessage{
         //TODO PERSIST FILE & SEND
         return sendMessage(messageText, sessionIDTo, pushMessage, gsonParamsMessage, true);
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        //cancel watchdog on destroy
+        watchdog?.cancel()
+        //persist pending messages to a file
+        if(pendingMessages.isNotEmpty()){
+            Log.d("serviceOnDestroy", "save messages")
+            val task = PendingMessageStore.AsyncStoreTask(this, pendingMessages.toList())
+            task.execute()
+
+        }
+
     }
 
     companion object {
