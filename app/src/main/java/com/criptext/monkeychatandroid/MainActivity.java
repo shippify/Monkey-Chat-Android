@@ -161,6 +161,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                         case audio:
                             params = new JsonObject();
                             params.addProperty("length",""+item.getAudioDuration());
+
                             mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
                                     MessageTypes.FileTypes.Audio, "Test Push Message", params);
                             break;
@@ -186,6 +187,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                             newItem.setMessageContent(item.getFilePath());
                             break;
                     }
+                    Log.d("MainActivity", "add item " + newItem.getFilePath());
                     adapter.smoothlyAddNewItem(newItem, recycler); // Add to recyclerView
                 }
             });
@@ -227,13 +229,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     private void processIncomingMessage(MOKMessage message, boolean refresh){
-
-        monkeyMessages.add(DatabaseHandler.createMessage(message, this, myMonkeyID, true));
-
-        if(refresh) {
-            adapter.notifyDataSetChanged();
-            recycler.scrollToPosition(monkeyMessages.size() - 1);
-        }
+        Log.d("MainActivity", "Received " + message.getMessage_id());
+        MessageItem newItem = DatabaseHandler.createMessage(message, this, myMonkeyID, true);
+        adapter.smoothlyAddNewItem(newItem, recycler);
     }
 
     public MediaPlayer.OnCompletionListener localCompletionForProximity=new MediaPlayer.OnCompletionListener() {
@@ -269,12 +267,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     public void onFileDownloadRequested(int position, @NotNull MonkeyItem item) {
 
-        MessageItem messageItem = (MessageItem)searchMessage(item.getMessageId());
+        MessageItem messageItem = (MessageItem) item;
         final MonkeyKitSocketService socketService = getService();
-        if(socketService !=null && messageItem != null && !messageItem.isDownloading()) {
+        if(socketService !=null && !messageItem.isDownloading()) {
             messageItem.setDownloading(true);
             DatabaseHandler.updateMessageDownloadingStatus(messageItem.model, true);
-            socketService.downloadFile(messageItem.getMessageText(), messageItem.getProps().toString(),
+            Log.d("MainActivity", "Downloading " + item.getFilePath());
+            socketService.downloadFile(messageItem.getFilePath(), messageItem.getProps().toString(),
                     myMonkeyID, new Runnable() {
                         @Override
                         public void run() {

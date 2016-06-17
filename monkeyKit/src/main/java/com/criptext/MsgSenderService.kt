@@ -2,7 +2,9 @@ package com.criptext
 
 import android.app.Service
 import android.util.Log
+import android.webkit.MimeTypeMap
 import com.criptext.comunication.AsyncConnSocket
+import com.criptext.comunication.FileUploadService
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
 import com.criptext.lib.KotlinWatchdog
@@ -11,7 +13,9 @@ import com.criptext.security.AESUtil
 import com.criptext.security.RandomStringBuilder
 import com.criptext.socket.SecureSocketService
 import com.google.gson.JsonObject
+import org.apache.commons.io.FilenameUtils
 import org.json.JSONObject
+import java.io.FileInputStream
 import java.util.*
 
 /**
@@ -23,6 +27,7 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
     protected lateinit var aesutil: AESUtil
     protected var watchdog: KotlinWatchdog? = null
     protected lateinit var asyncConnSocket: AsyncConnSocket
+    internal lateinit var fileUploader: FileUploader
 
     val pendingMessages: MutableList<JsonObject>
 
@@ -162,6 +167,9 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
         }
     }
 
+    override fun startSocketConnection(aesUtil: AESUtil?) {
+        fileUploader = FileUploader(this, aesUtil);
+    }
     private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: String,
                             params: JsonObject, persist: Boolean): MOKMessage{
 
@@ -216,15 +224,45 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
         //TODO UPLOAD WITH OKHTTP
     }
 
+    private fun createSendProps(old_id: String, filepath: String, fileType: Int, originalSize: Int): JsonObject{
+        val props = JsonObject();
+        props.addProperty("str", "0");
+        props.addProperty("encr", "1");
+        props.addProperty("device", "android");
+        props.addProperty("old_id", old_id);
+
+        val ext = FilenameUtils.getExtension(filepath)
+        props.addProperty("cmpr", "gzip");
+        props.addProperty("file_type", fileType);
+        props.addProperty("ext", ext);
+        props.addProperty("filename", FilenameUtils.getName(filepath));
+        props.addProperty("mime_type", MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext));
+        props.addProperty("size", originalSize);
+        return props;
+    }
+
     fun persistFileMessageAndSend(pathToFile: String, sessionIDTo: String, file_type: Int,
                                   pushMessage: String, gsonParamsMessage: JsonObject): MOKMessage{
         //TODO PERSIST FILE & SEND
+        /*
+        val newMessage = createMOKMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage);
+        val file = FileInputStream(pathToFile)
+        val fileSize = file.available()
+        file.close()
+        val props = createSendProps(newMessage.message_id, pathToFile, file_type, fileSize)
+        newMessage.props = props
+        storeMessage(newMessage, false, Runnable {
+            FileUploadService.startUpload(this, newMessage.message_id, pathToFile, clientData, sessionIDTo,
+                    file_type, props.toString(), gsonParamsMessage.toString(), pushMessage)
+        })
         return MOKMessage();
+        */
+        return fileUploader.persistFileMessageAndSend(pathToFile, sessionIDTo, file_type,
+                        gsonParamsMessage, pushMessage)
     }
 
     fun persistMessageAndSend(messageText: String, sessionIDTo: String,
                               pushMessage: String, gsonParamsMessage: JsonObject): MOKMessage{
-        //TODO PERSIST FILE & SEND
         return sendMessage(messageText, sessionIDTo, pushMessage, gsonParamsMessage, true);
     }
 

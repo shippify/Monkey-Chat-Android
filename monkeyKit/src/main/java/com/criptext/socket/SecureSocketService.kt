@@ -308,7 +308,7 @@ interface SecureSocketService {
     companion object {
 
         val baseURL = "monkey.criptext.com"
-        val httpsURL = "https://" + baseURL
+        val httpsURL = "http://" + baseURL
 
         fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>, clientData: ClientData) {
             val intent = Intent(context, service)

@@ -17,7 +17,7 @@ import com.criptext.socket.SecureSocketService
  * Created by gesuwall on 5/25/16.
  */
 
-abstract class MonkeyKitSocketService : MsgSenderService(), SecureSocketService {
+abstract class MonkeyKitSocketService : MsgSenderService() {
 
     override var portionsMessages: Int = 15
     override var lastTimeSynced: Long = 0L
@@ -31,6 +31,7 @@ abstract class MonkeyKitSocketService : MsgSenderService(), SecureSocketService 
 
     fun downloadFile(fileName: String, props: String, monkeyId: String, runnable: Runnable){
         //TODO DOWNLOAD FILE
+        super.fileUploader.downloadFile(fileName, props, monkeyId, runnable)
     }
 
 
@@ -64,7 +65,7 @@ abstract class MonkeyKitSocketService : MsgSenderService(), SecureSocketService 
 
     override fun executeInDelegate(method:CBTypes, info:Array<Any>) {
         //super already stores received messages and passes the to delegate
-        super<SecureSocketService>.executeInDelegate(method, info)
+        super.executeInDelegate(method, info)
         when (method) {
             /*
             CBTypes.onConnectOK -> {
@@ -200,6 +201,7 @@ abstract class MonkeyKitSocketService : MsgSenderService(), SecureSocketService 
         }
 
     override fun startSocketConnection(aesUtil: AESUtil?) {
+        super.startSocketConnection(aesUtil)
         if(aesUtil != null) {
             this.aesutil = aesUtil
             startSocketConnection()

@@ -39,7 +39,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile project(':monkeyKit')
     compile 'com.android.support:appcompat-v7:23.3.0'
-    compile 'com.github.GAumala.MonkeyUIAndroid:monkeykitui:dev-SNAPSHOT'
+    compile 'com.github.criptext.MonkeyUIAndroid:monkeykitui:1.0'
     /*compile ('com.criptext.monkeykitui:monkeykitui:1.5.7@aar') {
         transitive = true;
 
