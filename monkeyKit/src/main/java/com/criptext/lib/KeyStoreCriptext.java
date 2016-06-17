@@ -60,4 +60,18 @@ public class KeyStoreCriptext {
         return decryptedText;
     }
 
+
+    private static final String LAST_SYNC_KEY = "MonkeyKit.lastSync";
+    public static void setLastSync(Context ctx, Long value)
+    {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
+        prefs.edit().putLong(LAST_SYNC_KEY, value).apply();
+    }
+
+    public static Long getLastSync(Context ctx)
+    {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
+        return prefs.getLong(LAST_SYNC_KEY, 0);
+    }
+
 }

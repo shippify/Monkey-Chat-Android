@@ -275,7 +275,6 @@ abstract class MsgSenderService() : Service() , SecureSocketService {
             Log.d("serviceOnDestroy", "save messages")
             val task = PendingMessageStore.AsyncStoreTask(this, pendingMessages.toList())
             task.execute()
-
         }
 
     }

@@ -7,11 +7,10 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import com.criptext.comunication.*
-import com.criptext.database.CriptextDBHandler
+import com.criptext.lib.KeyStoreCriptext
 import com.criptext.lib.MonkeyKitDelegate
 import com.criptext.security.AESUtil
 import com.criptext.security.AsyncAESInitializer
-import com.criptext.socket.SecureSocketService
 
 /**
  * Created by gesuwall on 5/25/16.
@@ -36,8 +35,10 @@ abstract class MonkeyKitSocketService : MsgSenderService() {
 
 
     override fun onBind(intent: Intent?): IBinder? {
+
         if(delegate == null) {
             clientData = ClientData(intent!!)
+            //Log.d("MonkeyKitSocketService", "session: ${clientData.monkeyId}")
             val asyncAES = AsyncAESInitializer(this, clientData.monkeyId)
             asyncAES.execute()
             return MonkeyBinder()
@@ -48,6 +49,7 @@ abstract class MonkeyKitSocketService : MsgSenderService() {
 
     override fun onUnbind(intent: Intent?): Boolean {
         asyncConnSocket.disconectSocket()
+        delegate = null
         return super.onUnbind(intent)
     }
 
@@ -206,6 +208,12 @@ abstract class MonkeyKitSocketService : MsgSenderService() {
             this.aesutil = aesUtil
             startSocketConnection()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        //persist last time synced
+        KeyStoreCriptext.setLastSync(this, lastTimeSynced)
     }
 
     override fun startSocketConnection() {

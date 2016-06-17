@@ -547,7 +547,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 		}else if(evid==ComMessageProtocol.FAILLOGGINMSGDISCONECT){
 			//REMOTE LOGOUT DESDE EL SOCKET
 			socketStatus = Status.desconectado;
-			//This logout should only occur when the watchdog terminates de connection
+			//This logout should only occur when the watchdo
 			System.out.println("Desconectado del Socket!");
 			if(mainMessageHandler != null) {
 				Message msg = mainMessageHandler.obtainMessage();

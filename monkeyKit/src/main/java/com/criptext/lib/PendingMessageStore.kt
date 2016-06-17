@@ -5,6 +5,7 @@ import android.os.AsyncTask
 import android.util.Log
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
 
@@ -38,19 +39,22 @@ class PendingMessageStore {
         }
 
         fun retrieve(context: Context): List<JsonObject>{
+            var file: FileInputStream? = null
             try {
-                val file = context.openFileInput(filename)
+                file = context.openFileInput(filename)
                 val array: ByteArray = ByteArray(file.available())
                 file.read(array)
                 val jsonStr = String(array)
-                Log.d("PendingMessageStore", "str: $jsonStr")
+                //Log.d("PendingMessageStore", "str: $jsonStr")
                 val jsonArray = jsonStr.split(separator)
                 val parser = JsonParser()
                 return jsonArray.map { it ->
-                    Log.d("PendingMessageStore", "str: $it")
+                    //Log.d("PendingMessageStore", "str: $it")
                     parser.parse(it).asJsonObject }
             } catch(ex: FileNotFoundException){
                 return listOf()
+            } finally {
+                file?.close()
             }
 
 
