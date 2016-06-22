@@ -7,6 +7,7 @@ import android.os.AsyncTask
 import android.util.Base64
 import android.util.Log
 import com.criptext.ClientData
+import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.CBTypes
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
@@ -35,6 +36,8 @@ import java.util.*
  */
 
 interface SecureSocketService {
+
+    /*
     var portionsMessages: Int
     var lastTimeSynced: Long
     var delegate: MonkeyKitDelegate?
@@ -49,7 +52,11 @@ interface SecureSocketService {
 
     fun startWatchdog()
 
-    fun notifySyncSuccess()
+    fun notifySyncSuccess(){
+        val syncService = this as? MonkeyKitSocketService
+        syncService.wakeLock?.release()
+        syncService.stopSelf()
+    }
 
     fun decryptAES(encryptedText: String): String
 
@@ -309,6 +316,7 @@ interface SecureSocketService {
 
         val baseURL = "monkey.criptext.com"
         val httpsURL = "http://" + baseURL
+        val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
 
         fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>, clientData: ClientData) {
             val intent = Intent(context, service)
@@ -316,6 +324,12 @@ interface SecureSocketService {
             context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
 
-    }
+        fun startSyncService(context: Context, service:Class<*>, clientData: ClientData){
+            val intent = Intent(context, service)
+            clientData.fillIntent(intent)
+            context.startService(intent)
+        }
 
+    }
+*/
 }

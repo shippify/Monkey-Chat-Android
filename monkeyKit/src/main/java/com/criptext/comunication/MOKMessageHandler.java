@@ -4,7 +4,8 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import com.criptext.MsgSenderService;
+import com.criptext.MonkeyKitSocketService;
+import com.criptext.MonkeyKitSocketService;
 import com.criptext.lib.KeyStoreCriptext;
 import com.criptext.socket.SecureSocketService;
 
@@ -16,9 +17,9 @@ import java.util.ArrayList;
  * Created by gesuwall on 6/2/16.
  */
 public class MOKMessageHandler extends Handler {
-    private WeakReference<MsgSenderService> serviceRef;
+    private WeakReference<MonkeyKitSocketService> serviceRef;
 
-        public MOKMessageHandler(MsgSenderService service){
+        public MOKMessageHandler(MonkeyKitSocketService service){
             serviceRef = new WeakReference<>(service);
         }
 
@@ -31,7 +32,7 @@ public class MOKMessageHandler extends Handler {
 
             //if(message != null && message.getMsg() != null)
             Log.d("MOKMonkeyHandler", "message: " + " tipo: " + msg.what);
-            final MsgSenderService service = serviceRef.get();
+            final MonkeyKitSocketService service = serviceRef.get();
             if(service != null)
                 switch (msg.what) {
                     case MessageTypes.MOKProtocolMessage:
@@ -77,7 +78,7 @@ public class MOKMessageHandler extends Handler {
                         }
                         break;
                     case MessageTypes.MOKProtocolOpen:{
-                        if(KeyStoreCriptext.getString(service.getContext(), message.getRid()).compareTo("")==0)
+                        if(KeyStoreCriptext.getString(service, message.getRid()).compareTo("")==0)
                             service.sendOpenConversation(message.getRid());
                         else
                             System.out.println("MONKEY - llego open pero ya tengo las claves");
@@ -113,4 +114,12 @@ public class MOKMessageHandler extends Handler {
                 }
 
         }
+
+    private void handleBatchFromSync(MonkeyKitSocketService mkService, ArrayList<MOKMessage> batch ){
+       if(mkService.isSyncService()){
+           mkService.stopSelf();
+       } else {
+           mkService.executeInDelegate(CBTypes.onMessageBatchReady, new Object[]{batch});
+       }
+    }
 }

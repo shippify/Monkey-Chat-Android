@@ -62,6 +62,8 @@ public class KeyStoreCriptext {
 
 
     private static final String LAST_SYNC_KEY = "MonkeyKit.lastSync";
+    private static final String USER_MK_ID_KEY = "MonkeyKit.userMonkey";
+
     public static void setLastSync(Context ctx, Long value)
     {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
@@ -72,6 +74,18 @@ public class KeyStoreCriptext {
     {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
         return prefs.getLong(LAST_SYNC_KEY, 0);
+    }
+
+    public static void setUserMonkeyId(Context ctx, String value)
+    {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
+        prefs.edit().putString(USER_MK_ID_KEY, value).apply();
+    }
+
+    public static String getUserMonkeyId(Context ctx)
+    {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
+        return prefs.getString(LAST_SYNC_KEY, "");
     }
 
 }

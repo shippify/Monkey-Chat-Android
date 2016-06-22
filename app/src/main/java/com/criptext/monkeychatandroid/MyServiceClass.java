@@ -22,7 +22,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
     public void storeMessage(MOKMessage message, boolean incoming, final Runnable runnable) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        DatabaseHandler.saveMessage(DatabaseHandler.createMessage(message, getContext(), prefs.getString("sessionid", ""), incoming),
+        DatabaseHandler.saveMessage(DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), incoming),
             new Realm.Transaction.OnSuccess() {
                 @Override
                 public void onSuccess() {
@@ -41,7 +41,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
     public void storeMessageBatch(ArrayList<MOKMessage> messages, final Runnable runnable) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        DatabaseHandler.saveMessageBatch(messages, getContext(), prefs.getString("sessionid", ""),
+        DatabaseHandler.saveMessageBatch(messages, this, prefs.getString("sessionid", ""),
                 new Realm.Transaction.OnSuccess() {
                     @Override
                     public void onSuccess() {

@@ -36,7 +36,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onStart() {
         super.onStart()
-        SecureSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName, clientData)
+        MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName, clientData)
 
     }
 

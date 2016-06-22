@@ -9,13 +9,13 @@ import android.os.Message;
 import android.util.Log;
 
 import com.criptext.ClientData;
+import com.criptext.MonkeyKitSocketService;
 import com.criptext.MsgSenderService;
 import com.criptext.security.AESUtil;
 import com.criptext.lib.KeyStoreCriptext;
 import com.criptext.socket.DarkStarClient;
 import com.criptext.socket.DarkStarListener;
 import com.criptext.socket.DarkStarSocketClient;
-import com.criptext.socket.SecureSocketService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -42,7 +42,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	public Handler mainMessageHandler;
 	public Handler socketMessageHandler;
 	private Runnable lastAction = null;
-	private SecureSocketService service;
+	private MonkeyKitSocketService service;
 	//TIMEOUT
 
 	public AsyncConnSocket(String sessionId, String urlPassword, Handler mainMessageHandler) {
@@ -60,7 +60,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 		socketStatus = Status.sinIniciar;
 	}
 
-	public AsyncConnSocket(ClientData cdata, Handler messageHandler, SecureSocketService service){
+	public AsyncConnSocket(ClientData cdata, Handler messageHandler, MonkeyKitSocketService service){
 		this.sessionId = cdata.getMonkeyId();
 		this.urlPassword = cdata.getPassword();
 		this.mainMessageHandler = messageHandler;
@@ -147,7 +147,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	public void conexionRecursiva(){
 
 		socketStatus = Status.reconectando; userServerListener=new ComServerListener((ComServerDelegate) this);
-		socketClient = new DarkStarSocketClient(SecureSocketService.Companion.getBaseURL(),
+		socketClient = new DarkStarSocketClient(MonkeyKitSocketService.Companion.getBaseURL(),
 				1139,(DarkStarListener)userServerListener);
 		Thread connThread = new Thread(new Runnable() {
 			@Override
@@ -168,8 +168,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 						public void run() {
 							fireInTheHole();
 							//connection is successful, let's resend all pending messages
-							if(service instanceof MsgSenderService)
-								((MsgSenderService)service).resendPendingMessages();
+							service.resendPendingMessages();
 
 						}
 					});
@@ -327,7 +326,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	 * 	MOKProtocolMessageHasKeys
 	 */
 	public int decryptMOKMessage(MOKMessage remote){
-        String claves= KeyStoreCriptext.getString(service.getAppContext(), remote.getSid());
+        String claves= KeyStoreCriptext.getString(service.getApplicationContext(), remote.getSid());
         if(claves.compareTo("")==0 && !remote.getSid().startsWith("legacy:")){
             System.out.println("MONKEY - NO TENGO CLAVES DE AMIGO LAS MANDO A PEDIR");
             return MessageTypes.MOKProtocolMessageNoKeys;
@@ -372,7 +371,7 @@ public class AsyncConnSocket implements ComServerDelegate{
             Log.d("BatchGET", "Got Keys for " + remote.getSid() + ". Apply recursion");
 			return getKeysAndDecryptMOKMessage(remote, true);
         } else if(what == MessageTypes.MOKProtocolMessageWrongKeys){
-            String claves= KeyStoreCriptext.getString(service.getAppContext()
+            String claves= KeyStoreCriptext.getString(service.getApplicationContext()
                   , remote.getSid());
             String newClaves = service.requestKeyBySession(remote.getSid());
             if(newClaves != null && !newClaves.equals(claves))

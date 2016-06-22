@@ -1,18 +1,18 @@
 package com.criptext.security
 
 import android.os.AsyncTask
+import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.CBTypes
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
-import com.criptext.socket.SecureSocketService
 import java.lang.ref.WeakReference
 
 /**
  * Created by gesuwall on 6/6/16.
  */
 
-class DecryptTask(service: SecureSocketService): AsyncTask<EncryptedMsg, MOKMessage, Int>(){
-    val serviceRef: WeakReference<SecureSocketService>
+class DecryptTask(service: MonkeyKitSocketService): AsyncTask<EncryptedMsg, MOKMessage, Int>(){
+    val serviceRef: WeakReference<MonkeyKitSocketService>
     init {
         serviceRef = WeakReference(service)
     }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.AsyncTask
 import android.util.Log
 import com.criptext.ClientData
+import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.CBTypes
 import com.criptext.comunication.MOKMessage
 import com.criptext.lib.KeyStoreCriptext
@@ -23,8 +24,8 @@ import java.util.concurrent.TimeUnit
  * Created by gesuwall on 6/6/16.
  */
 
-class OpenConversationTask(service: SecureSocketService, val undecrypted: MOKMessage) : AsyncTask<String, Void, MOKMessage>(){
-   val serviceRef: WeakReference<SecureSocketService>
+class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOKMessage) : AsyncTask<String, Void, MOKMessage>(){
+   val serviceRef: WeakReference<MonkeyKitSocketService>
     val clientData: ClientData
     lateinit var newConvKey: String
     lateinit var conversationId: String
@@ -38,7 +39,7 @@ class OpenConversationTask(service: SecureSocketService, val undecrypted: MOKMes
     fun getAESData(monkeyId: String) :String? {
         val service = serviceRef.get()
         if(service != null)
-            return KeyStoreCriptext.getString(service.context, monkeyId)
+            return KeyStoreCriptext.getString(service, monkeyId)
 
         return null
     }
@@ -66,7 +67,7 @@ class OpenConversationTask(service: SecureSocketService, val undecrypted: MOKMes
     override fun onPostExecute(message: MOKMessage?) {
         val service = serviceRef.get()
         if(service != null && message!= null){
-            KeyStoreCriptext.putString(service.context, conversationId, KeyStoreCriptext.encryptString(newConvKey))
+            KeyStoreCriptext.putString(service, conversationId, KeyStoreCriptext.encryptString(newConvKey))
             service.executeInDelegate(CBTypes.onMessageReceived, Array<Any>(1, { i -> message}))
         }
 
@@ -102,7 +103,7 @@ class OpenConversationTask(service: SecureSocketService, val undecrypted: MOKMes
             val body = RequestBody.create(JSON, json.toString());
 
             val request = Request.Builder()
-                    .url(SecureSocketService.httpsURL + "/user/key/exchange")
+                    .url(MonkeyKitSocketService.httpsURL + "/user/key/exchange")
                     .post(body).build()
 
 
@@ -115,7 +116,7 @@ class OpenConversationTask(service: SecureSocketService, val undecrypted: MOKMes
         fun getTextEncryptedWithLatestKeys(msg: MOKMessage, clientData: ClientData): String? {
             val http = authorizedHttpClient(clientData)
             val request = Request.Builder()
-                    .url(SecureSocketService.httpsURL + "/message/${msg.message_id}/open/secure")
+                    .url(MonkeyKitSocketService.httpsURL + "/message/${msg.message_id}/open/secure")
                     .build()
             val response = http.newCall(request).execute().body().string();
             val parser = JsonParser()

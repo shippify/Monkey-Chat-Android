@@ -7,6 +7,7 @@ import android.util.Base64
 import android.util.Log
 import android.webkit.MimeTypeMap
 import com.criptext.ClientData
+import com.criptext.MonkeyKitSocketService
 import com.criptext.lib.KeyStoreCriptext
 import com.criptext.http.LoggingInterceptor
 import com.criptext.security.AESUtil
@@ -149,7 +150,7 @@ class FileUploadService: IntentService("FileUploadService") {
         val credential = Credentials.basic(clientData.appId, clientData.appKey);
         val request = Request.Builder()
                     .header("Authorization", credential)
-                    .url(SecureSocketService.httpsURL + "/file/new")
+                    .url(MonkeyKitSocketService.httpsURL + "/file/new")
                     .post(body).build()
 
         Log.d("FileUploadService", request.body().toString())

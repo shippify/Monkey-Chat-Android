@@ -8,7 +8,7 @@ import com.androidquery.auth.BasicHandle;
 import com.androidquery.callback.AjaxCallback;
 import com.androidquery.callback.AjaxStatus;
 import com.criptext.ClientData;
-import com.criptext.MsgSenderService;
+import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.CBTypes;
 import com.criptext.comunication.Compressor;
 import com.criptext.comunication.MOKMessage;
@@ -35,7 +35,7 @@ import java.util.Map;
  * Created by gesuwall on 6/17/16.
  */
 class FileUploader {
-    WeakReference<MsgSenderService> serviceRef;
+    WeakReference<MonkeyKitSocketService> serviceRef;
     final String monkeyID ;
     final AESUtil aesUtil;
     final AQuery aq;
@@ -53,12 +53,12 @@ class FileUploader {
     public void downloadFile(String filepath, final String propsStr, final String sender_id,
                              final Runnable runnable){
 
-        MsgSenderService service = serviceRef.get();
+        MonkeyKitSocketService service = serviceRef.get();
         final JsonObject props = new JsonParser().parse(propsStr).getAsJsonObject();
-        final String claves= KeyStoreCriptext.getString(service.getContext(),sender_id);
+        final String claves= KeyStoreCriptext.getString(service,sender_id);
         String name = FilenameUtils.getBaseName(filepath);
         File target = new File(filepath);
-        final String URL = SecureSocketService.Companion.getHttpsURL()+"/file/open/"+ name;
+        final String URL = MonkeyKitSocketService.Companion.getHttpsURL()+"/file/open/"+ name;
         System.out.println("MONKEY - Descargando:"+ filepath + " " + URL);
         aq.auth(handle).download(URL, target, new AjaxCallback<File>() {
             public void callback(String url, File file, com.androidquery.callback.AjaxStatus status) {
@@ -118,12 +118,12 @@ class FileUploader {
 
         });
     }
-    public FileUploader(MsgSenderService service, AESUtil aesUtil){
+    public FileUploader(MonkeyKitSocketService service, AESUtil aesUtil){
         serviceRef = new WeakReference(service);
         ClientData clientData = service.getServiceClientData();
         monkeyID = clientData.getMonkeyId();
         this.aesUtil = aesUtil;
-        aq = new AQuery(service.getAppContext());
+        aq = new AQuery(service.getApplicationContext());
         handle = new BasicHandle(clientData.getAppId(), clientData.getAppKey());
     }
 
@@ -196,7 +196,7 @@ class FileUploader {
             JsonObject props = new JsonObject();
             props.addProperty("status", MessageTypes.Status.delivered);
             props.addProperty("old_id", newMessage.getMessage_id());
-            MsgSenderService service = serviceRef.get();
+            MonkeyKitSocketService service = serviceRef.get();
             if(service != null)
             service.executeInDelegate(CBTypes.onAcknowledgeReceived,
                     new Object[]{new MOKMessage(response.getString("messageId"), newMessage.getRid(), this.monkeyID,
@@ -257,7 +257,7 @@ class FileUploader {
 
                 params.put("file", finalData);
 
-                MsgSenderService service = serviceRef.get();
+                MonkeyKitSocketService service = serviceRef.get();
                 if(persist && service != null) {
                     service.storeMessage(newMessage, false, new Runnable() {
                         @Override
@@ -334,7 +334,7 @@ class FileUploader {
                 params.put("file", finalData);
                 params.put("data", args.toString());
 
-                MsgSenderService service = serviceRef.get();
+                MonkeyKitSocketService service = serviceRef.get();
                 if(persist) {
                     service.storeMessage(newMessage, false, new Runnable() {
                         @Override
@@ -359,7 +359,7 @@ class FileUploader {
 
     public void uploadFile(Map<String, Object> params, final MOKMessage newMessage){
         System.out.println("send file: " + params);
-        aq.auth(handle).ajax(SecureSocketService.Companion.getHttpsURL() + "/file/new", params,
+        aq.auth(handle).ajax(MonkeyKitSocketService.Companion.getHttpsURL() + "/file/new", params,
                 JSONObject.class, new AjaxCallback<JSONObject>() {
             @Override
             public void callback(String url, JSONObject json, AjaxStatus status) {

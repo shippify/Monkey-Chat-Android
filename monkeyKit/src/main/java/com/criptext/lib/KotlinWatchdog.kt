@@ -2,14 +2,14 @@ package com.criptext.lib
 
 import android.os.Handler
 import android.util.Log
-import com.criptext.MsgSenderService
+import com.criptext.MonkeyKitSocketService
 import java.lang.ref.WeakReference
 
 /**
  * Created by gesuwall on 6/13/16.
  */
 
-class KotlinWatchdog(service: MsgSenderService){
+class KotlinWatchdog(service: MonkeyKitSocketService){
     private val handler: Handler
     private var runnable: Runnable? = null
     private var cancelled: Boolean
@@ -19,7 +19,7 @@ class KotlinWatchdog(service: MsgSenderService){
         return field
     }
 
-    val serviceRef: WeakReference<MsgSenderService>
+    val serviceRef: WeakReference<MonkeyKitSocketService>
 
     init {
         handler = Handler()
