@@ -402,12 +402,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     @NotNull
     @Override
-    public ClientData getClientData() {
-        return new ClientData(getIntent());
-    }
-
-    @NotNull
-    @Override
     public Class<?> getServiceClassName() {
         return MyServiceClass.class;
     }

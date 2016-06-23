@@ -103,10 +103,9 @@ abstract class MonkeyKitSocketService : Service() {
         fileUploader.downloadFile(fileName, props, monkeyId, runnable)
     }
 
-    private fun initializeMonkeyKitService(intent: Intent){
-        clientData = ClientData(intent)
-        //Log.d("MonkeyKitSocketService", "session: ${clientData.monkeyId}")
-        val asyncAES = AsyncAESInitializer(this, clientData.monkeyId)
+    private fun initializeMonkeyKitService(){
+        Log.d("MonkeyKitSocketService", "init")
+        val asyncAES = AsyncAESInitializer(this)
         asyncAES.execute()
 
     }
@@ -117,7 +116,7 @@ abstract class MonkeyKitSocketService : Service() {
             val powerManager = getSystemService(POWER_SERVICE) as PowerManager
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MonkeyKitSocketService")
             wakeLock?.acquire();
-            initializeMonkeyKitService(intent!!)
+            initializeMonkeyKitService()
             return START_NOT_STICKY
         }
         return super.onStartCommand(intent, flags, startId)
@@ -126,19 +125,18 @@ abstract class MonkeyKitSocketService : Service() {
     override fun onBind(intent: Intent?): IBinder? {
 
         if(delegate == null) {
-            initializeMonkeyKitService(intent!!)
+            initializeMonkeyKitService()
             return MonkeyBinder()
         }
 
         return null
     }
 
-    fun startSocketConnection(aesUtil: AESUtil?) {
+    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData) {
+        clientData = cdata
         fileUploader = FileManager(this, aesUtil);
-        if(aesUtil != null) {
-            this.aesutil = aesUtil
-            startSocketConnection()
-        }
+        this.aesutil = aesUtil
+        startSocketConnection()
     }
 
     fun startSocketConnection() {
@@ -785,6 +783,11 @@ abstract class MonkeyKitSocketService : Service() {
      */
     abstract fun storeMessageBatch(messages: ArrayList<MOKMessage>, runnable: Runnable);
 
+    /**
+     * Loads all credentials needed to initialize the service. This method will be called in
+     * a background thread, so it's ok to do blocking operations.
+     */
+    abstract fun loadClientData(): ClientData
 
     companion object {
         val transitionMessagesPrefs = "MonkeyKit.transitionMessages";
@@ -795,15 +798,13 @@ abstract class MonkeyKitSocketService : Service() {
         val httpsURL = "http://" + baseURL
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
 
-        fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>, clientData: ClientData) {
+        fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>) {
             val intent = Intent(context, service)
-            clientData.fillIntent(intent)
             context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
 
-        fun startSyncService(context: Context, service:Class<*>, clientData: ClientData){
+        fun startSyncService(context: Context, service:Class<*>){
             val intent = Intent(context, service)
-            clientData.fillIntent(intent)
             context.startService(intent)
         }
     }

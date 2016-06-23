@@ -17,8 +17,6 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     abstract val serviceClassName: Class<*>
 
-    abstract val clientData: ClientData
-
     private val monkeyKitConnection = object : ServiceConnection {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
             val binder = p1 as MonkeyKitSocketService.MonkeyBinder
@@ -36,7 +34,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onStart() {
         super.onStart()
-        MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName, clientData)
+        MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName)
 
     }
 

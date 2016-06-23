@@ -21,9 +21,6 @@ public class WelcomeActivity extends AppCompatActivity {
 
         if(prefs.getBoolean(MonkeyChat.IS_REGISTERED,false)){
             Intent mainIntent =new Intent(this,MainActivity.class);
-            ClientData cdata = new ClientData(prefs.getString(MonkeyChat.FULLNAME, null), SensitiveData.APP_ID, SensitiveData.APP_KEY,
-                        prefs.getString(MonkeyChat.MONKEY_ID, null));
-            cdata.fillIntent(mainIntent);
             startActivity(mainIntent);
         }
         else{
