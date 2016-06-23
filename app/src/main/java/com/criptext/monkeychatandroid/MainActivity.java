@@ -15,6 +15,7 @@ import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
+import com.criptext.comunication.PushMessage;
 import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.lib.MKDelegateActivity;
 import com.criptext.lib.MonkeyKit;
@@ -163,14 +164,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                             params.addProperty("length",""+item.getAudioDuration());
 
                             mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
-                                    MessageTypes.FileTypes.Audio, "Test Push Message", params);
+                                    MessageTypes.FileTypes.Audio, new PushMessage("Test Push Message"), params);
                             break;
                         case photo:
                             mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
-                                    MessageTypes.FileTypes.Photo, "Test Push Message", new JsonObject());
+                                    MessageTypes.FileTypes.Photo, new PushMessage("Test Push Message"), new JsonObject());
                             break;
                         default:
-                            mokMessage = socketService.persistMessageAndSend(item.getMessageText(), myMonkeyID, "Test Push Message", params);
+                            mokMessage = socketService.persistMessageAndSend(item.getMessageText(),
+                                    myMonkeyID, new PushMessage("Test Push Message"), params);
                             break;
                     }
 

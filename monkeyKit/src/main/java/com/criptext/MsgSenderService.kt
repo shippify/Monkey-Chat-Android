@@ -9,7 +9,6 @@ import android.util.Base64
 import android.util.Log
 import android.webkit.MimeTypeMap
 import com.criptext.comunication.AsyncConnSocket
-import com.criptext.comunication.FileUploadService
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
 import com.criptext.http.MonkeyHttpClient

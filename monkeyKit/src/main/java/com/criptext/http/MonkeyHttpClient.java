@@ -1,6 +1,9 @@
 package com.criptext.http;
 
 import android.util.Base64;
+import android.util.Log;
+
+import com.criptext.MonkeyKitSocketService;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -58,5 +61,26 @@ public class MonkeyHttpClient {
         return new JSONObject(tokener);
     }
 
+    public static void subscribePushHttp(String token, String sessionId, String urlUser, String urlPass) throws JSONException,
+        IOException {
+        // Create a new HttpClient and Post Header
+        HttpClient httpclient = newClient();
+
+            HttpPost httppost = newPost(MonkeyKitSocketService.Companion.getHttpsURL() + "/push/subscribe", urlUser, urlPass);
+
+            JSONObject params = new JSONObject();
+            JSONObject localJSONObject1 = new JSONObject();
+            localJSONObject1.put("token",token);
+            localJSONObject1.put("device","android");
+            localJSONObject1.put("mode","1");
+            localJSONObject1.put("userid", sessionId);
+
+            params.put("data", localJSONObject1.toString());
+            Log.d("subscribePushHttp", "Req: " + params.toString());
+
+            JSONObject finalResult = getResponse(httpclient, httppost, params.toString());
+            Log.d("subscribePushHttp", finalResult.toString());
+
+    }
 
 }

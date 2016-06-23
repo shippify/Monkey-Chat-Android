@@ -2,6 +2,7 @@ package com.criptext.gcm
 
 import android.os.Bundle
 import android.util.Log
+import com.criptext.database.ClientDataTask
 import com.google.android.gms.gcm.GcmListenerService
 
 /**
@@ -16,7 +17,14 @@ class MonkeyGcmListenerService: GcmListenerService() {
     override fun onMessageReceived(from: String?, data: Bundle?) {
         super.onMessageReceived(from, data)
         Log.d("GCMListener", from);
+        ClientDataTask(this).execute()
 
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("GCMListener", "onDestroy");
+    }
+
 
 }

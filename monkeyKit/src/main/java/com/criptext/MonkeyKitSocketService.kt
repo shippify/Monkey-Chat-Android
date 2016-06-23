@@ -13,6 +13,7 @@ import android.util.Log
 import android.webkit.MimeTypeMap
 import com.criptext.comunication.*
 import com.criptext.database.CriptextDBHandler
+import com.criptext.http.FileManager
 import com.criptext.http.MonkeyHttpClient
 import com.criptext.http.OpenConversationTask
 import com.criptext.lib.KeyStoreCriptext
@@ -43,20 +44,56 @@ import java.util.*
 
 abstract class MonkeyKitSocketService : Service() {
 
+    /**
+     * How many messages should have every batch from sync
+     */
     var portionsMessages: Int = 15
+    /**
+     * A timestamp to send as argument for sync. Server will return messages sent after that timestamp
+     */
     var lastTimeSynced: Long = 0L
-
+    /**
+     * object that holds data about the app and the logged in user.
+     */
     protected lateinit var clientData: ClientData
+    /**
+     * object used to encrypt, decrypt and generate AES Keys.
+     */
     protected lateinit var aesutil: AESUtil
+    /**
+     * Object that periodically restarts the socket connection if messages were not successfuly delivered
+     */
     protected var watchdog: KotlinWatchdog? = null
+    /**
+     * Object that manages the socket connection and runs it in a background thread.
+     */
     protected lateinit var asyncConnSocket: AsyncConnSocket
-    internal lateinit var fileUploader: FileUploader
+    /**
+     * Object that uploads files over http
+     */
+    internal lateinit var fileUploader: FileManager
+    /**
+     * Delegate object that will execute callbacks
+     */
     var delegate: MonkeyKitDelegate? = null
+    /**
+     * true if the AESInitializer task has completed successfully.
+     */
     private var socketInitialized = false
+    /**
+     * true if the service should stop itself after receiving sync response
+     */
     var isSyncService: Boolean = false
     private set
+    /**
+     * Keeps the CPU on even if the screen is turned off while  a lock is held
+     */
     internal var wakeLock: PowerManager.WakeLock? = null
 
+    /**
+     * List of messages that have not been successfully delivered yet
+     */
+    val pendingMessages: MutableList<JsonObject> = mutableListOf();
 
     val messageHandler: MOKMessageHandler by lazy {
         MOKMessageHandler(this)
@@ -75,7 +112,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        isSyncService = intent?.getBooleanExtra(MonkeyKitSocketService.SYNC_SERVICE_KEY, false) ?: false
+        isSyncService = intent!!.getBooleanExtra(MonkeyKitSocketService.SYNC_SERVICE_KEY, false)
         if(isSyncService){
             val powerManager = getSystemService(POWER_SERVICE) as PowerManager
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MonkeyKitSocketService")
@@ -85,6 +122,7 @@ abstract class MonkeyKitSocketService : Service() {
         }
         return super.onStartCommand(intent, flags, startId)
     }
+
     override fun onBind(intent: Intent?): IBinder? {
 
         if(delegate == null) {
@@ -95,12 +133,39 @@ abstract class MonkeyKitSocketService : Service() {
         return null
     }
 
+    fun startSocketConnection(aesUtil: AESUtil?) {
+        fileUploader = FileManager(this, aesUtil);
+        if(aesUtil != null) {
+            this.aesutil = aesUtil
+            startSocketConnection()
+        }
+    }
+
+    fun startSocketConnection() {
+        asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
+        asyncConnSocket.conectSocket()
+        socketInitialized = true
+    }
+
     override fun onUnbind(intent: Intent?): Boolean {
         delegate = null
         return true
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        watchdog?.cancel()
+        //persist pending messages to a file
+        if(pendingMessages.isNotEmpty()){
+            Log.d("serviceOnDestroy", "save messages")
+            val task = PendingMessageStore.AsyncStoreTask(this, pendingMessages.toList())
+            task.execute()
+        }
 
+        //persist last time synced
+        asyncConnSocket.disconectSocket()
+        KeyStoreCriptext.setLastSync(this, lastTimeSynced)
+    }
 
     inner class MonkeyBinder : Binder() {
 
@@ -110,6 +175,7 @@ abstract class MonkeyKitSocketService : Service() {
         }
 
     }
+
     fun addMessageToDecrypt(encrypted: MOKMessage) {
         //TODO ADD UNDECRYPTED MAYBE?
     }
@@ -270,34 +336,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
 
-    fun startSocketConnection(aesUtil: AESUtil?) {
-        fileUploader = FileUploader(this, aesUtil);
-        if(aesUtil != null) {
-            this.aesutil = aesUtil
-            startSocketConnection()
-        }
-    }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        watchdog?.cancel()
-        //persist pending messages to a file
-        if(pendingMessages.isNotEmpty()){
-            Log.d("serviceOnDestroy", "save messages")
-            val task = PendingMessageStore.AsyncStoreTask(this, pendingMessages.toList())
-            task.execute()
-        }
-
-        //persist last time synced
-        asyncConnSocket.disconectSocket()
-        KeyStoreCriptext.setLastSync(this, lastTimeSynced)
-    }
-
-    fun startSocketConnection() {
-        asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
-        asyncConnSocket.conectSocket()
-        socketInitialized = true
-    }
 
     val serviceClientData: ClientData
         get() = clientData
@@ -314,11 +353,6 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
 
-    val pendingMessages: MutableList<JsonObject>
-
-    init {
-        pendingMessages = mutableListOf();
-    }
 
      fun startWatchdog(){
         if(watchdog == null) {
@@ -405,22 +439,19 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     private fun createSendJSON(idnegative: String, sessionIDTo: String, elmensaje: String,
-                               pushMessage: String, params: JsonObject, props: JsonObject): JsonObject {
+                               pushMessage: PushMessage, params: JsonObject, props: JsonObject): JsonObject {
 
         val args= JsonObject();
         val json= JsonObject();
-        val pushObject = JsonObject();
 
         try {
-            pushObject.addProperty("key", "text");
-            pushObject.addProperty("value", pushMessage.replace("\\\\", "\\"));
 
             args.addProperty("id", idnegative);
             args.addProperty("sid", clientData.monkeyId);
             args.addProperty("rid", sessionIDTo);
             args.addProperty("msg", aesutil.encrypt(elmensaje));
             args.addProperty("type", MessageTypes.MOKText);
-            args.addProperty("push", pushObject.toString());
+            args.addProperty("push", pushMessage.toString());
             if (params != null)
                 args.addProperty("params", params.toString());
             if (props != null)
@@ -453,7 +484,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
 
-    private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: String,
+    private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: PushMessage,
                             params: JsonObject, persist: Boolean): MOKMessage{
 
         if(elmensaje.length > 0){
@@ -498,7 +529,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param params JsonObject con el params a enviar en el MOKMessage
      * @return el MOKMessage enviado.
      */
-    private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: String, params: JsonObject): MOKMessage {
+    private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: PushMessage, params: JsonObject): MOKMessage {
         return sendMessage(elmensaje, sessionIDTo, pushMessage, params, false);
 
     }
@@ -525,7 +556,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun persistFileMessageAndSend(pathToFile: String, sessionIDTo: String, file_type: Int,
-                                  pushMessage: String, gsonParamsMessage: JsonObject): MOKMessage{
+                                  pushMessage: PushMessage, gsonParamsMessage: JsonObject): MOKMessage{
         //TODO PERSIST FILE & SEND
         /*
         val newMessage = createMOKMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage);
@@ -541,11 +572,11 @@ abstract class MonkeyKitSocketService : Service() {
         return MOKMessage();
         */
         return fileUploader.persistFileMessageAndSend(pathToFile, sessionIDTo, file_type,
-                        gsonParamsMessage, pushMessage)
+                        gsonParamsMessage, pushMessage.toString())
     }
 
     fun persistMessageAndSend(messageText: String, sessionIDTo: String,
-                              pushMessage: String, gsonParamsMessage: JsonObject): MOKMessage{
+                              pushMessage: PushMessage, gsonParamsMessage: JsonObject): MOKMessage{
         return sendMessage(messageText, sessionIDTo, pushMessage, gsonParamsMessage, true);
     }
 
@@ -760,7 +791,7 @@ abstract class MonkeyKitSocketService : Service() {
         val lastSyncPrefs = "MonkeyKit.lastSyncTime";
         val lastSyncKey = "MonkeyKit.lastSyncKey";
 
-        val baseURL = "monkey.criptext.com"
+        val baseURL = "stage.monkey.criptext.com"
         val httpsURL = "http://" + baseURL
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
 

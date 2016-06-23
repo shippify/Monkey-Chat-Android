@@ -2,13 +2,11 @@ package com.criptext.gcm
 
 import android.app.Activity
 import android.app.IntentService
-import android.content.Context
 import android.content.Intent
 import android.preference.PreferenceManager
 import android.util.Log
 import com.criptext.ClientData
-import com.criptext.lib.MonkeyKit
-import com.criptext.lib.R
+import com.criptext.http.MonkeyHttpClient
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.gcm.GoogleCloudMessaging
@@ -47,7 +45,7 @@ abstract class MonkeyRegistrationService : IntentService(TAG){
             // [END get_token]
             Log.i(TAG, "GCM Registration Token: " + token);
 
-            MonkeyKit.subscribePushHttp(token, monkeyId, appId, appKey)
+            MonkeyHttpClient.subscribePushHttp(token, monkeyId, appId, appKey)
 
             // You should store a boolean that indicates whether the generated token has been
             // sent to your server. If the boolean is false, send the token to your server,

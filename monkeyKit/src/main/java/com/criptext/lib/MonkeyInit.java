@@ -5,6 +5,8 @@ import android.os.AsyncTask;
 import android.util.Base64;
 import android.util.Log;
 
+import com.criptext.MonkeyKitSocketService;
+import com.criptext.http.MonkeyHttpClient;
 import com.criptext.security.AESUtil;
 import com.criptext.security.RSAUtil;
 
@@ -113,8 +115,9 @@ public class MonkeyInit {
     private String getSessionHTTP(String urlUser, String urlPass, String fullname) throws JSONException,
             UnsupportedEncodingException, ClientProtocolException, IOException{
         // Create a new HttpClient and Post Header
-        HttpClient httpclient = MonkeyKit.newMonkeyHttpClient();
-        HttpPost httppost = MonkeyKit.newMonkeyHttpPost(MonkeyKit.URL + "/user/session", urlUser, urlPass);
+        HttpClient httpclient = MonkeyHttpClient.newClient();
+        HttpPost httppost = MonkeyHttpClient.newPost(MonkeyKitSocketService.Companion.getHttpsURL() +
+                "/user/session", urlUser, urlPass);
 
         JSONObject localJSONObject1 = new JSONObject();
 
@@ -131,7 +134,7 @@ public class MonkeyInit {
         params.put("data", localJSONObject1.toString());
         Log.d("getSessionHTTP", "Req: " + params.toString());
 
-        JSONObject finalResult = MonkeyKit.getHttpResponseJson(httpclient, httppost, params.toString());
+        JSONObject finalResult = MonkeyHttpClient.getResponse(httpclient, httppost, params.toString());
 
         Log.d("getSesssionHTTP", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
@@ -152,8 +155,9 @@ public class MonkeyInit {
         RSAUtil rsaUtil = new RSAUtil();
         rsaUtil.generateKeys();
 
-        HttpClient httpclient = MonkeyKit.newMonkeyHttpClient();
-        HttpPost httppost = MonkeyKit.newMonkeyHttpPost(MonkeyKit.URL+"/user/key/sync", urlUser, urlPass);
+        HttpClient httpclient = MonkeyHttpClient.newClient();
+        HttpPost httppost = MonkeyHttpClient.newPost(MonkeyKitSocketService.Companion.getHttpsURL() +
+                "/user/key/sync", urlUser, urlPass);
 
         JSONObject localJSONObject1 = new JSONObject();
 
@@ -164,7 +168,7 @@ public class MonkeyInit {
         params.put("data", localJSONObject1.toString());
         Log.d("userSyncMS", "Req: " + params.toString());
 
-        JSONObject finalResult = MonkeyKit.getHttpResponseJson(httpclient, httppost, params.toString());
+        JSONObject finalResult = MonkeyHttpClient.getResponse(httpclient, httppost, params.toString());
          Log.d("userSyncMS", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
 
@@ -189,8 +193,9 @@ public class MonkeyInit {
     private String connectHTTP(String sessionId, String encriptedKeys) throws JSONException,
             UnsupportedEncodingException, ClientProtocolException, IOException{
  // Create a new HttpClient and Post Header
-        HttpClient httpclient = MonkeyKit.newMonkeyHttpClient();
-        HttpPost httppost = MonkeyKit.newMonkeyHttpPost(MonkeyKit.URL+"/user/connect", urlUser, urlPass);
+        HttpClient httpclient = MonkeyHttpClient.newClient();
+        HttpPost httppost = MonkeyHttpClient.newPost(MonkeyKitSocketService.Companion.getHttpsURL() +
+                "/user/connect", urlUser, urlPass);
 
         JSONObject localJSONObject1 = new JSONObject();
 
@@ -201,7 +206,7 @@ public class MonkeyInit {
         params.put("data", localJSONObject1.toString());
         Log.d("connectHTTP", "Req: " + params.toString());
 
-        JSONObject finalResult = MonkeyKit.getHttpResponseJson(httpclient, httppost, params.toString());
+        JSONObject finalResult = MonkeyHttpClient.getResponse(httpclient, httppost, params.toString());
          Log.d("connectHTTP", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
 
