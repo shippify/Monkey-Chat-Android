@@ -1,6 +1,7 @@
 package com.criptext.security
 
 import android.os.AsyncTask
+import android.util.Log
 import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.CBTypes
 import com.criptext.comunication.MOKMessage
@@ -34,10 +35,10 @@ class DecryptTask(service: MonkeyKitSocketService): AsyncTask<EncryptedMsg, MOKM
         fun decryptMessage(encrypted: EncryptedMsg): Boolean{
             try {
                 val message = encrypted.message
-                if (message.encr == "1" && !message.type.equals(MessageTypes.MOKFile)) {
+                if (!message.type.equals(MessageTypes.MOKFile)) { //only attempt to decrypt if it is not a file
                     message.msg = AESUtil.decryptWithCustomKeyAndIV(message.msg,
                             encrypted.key, encrypted.iv);
-                    message.encr = "0"
+                    message.encr = "0" //This "encr" property doesn't seem to be of much use
                 }
 
                 return true

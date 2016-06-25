@@ -1,8 +1,9 @@
 package com.criptext.gcm
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import com.criptext.database.ClientDataTask
+import com.criptext.MonkeyKitSocketService
 import com.google.android.gms.gcm.GcmListenerService
 
 /**
@@ -12,19 +13,21 @@ import com.google.android.gms.gcm.GcmListenerService
  * Created by Gabriel on 5/30/16.
  */
 
-class MonkeyGcmListenerService: GcmListenerService() {
+abstract class MonkeyGcmListenerService: GcmListenerService() {
 
     override fun onMessageReceived(from: String?, data: Bundle?) {
         super.onMessageReceived(from, data)
-        Log.d("GCMListener", from);
-        ClientDataTask(this).execute()
-
+        Log.d("GCMListener", data.toString());
+        if(MonkeyKitSocketService.status == MonkeyKitSocketService.ServiceStatus.dead){
+            val intent = Intent(this, socketServiceClass)
+            startService(intent)
+        }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d("GCMListener", "onDestroy");
-    }
+    abstract val socketServiceClass : Class<*>
+
+    abstract fun createNotification()
+
 
 
 }

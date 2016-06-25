@@ -63,7 +63,7 @@
 
         <!-- Service that receives downstream push messages -->
         <service
-            android:name="com.criptext.gcm.MonkeyGcmListenerService"
+            android:name=".MyGcmListenerService"
             android:exported="false" >
             <intent-filter>
                 <action android:name="com.google.android.c2dm.intent.RECEIVE" />

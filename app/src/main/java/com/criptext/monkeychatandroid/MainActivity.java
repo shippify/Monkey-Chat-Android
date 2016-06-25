@@ -156,6 +156,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                         return;
                     }
 
+                    String gianni = "idkh61jqs9ia151u7edhd7vi";
                     JsonObject params = new JsonObject();
                     MOKMessage mokMessage;
                     switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
@@ -163,16 +164,16 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                             params = new JsonObject();
                             params.addProperty("length",""+item.getAudioDuration());
 
-                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
+                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), gianni,
                                     MessageTypes.FileTypes.Audio, new PushMessage("Test Push Message"), params);
                             break;
                         case photo:
-                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myMonkeyID,
+                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), gianni,
                                     MessageTypes.FileTypes.Photo, new PushMessage("Test Push Message"), new JsonObject());
                             break;
                         default:
                             mokMessage = socketService.persistMessageAndSend(item.getMessageText(),
-                                    myMonkeyID, new PushMessage("Test Push Message"), params);
+                                    gianni, new PushMessage("Test Push Message"), params);
                             break;
                     }
 
@@ -343,10 +344,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     public void onMessageRecieved(MOKMessage message) {
 
         final MonkeyKitSocketService socketService = getService();
-        if(message.getSid().equals(myMonkeyID)){
-            processIncomingMessage(message,true);
-            socketService.setLastTimeSynced(Long.parseLong(message.getDatetime()));
-        }
+         processIncomingMessage(message,true);
+         socketService.setLastTimeSynced(Long.parseLong(message.getDatetime()));
 
     }
 

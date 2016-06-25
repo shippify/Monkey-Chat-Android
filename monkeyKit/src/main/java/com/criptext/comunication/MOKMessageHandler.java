@@ -115,11 +115,4 @@ public class MOKMessageHandler extends Handler {
 
         }
 
-    private void handleBatchFromSync(MonkeyKitSocketService mkService, ArrayList<MOKMessage> batch ){
-       if(mkService.isSyncService()){
-           mkService.stopSelf();
-       } else {
-           mkService.executeInDelegate(CBTypes.onMessageBatchReady, new Object[]{batch});
-       }
-    }
 }

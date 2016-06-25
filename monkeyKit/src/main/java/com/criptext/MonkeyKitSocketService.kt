@@ -16,14 +16,10 @@ import com.criptext.database.CriptextDBHandler
 import com.criptext.http.FileManager
 import com.criptext.http.MonkeyHttpClient
 import com.criptext.http.OpenConversationTask
-import com.criptext.lib.KeyStoreCriptext
-import com.criptext.lib.KotlinWatchdog
-import com.criptext.lib.MonkeyKitDelegate
-import com.criptext.lib.PendingMessageStore
+import com.criptext.lib.*
 import com.criptext.security.AESUtil
 import com.criptext.security.AsyncAESInitializer
 import com.criptext.security.RandomStringBuilder
-import com.criptext.socket.SecureSocketService
 import com.google.gson.JsonObject
 import org.apache.commons.io.FilenameUtils
 import org.apache.http.client.ClientProtocolException
@@ -81,9 +77,9 @@ abstract class MonkeyKitSocketService : Service() {
      */
     private var socketInitialized = false
     /**
-     * true if the service should stop itself after receiving sync response
+     * true if the service was started manually only for sync
      */
-    var isSyncService: Boolean = false
+    var startedManually: Boolean = false
     private set
     /**
      * Keeps the CPU on even if the screen is turned off while  a lock is held
@@ -105,31 +101,34 @@ abstract class MonkeyKitSocketService : Service() {
 
     private fun initializeMonkeyKitService(){
         Log.d("MonkeyKitSocketService", "init")
+        status = ServiceStatus.initializing
         val asyncAES = AsyncAESInitializer(this)
         asyncAES.execute()
 
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        isSyncService = intent!!.getBooleanExtra(MonkeyKitSocketService.SYNC_SERVICE_KEY, false)
-        if(isSyncService){
-            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MonkeyKitSocketService")
-            wakeLock?.acquire();
-            initializeMonkeyKitService()
-            return START_NOT_STICKY
-        }
+        startedManually = true
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MonkeyKitSocketService")
+        wakeLock?.acquire();
+        initializeMonkeyKitService()
+        return START_NOT_STICKY
         return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-
-        if(delegate == null) {
+        if(status == ServiceStatus.dead) {
             initializeMonkeyKitService()
             return MonkeyBinder()
         }
 
         return null
+    }
+
+    override fun onRebind(intent: Intent?) {
+        super.onRebind(intent)
+
     }
 
     fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData) {
@@ -142,16 +141,25 @@ abstract class MonkeyKitSocketService : Service() {
     fun startSocketConnection() {
         asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
         asyncConnSocket.conectSocket()
-        socketInitialized = true
+        //At this point initialization is complete. We are ready to receive and send messages
+        status = ServiceStatus.running
+
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         delegate = null
-        return true
+        if(startedManually) { //if service started manually, stop it manually with a timeout task
+            ServiceTimeoutTask(this).execute()
+            return true
+        } else
+            return false
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
+
+        releaseWakeLock()
         watchdog?.cancel()
         //persist pending messages to a file
         if(pendingMessages.isNotEmpty()){
@@ -163,6 +171,8 @@ abstract class MonkeyKitSocketService : Service() {
         //persist last time synced
         asyncConnSocket.disconectSocket()
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
+
+        status = ServiceStatus.dead
     }
 
     inner class MonkeyBinder : Binder() {
@@ -172,6 +182,11 @@ abstract class MonkeyKitSocketService : Service() {
             return this@MonkeyKitSocketService;
         }
 
+    }
+
+    fun releaseWakeLock(){
+        wakeLock?.release()
+        wakeLock = null
     }
 
     fun addMessageToDecrypt(encrypted: MOKMessage) {
@@ -233,7 +248,10 @@ abstract class MonkeyKitSocketService : Service() {
             CBTypes.onMessageBatchReady -> {
                 val batch = info[0] as ArrayList<MOKMessage>;
                 storeMessageBatch(batch, Runnable {
-                            delegate?.onMessageBatchReady(batch);
+                    delegate?.onMessageBatchReady(batch);
+                    releaseWakeLock()
+                    if(startedManually && delegate == null) //sync service should stop after storing batch
+                        stopSelf()
                 });
             }
             /*
@@ -763,7 +781,6 @@ abstract class MonkeyKitSocketService : Service() {
         return null;
     }
 
-
     /**
      * Guarda un mensaje de MonkeyKit en la base de datos. La implementacion de este metodo deberia de
      * ser asincrona para mejorar el rendimiento del servicio. MonkeyKit llamara a este metodo cada
@@ -798,17 +815,16 @@ abstract class MonkeyKitSocketService : Service() {
         val httpsURL = "http://" + baseURL
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
 
+        var status = ServiceStatus.dead
+
         fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>) {
             val intent = Intent(context, service)
             context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
-
-        fun startSyncService(context: Context, service:Class<*>){
-            val intent = Intent(context, service)
-            context.startService(intent)
-        }
     }
 
-
+    enum class ServiceStatus {
+        dead, initializing, running
+    }
 
 }

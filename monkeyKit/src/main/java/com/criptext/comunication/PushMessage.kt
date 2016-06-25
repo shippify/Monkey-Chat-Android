@@ -24,8 +24,8 @@ open class PushMessage(textMessage: String, ringtone: String){
         androidElement.addProperty(alert, textMessage)
 
         json.addProperty(text, textMessage)
-        //json.add(iosData, iosElement)
-        //json.add(andData, androidElement)
+        json.add(iosData, iosElement)
+        json.add(andData, androidElement)
     }
 
     override fun toString(): String {

@@ -78,7 +78,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
     companion object {
 
         fun authorizedHttpClient(clientData: ClientData) = OkHttpClient().newBuilder()
-                .authenticator(Authenticator { route, response ->
+                .authenticator({ route, response ->
                     val credential = Credentials.basic(clientData.appId, clientData.appKey);
                     response.request().newBuilder()
                             .header("Authorization", credential).build()
@@ -92,18 +92,16 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
             val http = authorizedHttpClient(clientData)
 
-            val JSON = MediaType.parse("application/json; charset=utf-8");
-
             val data = JsonObject();
             data.addProperty("user_to", user_to);
-            data.addProperty("session_id", clientData.monkeyId);
+            data.addProperty("monkey_id", clientData.monkeyId);
 
-            val json = JsonObject();
-            json.add("data", data)
-            val body = RequestBody.create(JSON, json.toString());
+            val body = FormBody.Builder().add("data", data.toString()).build()
 
+            val credential = Credentials.basic(clientData.appId, clientData.appKey);
             val request = Request.Builder()
                     .url(MonkeyKitSocketService.httpsURL + "/user/key/exchange")
+                    .header("Authorization", credential)
                     .post(body).build()
 
 
@@ -114,6 +112,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
         }
 
         fun getTextEncryptedWithLatestKeys(msg: MOKMessage, clientData: ClientData): String? {
+            //TODO TEST THIS!!
             val http = authorizedHttpClient(clientData)
             val request = Request.Builder()
                     .url(MonkeyKitSocketService.httpsURL + "/message/${msg.message_id}/open/secure")
@@ -137,27 +136,35 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
                 Log.e("OpenConversationTask", "Can't decrypt. data object not found in ${openConversationResponse.toString()}.")
                 return null;
             }
+            //This encrypted key has the other user's key and IV separated by ':', but we can't use it
+            // yet, it is encypted
             val encryptedKey = data.get("convKey").asString
+            //MonkeyID of the other user
             val conversationId = data.get("session_to").asString
 
             if (conversationId != pendingMessage.sid)
                 throw IllegalArgumentException("Can't decrypt the message's sender ID does not match the ID of the " +
                         "key given by the Json object. All messages must have the same sender ID.")
 
+            //the result of this decryption is a string key and IV separated by ':'. Ready to use
             val conversationKey = aesutil.decrypt(encryptedKey);
 
             val decryptedList = mutableListOf<MOKMessage>()
+            //1st attempt to decrypt, if it works add message to decrypted list
             if (DecryptTask.decryptMessage(EncryptedMsg.fromSecret(pendingMessage,
                     conversationKey))) {
-                decryptedList.add(pendingMessage)
+                return pendingMessage
             } else {
+                //Decryption didn't work with current key. Ask the server to encrypt again with current keys
+                //then do a 2nd attempt to decrypt, if it works add to decrypted list
                 pendingMessage.msg = getTextEncryptedWithLatestKeys(pendingMessage, clientData)
                 if (DecryptTask.decryptMessage((EncryptedMsg.fromSecret(pendingMessage, conversationKey))))
-                    decryptedList.add(pendingMessage)
-                else
+                    return pendingMessage
+                else //The 2 decryption attempts have failed. Discard the message
                     Log.e("OpenConversationTask", "can't decrypt ${pendingMessage.message_id}. discarding")
             }
-            return pendingMessage
+            //return all the messages that were successfully decrypted
+            return null
 
 
         }
