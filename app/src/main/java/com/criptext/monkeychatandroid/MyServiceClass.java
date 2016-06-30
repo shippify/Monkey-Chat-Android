@@ -7,7 +7,6 @@ import android.util.Log;
 import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKMessage;
-import com.criptext.lib.MonkeyKit;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 
 import org.jetbrains.annotations.NotNull;

@@ -4,13 +4,10 @@ import android.app.ActivityManager;
 import android.app.Application;
 import android.content.Context;
 
-import com.criptext.lib.MonkeyKit;
-
 import io.realm.DynamicRealm;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
 import io.realm.RealmMigration;
-import io.realm.RealmSchema;
 
 /**
  * Created by Daniel Tigse on 4/19/16.
@@ -20,7 +17,6 @@ public class MonkeyChat extends Application{
 
 
     public String MONKEY_REALM = "SampleApp.MonkeyKitRealm";
-    private Realm monkeyRealm;
     private static MonkeyChat singleton;
 
     public static String MONKEY_ID = "MonkeyChat.MonkeyId";
@@ -35,25 +31,6 @@ public class MonkeyChat extends Application{
 
     public static MonkeyChat getInstance(){
         return singleton;
-    }
-
-    public static void startMonkeyService(Context c, String name, String sessionid, String CRIPTEXT_APP_ID, String CRIPTEXT_APP_KEY){
-        if(!isMyServiceRunning(MyServiceClass.class, c)){
-            MonkeyKit.startMonkeyService(c, MyServiceClass.class,
-                    name,
-                    sessionid,
-                    CRIPTEXT_APP_ID, CRIPTEXT_APP_KEY);
-        }
-    }
-
-    public static boolean isMyServiceRunning(Class<?> serviceClass, Context context) {
-        ActivityManager manager = (ActivityManager)context.getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public Realm getNewMonkeyRealm(){
@@ -77,29 +54,5 @@ public class MonkeyChat extends Application{
             //Example here https://realm.io/docs/java/latest/#migrations
         }
     };
-
-    public static String milliSecondsToTimer(long milliseconds){
-
-        String finalTimerString = "";
-        String secondsString = "";
-
-        // Convert total duration into time
-        int hours = (int)( milliseconds / (1000*60*60));
-        int minutes = (int)(milliseconds % (1000*60*60)) / (1000*60);
-        int seconds = (int) ((milliseconds % (1000*60*60)) % (1000*60) / 1000);
-        // Add hours if there
-        if(hours > 0){
-            finalTimerString = hours + ":";
-        }
-        // Prepending 0 to seconds if it is one digit
-        if(seconds < 10){
-            secondsString = "0" + seconds;
-        }else{
-            secondsString = "" + seconds;}
-
-        finalTimerString = finalTimerString + minutes + ":" + secondsString;
-        // return timer string
-        return finalTimerString;
-    }
 
 }

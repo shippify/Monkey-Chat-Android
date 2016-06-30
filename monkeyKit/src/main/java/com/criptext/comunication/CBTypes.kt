@@ -6,7 +6,7 @@ package com.criptext.comunication
 
 enum class CBTypes {
     onMessageReceived, onAcknowledgeReceived, onSocketConnected, onSocketDisconnected,
-        onConnectOK, onNetworkError, onDeleteReceived, onCreateGroupOK, onCreateGroupError,
+        onDeleteReceived, onCreateGroupOK, onCreateGroupError,
         onDeleteGroupOK, onDeleteGroupError, onAddMemberToGroupOK, onAddMemberToGroupError,
         onContactOpenMyConversation, onGetGroupInfoOK, onGetGroupInfoError, onNotificationReceived,
         onMessageBatchReady

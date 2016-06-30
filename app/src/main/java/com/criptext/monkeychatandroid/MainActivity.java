@@ -305,11 +305,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
      */
 
     @Override
-    public void onNetworkError(Exception exception) {
-
-    }
-
-    @Override
     public void onSocketConnected() {
 
     }
