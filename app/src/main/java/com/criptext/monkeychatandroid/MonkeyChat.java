@@ -56,13 +56,6 @@ public class MonkeyChat extends Application{
         return false;
     }
 
-    public Realm getMonkeyKitRealm(){
-        if(monkeyRealm == null)
-            monkeyRealm = getNewMonkeyRealm();
-
-        return monkeyRealm;
-    }
-
     public Realm getNewMonkeyRealm(){
         RealmConfiguration libraryConfig = getMonkeyConfig();
         return Realm.getInstance(libraryConfig);

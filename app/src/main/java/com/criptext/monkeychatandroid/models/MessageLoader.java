@@ -7,6 +7,7 @@ import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.ArrayList;
 
+import io.realm.Realm;
 import io.realm.RealmChangeListener;
 import io.realm.RealmResults;
 
@@ -43,13 +44,13 @@ public class MessageLoader {
         this.adapter = adapter;
     }
 
-    public void loadNewPage(){
+    public void loadNewPage(Realm realm){
         if(lastIndex == 0){
             adapter.setHasReachedEnd(true);
             return;
         }
 
-        final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(senderId, receiverId);
+        final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(realm, senderId, receiverId);
         realmResults.addChangeListener(new RealmChangeListener() {
             @Override
             public void onChange() {

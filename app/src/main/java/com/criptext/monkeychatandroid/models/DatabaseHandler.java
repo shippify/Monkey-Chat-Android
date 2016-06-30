@@ -21,9 +21,8 @@ import io.realm.RealmResults;
  */
 public class DatabaseHandler {
 
-    public static void saveMessage(final MessageItem messageItem, final Realm.Transaction.OnSuccess onSuccess, final Realm.Transaction.OnError onError) {
+    public static void saveMessage(Realm realm, final MessageItem messageItem, final Realm.Transaction.OnSuccess onSuccess, final Realm.Transaction.OnError onError) {
 
-        Realm realm = MonkeyChat.getInstance().getMonkeyKitRealm();
         realm.executeTransactionAsync(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
@@ -33,24 +32,19 @@ public class DatabaseHandler {
         }, onSuccess, onError);
     }
 
-    public static void saveMessageBatch(final ArrayList<MOKMessage> messages, final Context context, final String userSession, final Realm.Transaction.OnSuccess onSuccess, final Realm.Transaction.OnError onError) {
+    public static void saveMessageBatch(Realm realm, final ArrayList<MOKMessage> messages, final Context context, final String userSession, final Realm.Transaction.OnSuccess onSuccess, final Realm.Transaction.OnError onError) {
 
         final WeakReference<Context> weakContext = new WeakReference<>(context);
-        Realm realm = MonkeyChat.getInstance().getMonkeyKitRealm();
         realm.executeTransactionAsync(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
 
                 for(int i = messages.size() - 1; i > -1; i--){
                     MOKMessage message = messages.get(i);
-                    boolean continuar=true;
-                    if(message.getProps().has("old_id")){
-                        if(existMessage(realm, message.getProps().get("old_id").getAsString()))
-                            continuar=false;
-                    }
-                    if(continuar && !existMessage(realm, message.getMessage_id())){
+                    if(!existMessage(realm, message.getMessage_id())){
                         MessageItem messageItem = createMessage(message, context, userSession, true);
-                        realm.copyToRealmOrUpdate(messageItem.getModel());
+                        realm.copyToRealm(messageItem.getModel());
+                        Log.d("DatabaseHandler", "stored msg: " + message.getMsg());
                     } else
                         messages.remove(i);
                 }
@@ -105,23 +99,17 @@ public class DatabaseHandler {
         return item;
     }
 
-    public static RealmResults<MessageModel> getMessages(String id, String userSession){
+    public static RealmResults<MessageModel> getMessages(Realm realm, String id, String userSession){
 
-        Realm realm = MonkeyChat.getInstance().getMonkeyKitRealm();
         final RealmResults<MessageModel> myMessages;
         if (id.startsWith("G:")) {
-            //GRUPO MESSAGES
+            //In a group, all messages are either sent from or sent to an ID that starts with ':G'
+            //Let's get all those messages.
             myMessages = realm.where(MessageModel.class).equalTo("recieverSessionId", id).or().equalTo("senderSessionId", id).findAllAsync();
         } else {
+            //If this is not a group, then it's probably the mirror chat,
+            //Let's just get all messages from DB.
             myMessages = realm.where(MessageModel.class)
-                    .beginGroup()
-                    .contains("recieverSessionId", id).not().beginsWith("senderSessionId", "G:", Case.SENSITIVE)
-                    .equalTo("senderSessionId", userSession)
-                    .endGroup()
-                    .or()
-                    .beginGroup()
-                    .equalTo("senderSessionId", id).not().beginsWith("recieverSessionId", "G:", Case.SENSITIVE)
-                    .endGroup()
                     .findAllAsync();
         }
 
@@ -129,16 +117,13 @@ public class DatabaseHandler {
 
     }
 
-    public static void deleteAll(){
-        Realm realm = MonkeyChat.getInstance().getMonkeyKitRealm();
+    public static void deleteAll(Realm realm){
         realm.beginTransaction();
         realm.where(MessageModel.class).findAll().deleteAllFromRealm();
         realm.commitTransaction();
     }
 
-    public static void updateMessageDownloadingStatus(MessageModel model, boolean isDownloading) {
-
-        Realm realm = MonkeyChat.getInstance().getMonkeyKitRealm();
+    public static void updateMessageDownloadingStatus(Realm realm, MessageModel model, boolean isDownloading) {
         realm.beginTransaction();
         if(model != null){
             model.setDownloading(isDownloading);
@@ -147,9 +132,8 @@ public class DatabaseHandler {
 
     }
 
-    public static void updateMessageOutgoingStatus(final MessageModel model, final MonkeyItem.OutgoingMessageStatus outgoingMessageStatus) {
+    public static void updateMessageOutgoingStatus(Realm realm, final MessageModel model, final MonkeyItem.OutgoingMessageStatus outgoingMessageStatus) {
 
-        Realm realm = MonkeyChat.getInstance().getMonkeyKitRealm();
         realm.executeTransactionAsync(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {

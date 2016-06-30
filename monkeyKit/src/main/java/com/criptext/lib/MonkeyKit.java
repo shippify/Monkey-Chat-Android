@@ -2056,7 +2056,6 @@ public abstract class MonkeyKit extends Service {
     public void destroyMonkeyKit(){
         if(asynConnSocket != null) {
             asynConnSocket.stop();
-            asynConnSocket.socketMessageHandler = null;
         }
 
     }

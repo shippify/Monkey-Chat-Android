@@ -62,15 +62,15 @@ public class GroupManager extends AQueryHttp {
         if(jo!=null){
             try {
                 JSONObject json = jo.getJSONObject("data");
-                service.executeInDelegate(CBTypes.onCreateGroupOK, new Object[]{json.getString("group_id")});
+                service.processMessageFromHandler(CBTypes.onCreateGroupOK, new Object[]{json.getString("group_id")});
             }
             catch(Exception e){
-                service.executeInDelegate(CBTypes.onCreateGroupError, new Object[]{""});
+                service.processMessageFromHandler(CBTypes.onCreateGroupError, new Object[]{""});
                 e.printStackTrace();
             }
         }
         else
-            service.executeInDelegate(CBTypes.onCreateGroupError, new Object[]{status.getCode()+" - "+status.getMessage()});
+            service.processMessageFromHandler(CBTypes.onCreateGroupError, new Object[]{status.getCode()+" - "+status.getMessage()});
     }
 
     /************************************************************************/
@@ -110,15 +110,15 @@ public class GroupManager extends AQueryHttp {
             try {
                 System.out.println("MONKEY - onDeleteGroup: " + jo.toString());
                 JSONObject json = jo.getJSONObject("data");
-                service.executeInDelegate(CBTypes.onDeleteGroupOK, new Object[]{json.getString("group_id")});
+                service.processMessageFromHandler(CBTypes.onDeleteGroupOK, new Object[]{json.getString("group_id")});
             }
             catch(Exception e){
-                service.executeInDelegate(CBTypes.onDeleteGroupError, new Object[]{""});
+                service.processMessageFromHandler(CBTypes.onDeleteGroupError, new Object[]{""});
                 e.printStackTrace();
             }
         }
         else if(service != null)
-            service.executeInDelegate(CBTypes.onDeleteGroupError, new Object[]{status.getCode()+" - "+status.getMessage()});
+            service.processMessageFromHandler(CBTypes.onDeleteGroupError, new Object[]{status.getCode()+" - "+status.getMessage()});
     }
 
     /************************************************************************/
@@ -162,15 +162,15 @@ public class GroupManager extends AQueryHttp {
             try {
                 System.out.println("MONKEY - onAddMemberToGroup - " + jo.toString());
                 //JSONObject json = jo.getJSONObject("data");
-                service.executeInDelegate(CBTypes.onAddMemberToGroupOK, new Object[]{});
+                service.processMessageFromHandler(CBTypes.onAddMemberToGroupOK, new Object[]{});
             }
             catch(Exception e){
-                service.executeInDelegate(CBTypes.onAddMemberToGroupError, new Object[]{""});
+                service.processMessageFromHandler(CBTypes.onAddMemberToGroupError, new Object[]{""});
                 e.printStackTrace();
             }
         }
         else if(service != null)
-            service.executeInDelegate(CBTypes.onAddMemberToGroupError, new Object[]{status.getCode()+" - "+status.getMessage()});
+            service.processMessageFromHandler(CBTypes.onAddMemberToGroupError, new Object[]{status.getCode()+" - "+status.getMessage()});
     }
 
     /************************************************************************/
@@ -210,15 +210,15 @@ public class GroupManager extends AQueryHttp {
 
                 JsonParser jsonParser = new JsonParser();
                 JsonObject gsonObject = (JsonObject)jsonParser.parse(json.toString());
-                service.executeInDelegate(CBTypes.onGetGroupInfoOK, new Object[]{gsonObject});
+                service.processMessageFromHandler(CBTypes.onGetGroupInfoOK, new Object[]{gsonObject});
             }
             catch(Exception e){
-                service.executeInDelegate(CBTypes.onGetGroupInfoError, new Object[]{""});
+                service.processMessageFromHandler(CBTypes.onGetGroupInfoError, new Object[]{""});
                 e.printStackTrace();
             }
         }
         else if(service != null)
-            service.executeInDelegate(CBTypes.onGetGroupInfoError, new Object[]{status.getCode() + " - " + status.getMessage()});
+            service.processMessageFromHandler(CBTypes.onGetGroupInfoError, new Object[]{status.getCode() + " - " + status.getMessage()});
     }
 
 }

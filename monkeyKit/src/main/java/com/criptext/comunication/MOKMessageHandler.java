@@ -5,9 +5,7 @@ import android.os.Message;
 import android.util.Log;
 
 import com.criptext.MonkeyKitSocketService;
-import com.criptext.MonkeyKitSocketService;
 import com.criptext.lib.KeyStoreCriptext;
-import com.criptext.socket.SecureSocketService;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -41,26 +39,26 @@ public class MOKMessageHandler extends Handler {
                             if (message.getProps().has("file_type")) {
                                 type = message.getProps().get("file_type").getAsInt();
                                 if (type <= 4 && type >= 0)
-                                    service.executeInDelegate(CBTypes.onMessageReceived, new Object[]{message});
+                                    service.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
                                 else
                                     System.out.println("MONKEY - archivo no soportado");
                             } else if (message.getProps().has("type")) {
                                 type = message.getProps().get("type").getAsInt();
                                 if (type == 2 || type == 1)
-                                    service.executeInDelegate(CBTypes.onMessageReceived, new Object[]{message});
+                                    service.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
                             } else if (message.getProps().has("monkey_action")) {
                                 type = message.getProps().get("monkey_action").getAsInt();
                                 message.setMonkeyAction(type);
-                                service.executeInDelegate(CBTypes.onNotificationReceived, new Object[]{message});
+                                service.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message});
                             } else
-                                service.executeInDelegate(CBTypes.onNotificationReceived, new Object[]{message});
+                                service.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message});
                         }
                         break;
                     case MessageTypes.MOKProtocolMessageBatch:
-                        service.executeInDelegate(CBTypes.onMessageBatchReady, new Object[]{(ArrayList<MOKMessage>)msg.obj});
+                        service.processMessageFromHandler(CBTypes.onMessageBatchReady, new Object[]{(ArrayList<MOKMessage>)msg.obj});
                         break;
                     case MessageTypes.MOKProtocolMessageHasKeys:
-                        service.executeInDelegate(CBTypes.onMessageReceived, new Object[]{message});
+                        service.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
                         break;
                     case MessageTypes.MOKProtocolMessageNoKeys:
                     case MessageTypes.MOKProtocolMessageWrongKeys:
@@ -72,7 +70,7 @@ public class MOKMessageHandler extends Handler {
                             //The acknowledge message has the id of the successfully sent message in
                             //the Msg field. We'll use that to update our pending messages list.
                             service.removePendingMessage(message.getMsg());
-                            service.executeInDelegate(CBTypes.onAcknowledgeReceived, new Object[]{message});
+                            service.processMessageFromHandler(CBTypes.onAcknowledgeReceived, new Object[]{message});
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -83,30 +81,30 @@ public class MOKMessageHandler extends Handler {
                         else
                             System.out.println("MONKEY - llego open pero ya tengo las claves");
                         //MANDAR AL APP QUE PONGA LEIDO TODOS LOS MENSAJES
-                        service.executeInDelegate(CBTypes.onContactOpenMyConversation, new Object[]{message.getSid()});
+                        service.processMessageFromHandler(CBTypes.onContactOpenMyConversation, new Object[]{message.getSid()});
                         break;
                     }
                     case MessageTypes.MOKProtocolDelete:{
-                        service.executeInDelegate(CBTypes.onDeleteReceived, new Object[]{message});
+                        service.processMessageFromHandler(CBTypes.onDeleteReceived, new Object[]{message});
                         break;
                     }
                     case MessageTypes.MessageSocketConnected:{
-                        service.executeInDelegate(CBTypes.onSocketConnected, new Object[]{""});
+                        service.processMessageFromHandler(CBTypes.onSocketConnected, new Object[]{""});
                         break;
                     }
                     case MessageTypes.MessageSocketDisconnected:{
-                        service.executeInDelegate(CBTypes.onSocketDisconnected, new Object[]{""});//new Object[]{""}
+                        service.processMessageFromHandler(CBTypes.onSocketDisconnected, new Object[]{""});//new Object[]{""}
                         //If socket disconnected and this handler is still alive we should reconnect
                         //immediately.
                         service.startSocketConnection();
                         break;
                     }
                     case MessageTypes.MOKProtocolGet: {
-                        service.executeInDelegate(CBTypes.onNotificationReceived, new Object[]{message});
+                        service.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message});
                         break;
                     }
                     case MessageTypes.MOKProtocolSync: {
-                        service.executeInDelegate(CBTypes.onNotificationReceived, new Object[]{message});
+                        service.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message});
                         break;
                     }
                     default:

@@ -2,6 +2,7 @@ package com.criptext.monkeychatandroid;
 
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
 import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
@@ -20,12 +21,14 @@ import io.realm.Realm;
  */
 
 public class MyServiceClass extends MonkeyKitSocketService{
+    private Realm realm;
 
     @Override
     public void storeMessage(MOKMessage message, boolean incoming, final Runnable runnable) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        DatabaseHandler.saveMessage(DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), incoming),
+        openDatabase();
+        DatabaseHandler.saveMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), incoming),
             new Realm.Transaction.OnSuccess() {
                 @Override
                 public void onSuccess() {
@@ -36,15 +39,15 @@ public class MyServiceClass extends MonkeyKitSocketService{
                 public void onError(Throwable error) {
                     error.printStackTrace();
                 }
-        });
-
+            });
     }
 
     @Override
     public void storeMessageBatch(ArrayList<MOKMessage> messages, final Runnable runnable) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        DatabaseHandler.saveMessageBatch(messages, this, prefs.getString("sessionid", ""),
+        openDatabase();
+        DatabaseHandler.saveMessageBatch(realm, messages, this, prefs.getString("sessionid", ""),
                 new Realm.Transaction.OnSuccess() {
                     @Override
                     public void onSuccess() {
@@ -66,5 +69,22 @@ public class MyServiceClass extends MonkeyKitSocketService{
         String fullname = prefs.getString(MonkeyChat.FULLNAME, null);
         String monkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
         return new ClientData(fullname, SensitiveData.APP_ID, SensitiveData.APP_KEY, monkeyID);
+    }
+
+    @Override
+    public void closeDatabase() {
+        if(realm != null)
+            realm.close();
+        realm = null;
+        Log.d("DatabaseHandler", "Realm closed");
+    }
+
+    @Override
+    public void openDatabase() {
+        if(realm == null){
+            realm = MonkeyChat.getInstance().getNewMonkeyRealm();
+        }
+        Log.d("DatabaseHandler", "Realm open");
+
     }
 }

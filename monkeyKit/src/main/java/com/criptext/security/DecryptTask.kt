@@ -28,7 +28,7 @@ class DecryptTask(service: MonkeyKitSocketService): AsyncTask<EncryptedMsg, MOKM
 
     override fun onProgressUpdate(vararg values: MOKMessage?) {
         val service = serviceRef.get()
-        service?.executeInDelegate(CBTypes.onMessageReceived, Array(0, { i -> values[i] as Any}));
+        service?.processMessageFromHandler(CBTypes.onMessageReceived, Array(0, { i -> values[i] as Any}));
     }
 
     companion object {

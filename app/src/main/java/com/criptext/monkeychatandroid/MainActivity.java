@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.MediaPlayer;
 import android.preference.PreferenceManager;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -18,8 +17,6 @@ import com.criptext.comunication.MessageTypes;
 import com.criptext.comunication.PushMessage;
 import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.lib.MKDelegateActivity;
-import com.criptext.lib.MonkeyKit;
-import com.criptext.lib.MonkeyKitDelegate;
 import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
@@ -38,6 +35,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import io.realm.Realm;
+
 public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     MonkeyAdapter adapter;
@@ -48,17 +47,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     VoiceNotePlayer voiceNotePlayer;
 
     private SharedPreferences prefs;
-    private String myMonkeyID;
+    private String myMonkeyID, myFriendID;
     private  SensorHandler sensorHandler;
+
+    private Realm realm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        
+
+        initRealm();
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
+        myFriendID = "iq2halrqq519fgko9di8jjor";
         if(MonkeyRegistrationService.Companion.checkPlayServices(this))
                 registerWithGCM();
 
@@ -76,10 +79,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         initInputView();
         voiceNotePlayer = new DefaultVoiceNotePlayer(adapter, recycler);
         sensorHandler = new SensorHandler(voiceNotePlayer, this);
-        messageLoader.loadNewPage();
+        messageLoader.loadNewPage(realm);
     }
 
 
+    private void initRealm(){
+        if(realm == null)
+            realm = MonkeyChat.getInstance().getNewMonkeyRealm();
+    }
 
     public void registerWithGCM(){
         Intent intent = new Intent(this, SampleRegistrationService.class);
@@ -100,6 +107,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     protected void onStop() {
 
         super.onStop();
+        realm.close();
+        realm = null;
         voiceNotePlayer.releasePlayer();
         sensorHandler.onStop();
     }
@@ -113,6 +122,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     protected void onStart(){
         super.onStart();
+        initRealm();
         voiceNotePlayer.initPlayer();
     }
 
@@ -129,7 +139,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_deleteall:
-                DatabaseHandler.deleteAll();
+                DatabaseHandler.deleteAll(realm);
                 monkeyMessages.clear();
                 adapter.notifyDataSetChanged();
                 break;
@@ -156,7 +166,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                         return;
                     }
 
-                    String gianni = "idkh61jqs9ia151u7edhd7vi";
                     JsonObject params = new JsonObject();
                     MOKMessage mokMessage;
                     switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
@@ -164,20 +173,20 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                             params = new JsonObject();
                             params.addProperty("length",""+item.getAudioDuration());
 
-                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), gianni,
+                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myFriendID,
                                     MessageTypes.FileTypes.Audio, new PushMessage("Test Push Message"), params);
                             break;
                         case photo:
-                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), gianni,
+                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myFriendID,
                                     MessageTypes.FileTypes.Photo, new PushMessage("Test Push Message"), new JsonObject());
                             break;
                         default:
                             mokMessage = socketService.persistMessageAndSend(item.getMessageText(),
-                                    gianni, new PushMessage("Test Push Message"), params);
+                                    myFriendID, new PushMessage("Test Push Message"), params);
                             break;
                     }
 
-                    MessageItem newItem = new MessageItem(myMonkeyID, myMonkeyID, mokMessage.getMessage_id(),
+                    MessageItem newItem = new MessageItem(myMonkeyID, myFriendID, mokMessage.getMessage_id(),
                             item.getMessageText(), item.getMessageTimestamp(), item.isIncomingMessage(),
                             MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
 
@@ -226,7 +235,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         MessageItem monkeyItem = (MessageItem) searchMessage(message.getOldId());
         if(monkeyItem != null) {
             monkeyItem.setStatus(MonkeyItem.OutgoingMessageStatus.delivered);
-            DatabaseHandler.updateMessageOutgoingStatus(monkeyItem.model, MonkeyItem.OutgoingMessageStatus.delivered);
+            DatabaseHandler.updateMessageOutgoingStatus(realm, monkeyItem.model, MonkeyItem.OutgoingMessageStatus.delivered);
             adapter.notifyDataSetChanged();
         }
     }
@@ -274,7 +283,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         final MonkeyKitSocketService socketService = getService();
         if(socketService !=null && !messageItem.isDownloading()) {
             messageItem.setDownloading(true);
-            DatabaseHandler.updateMessageDownloadingStatus(messageItem.model, true);
+            DatabaseHandler.updateMessageDownloadingStatus(realm, messageItem.model, true);
             Log.d("MainActivity", "Downloading " + item.getFilePath());
             socketService.downloadFile(messageItem.getFilePath(), messageItem.getProps().toString(),
                     myMonkeyID, new Runnable() {
@@ -288,7 +297,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     @Override
     public void onLoadMoreData(int i) {
-        messageLoader.loadNewPage();
+        messageLoader.loadNewPage(realm);
     }
 
     /******

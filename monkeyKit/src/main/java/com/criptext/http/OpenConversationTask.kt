@@ -68,7 +68,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
         val service = serviceRef.get()
         if(service != null && message!= null){
             KeyStoreCriptext.putString(service, conversationId, KeyStoreCriptext.encryptString(newConvKey))
-            service.executeInDelegate(CBTypes.onMessageReceived, Array<Any>(1, { i -> message}))
+            service.processMessageFromHandler(CBTypes.onMessageReceived, Array<Any>(1, { i -> message}))
         }
 
 

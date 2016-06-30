@@ -46,8 +46,15 @@ abstract class MonkeyKitSocketService : Service() {
     var portionsMessages: Int = 15
     /**
      * A timestamp to send as argument for sync. Server will return messages sent after that timestamp
+     * It should only be updated when a message is received.
      */
     var lastTimeSynced: Long = 0L
+    set (value){
+        if(status != ServiceStatus.dead && value > field)
+            //only update last sync if service is not dead.
+            //setting a lower value is not allowed. It should always increase
+            field = value
+    }
     /**
      * object that holds data about the app and the logged in user.
      */
@@ -72,10 +79,7 @@ abstract class MonkeyKitSocketService : Service() {
      * Delegate object that will execute callbacks
      */
     var delegate: MonkeyKitDelegate? = null
-    /**
-     * true if the AESInitializer task has completed successfully.
-     */
-    private var socketInitialized = false
+    private set;
     /**
      * true if the service was started manually only for sync
      */
@@ -102,6 +106,7 @@ abstract class MonkeyKitSocketService : Service() {
     private fun initializeMonkeyKitService(){
         Log.d("MonkeyKitSocketService", "init")
         status = ServiceStatus.initializing
+        openDatabase();
         val asyncAES = AsyncAESInitializer(this)
         asyncAES.execute()
 
@@ -114,16 +119,13 @@ abstract class MonkeyKitSocketService : Service() {
         wakeLock?.acquire();
         initializeMonkeyKitService()
         return START_NOT_STICKY
-        return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        if(status == ServiceStatus.dead) {
+        if(status == ServiceStatus.dead)
             initializeMonkeyKitService()
-            return MonkeyBinder()
-        }
 
-        return null
+        return MonkeyBinder()
     }
 
     override fun onRebind(intent: Intent?) {
@@ -131,6 +133,9 @@ abstract class MonkeyKitSocketService : Service() {
 
     }
 
+    /**
+     * This method gets called by the Async Intializer on its PostExecute method.
+     */
     fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData) {
         clientData = cdata
         fileUploader = FileManager(this, aesUtil);
@@ -139,14 +144,15 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun startSocketConnection() {
-        asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
-        asyncConnSocket.conectSocket()
         //At this point initialization is complete. We are ready to receive and send messages
         status = ServiceStatus.running
 
+        asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
+        asyncConnSocket.conectSocket()
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
+        Log.d("MonkeyKitSocketService", "onUnbind");
         delegate = null
         if(startedManually) { //if service started manually, stop it manually with a timeout task
             ServiceTimeoutTask(this).execute()
@@ -155,30 +161,36 @@ abstract class MonkeyKitSocketService : Service() {
             return false
     }
 
-
     override fun onDestroy() {
         super.onDestroy()
 
+        status = ServiceStatus.dead
+        Log.d("MonkeyKitSocketService", "onDestroy");
+        //let the CPU go to sleep by releasing the wake lock
         releaseWakeLock()
+
+        //If for some reason, client didn't unbind,
+        delegate = null;
         watchdog?.cancel()
         //persist pending messages to a file
         if(pendingMessages.isNotEmpty()){
-            Log.d("serviceOnDestroy", "save messages")
+            //Log.d("serviceOnDestroy", "save messages")
             val task = PendingMessageStore.AsyncStoreTask(this, pendingMessages.toList())
             task.execute()
         }
 
-        //persist last time synced
         asyncConnSocket.disconectSocket()
+        //persist last time synced
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
+        closeDatabase();
 
-        status = ServiceStatus.dead
     }
 
     inner class MonkeyBinder : Binder() {
 
         fun getService(delegate: MonkeyKitDelegate): MonkeyKitSocketService{
             this@MonkeyKitSocketService.delegate = delegate
+            Log.d("MonkeyKitSocketService", "set delegate. ${this@MonkeyKitSocketService.delegate != null}")
             return this@MonkeyKitSocketService;
         }
 
@@ -193,8 +205,10 @@ abstract class MonkeyKitSocketService : Service() {
         //TODO ADD UNDECRYPTED MAYBE?
     }
 
-    fun executeInDelegate(method:CBTypes, info:Array<Any>) {
-        //super already stores received messages and passes the to delegate
+    fun processMessageFromHandler(method:CBTypes, info:Array<Any>) {
+        if(status != ServiceStatus.running)
+            return //There's no point in doing anything with the delegates if the service is dead.
+
         when (method) {
             /*
             CBTypes.onConnectOK -> {
@@ -241,17 +255,25 @@ abstract class MonkeyKitSocketService : Service() {
                     tipo == MessageTypes.blMessageShareAFriend ||
                     tipo == MessageTypes.blMessageDefault)
                     storeMessage(message, true, Runnable {
+                        //Message received and stored, update lastTimeSynced with with the timestamp
+                        //that the server gave the message
+                        lastTimeSynced = message.datetime.toLong();
                         delegate?.onMessageRecieved(message)
+                        if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
+                            ServiceTimeoutTask(this).execute()
                     })
             }
 
             CBTypes.onMessageBatchReady -> {
                 val batch = info[0] as ArrayList<MOKMessage>;
                 storeMessageBatch(batch, Runnable {
+                    //Message batch received and stored, update lastTimeSynced with with the timestamp
+                    //that the server gave to the last message
+                    if(batch.isNotEmpty())
+                        lastTimeSynced = batch.last().datetime.toLong();
                     delegate?.onMessageBatchReady(batch);
-                    releaseWakeLock()
-                    if(startedManually && delegate == null) //sync service should stop after storing batch
-                        stopSelf()
+                    if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
+                        ServiceTimeoutTask(this).execute()
                 });
             }
             /*
@@ -359,7 +381,7 @@ abstract class MonkeyKitSocketService : Service() {
 
     fun decryptAES(encryptedText: String) = aesutil.decrypt(encryptedText)
 
-    fun isSocketConnected(): Boolean = socketInitialized && asyncConnSocket.isConnected
+    fun isSocketConnected(): Boolean = status == ServiceStatus.running && asyncConnSocket.isConnected
 
     fun notifySyncSuccess() {
         if(pendingMessages.isEmpty()){
@@ -648,17 +670,16 @@ abstract class MonkeyKitSocketService : Service() {
                 System.out.println("MONKEY - Enviando Sync:"+json.toString());
                 sendJsonThroughSocket(json)
             }
-            else
-                System.out.println("MONKEY - no pudo enviar Sync - socket desconectado");
+            else {
+                System.out.println("MONKEY - no pudo enviar Sync - socket desconectado " + asyncConnSocket.socketStatus);
+                Thread.dumpStack();
+            }
 
 
 
         } catch (e: Exception) {
             e.printStackTrace();
         }
-
-        this.lastTimeSynced = lastTimeSync
-
     }
 
     fun sendGet(since: String){
@@ -780,6 +801,10 @@ abstract class MonkeyKitSocketService : Service() {
 
         return null;
     }
+
+    abstract fun openDatabase()
+
+    abstract fun closeDatabase()
 
     /**
      * Guarda un mensaje de MonkeyKit en la base de datos. La implementacion de este metodo deberia de

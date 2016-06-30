@@ -182,7 +182,7 @@ public class FileManager extends AQueryHttp{
                 props.addProperty("old_id", newMessage.getMessage_id());
                 MonkeyKitSocketService service = serviceRef.get();
                 if(service != null)
-                service.executeInDelegate(CBTypes.onAcknowledgeReceived,
+                service.processMessageFromHandler(CBTypes.onAcknowledgeReceived,
                         new Object[]{new MOKMessage(response.getString("messageId"), newMessage.getRid(), this.monkeyID,
                                 newMessage.getMessage_id(), "", "2", new JsonObject(), props)});
             } catch (Exception e) {

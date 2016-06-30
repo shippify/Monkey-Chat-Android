@@ -38,9 +38,9 @@ public class AsyncConnSocket implements ComServerDelegate{
 	public static int isdisconectfinal=-1;
 
 	public enum Status {sinIniciar, conectado, reconectando, desconectado};
-	private Status socketStatus;
-	public Handler mainMessageHandler;
-	public Handler socketMessageHandler;
+	public Status socketStatus;
+	private Handler mainMessageHandler;
+	private Handler socketMessageHandler;
 	private Runnable lastAction = null;
 	private MonkeyKitSocketService service;
 	//TIMEOUT
@@ -66,6 +66,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 		this.mainMessageHandler = messageHandler;
 		this.socketStatus = Status.sinIniciar;
 		this.service = service;
+		Log.d("AsyncConnSocket", "new socket");
 	}
 
 

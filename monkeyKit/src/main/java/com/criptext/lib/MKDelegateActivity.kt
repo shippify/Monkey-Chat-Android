@@ -6,6 +6,7 @@ import android.content.ServiceConnection
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import com.criptext.ClientData
 import com.criptext.MonkeyKitSocketService
 import com.criptext.socket.SecureSocketService
@@ -19,6 +20,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     private val monkeyKitConnection = object : ServiceConnection {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
+            Log.d("MKDelegateActivity", "service connected")
             val binder = p1 as MonkeyKitSocketService.MonkeyBinder
             val sService = binder.getService(this@MKDelegateActivity)
             service = sService
