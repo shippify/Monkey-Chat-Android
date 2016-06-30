@@ -14,7 +14,7 @@ import com.criptext.comunication.MessageTypes
 import com.criptext.http.MonkeyHttpClient
 import com.criptext.http.OpenConversationTask
 import com.criptext.lib.KeyStoreCriptext
-import com.criptext.lib.KotlinWatchdog
+import com.criptext.lib.Watchdog
 import com.criptext.lib.MonkeyKitDelegate
 import com.criptext.lib.PendingMessageStore
 import com.criptext.security.AESUtil

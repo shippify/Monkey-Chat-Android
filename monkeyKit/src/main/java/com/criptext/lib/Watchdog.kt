@@ -9,7 +9,7 @@ import java.lang.ref.WeakReference
  * Created by gesuwall on 6/13/16.
  */
 
-class KotlinWatchdog(service: MonkeyKitSocketService){
+class Watchdog(service: MonkeyKitSocketService){
     private val handler: Handler
     private var runnable: Runnable? = null
     private var cancelled: Boolean

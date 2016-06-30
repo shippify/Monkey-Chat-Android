@@ -66,7 +66,7 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * Object that periodically restarts the socket connection if messages were not successfuly delivered
      */
-    protected var watchdog: KotlinWatchdog? = null
+    protected var watchdog: Watchdog? = null
     /**
      * Object that manages the socket connection and runs it in a background thread.
      */
@@ -308,7 +308,7 @@ abstract class MonkeyKitSocketService : Service() {
 
      fun startWatchdog(){
         if(watchdog == null) {
-            watchdog = KotlinWatchdog(this);
+            watchdog = Watchdog(this);
             watchdog!!.start();
         }
     }
