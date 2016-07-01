@@ -367,7 +367,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
      */
 
     @Override
-    public void onSocketConnected() {  }
+    public void onSocketConnected() {
+        Log.d("MainActivity", "onSocketConnected");
+        setActionBarTitle(2); }
 
     @Override
     public void onSocketDisconnected() {
@@ -447,10 +449,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     public void onBoundToService() {
         if(getService().isSocketConnected()) {
-            setActionBarTitle(1);
+            setActionBarTitle(2);
         }
         else{
-            setActionBarTitle(2);
+            setActionBarTitle(1);
         }
     }
 }

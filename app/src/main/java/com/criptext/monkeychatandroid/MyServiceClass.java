@@ -75,7 +75,6 @@ public class MyServiceClass extends MonkeyKitSocketService{
         if(realm != null)
             realm.close();
         realm = null;
-        Log.d("DatabaseHandler", "Realm closed");
     }
 
     @Override
@@ -83,7 +82,6 @@ public class MyServiceClass extends MonkeyKitSocketService{
         if(realm == null){
             realm = MonkeyChat.getInstance().getNewMonkeyRealm();
         }
-        Log.d("DatabaseHandler", "Realm open");
 
     }
 }

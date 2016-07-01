@@ -124,6 +124,9 @@ abstract class MonkeyKitSocketService : Service() {
     override fun onBind(intent: Intent?): IBinder? {
         if(status == ServiceStatus.dead)
             initializeMonkeyKitService()
+        else
+            status = ServiceStatus.bound
+
 
         return MonkeyBinder()
     }
@@ -145,7 +148,7 @@ abstract class MonkeyKitSocketService : Service() {
 
     fun startSocketConnection() {
         //At this point initialization is complete. We are ready to receive and send messages
-        status = ServiceStatus.running
+        status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
 
         asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
         asyncConnSocket.conectSocket()
@@ -154,6 +157,7 @@ abstract class MonkeyKitSocketService : Service() {
     override fun onUnbind(intent: Intent?): Boolean {
         Log.d("MonkeyKitSocketService", "onUnbind");
         delegate = null
+        status = ServiceStatus.running
         if(startedManually) { //if service started manually, stop it manually with a timeout task
             ServiceTimeoutTask(this).execute()
             return true
@@ -163,6 +167,9 @@ abstract class MonkeyKitSocketService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        if(status >= ServiceStatus.running)
+            asyncConnSocket.disconectSocket()
 
         status = ServiceStatus.dead
         Log.d("MonkeyKitSocketService", "onDestroy");
@@ -179,7 +186,6 @@ abstract class MonkeyKitSocketService : Service() {
             task.execute()
         }
 
-        asyncConnSocket.disconectSocket()
         //persist last time synced
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
         closeDatabase();
@@ -206,7 +212,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun processMessageFromHandler(method:CBTypes, info:Array<Any>) {
-        if(status != ServiceStatus.running)
+        if(status < ServiceStatus.running)
             return //There's no point in doing anything with the delegates if the service is dead.
 
         when (method) {
@@ -295,7 +301,7 @@ abstract class MonkeyKitSocketService : Service() {
 
     fun decryptAES(encryptedText: String) = aesutil.decrypt(encryptedText)
 
-    fun isSocketConnected(): Boolean = status == ServiceStatus.running && asyncConnSocket.isConnected
+    fun isSocketConnected(): Boolean = status >= ServiceStatus.running && asyncConnSocket.isConnected
 
     fun notifySyncSuccess() {
         if(pendingMessages.isEmpty()){
@@ -763,7 +769,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     enum class ServiceStatus {
-        dead, initializing, running
+        dead, initializing, running, bound
     }
 
 }

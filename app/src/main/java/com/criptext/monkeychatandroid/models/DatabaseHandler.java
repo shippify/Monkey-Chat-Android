@@ -4,15 +4,11 @@ import android.content.Context;
 import android.util.Log;
 
 import com.criptext.comunication.MOKMessage;
-import com.criptext.comunication.MessageTypes;
-import com.criptext.database.CriptextDBHandler;
-import com.criptext.monkeychatandroid.MonkeyChat;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
-import io.realm.Case;
 import io.realm.Realm;
 import io.realm.RealmResults;
 
@@ -44,7 +40,6 @@ public class DatabaseHandler {
                     if(!existMessage(realm, message.getMessage_id())){
                         MessageItem messageItem = createMessage(message, context, userSession, true);
                         realm.copyToRealm(messageItem.getModel());
-                        Log.d("DatabaseHandler", "stored msg: " + message.getMsg());
                     } else
                         messages.remove(i);
                 }
@@ -144,7 +139,6 @@ public class DatabaseHandler {
         }, new Realm.Transaction.OnSuccess() {
             @Override
             public void onSuccess() {
-                Log.i("DB", "Success updating outgoing status");
             }
         }, new Realm.Transaction.OnError() {
             @Override
