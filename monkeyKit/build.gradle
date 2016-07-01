@@ -1,8 +1,9 @@
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'com.github.dcendents.android-maven'
 
-group = 'com.criptext'
+group = 'com.github.Criptext'
 version = '2.0.0'
 
 android {
@@ -42,6 +43,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile 'com.google.android.gms:play-services-gcm:9.0.0'
     compile 'com.squareup.okhttp3:okhttp:3.3.1'
+
 
     compile 'com.android.support:appcompat-v7:22.1.0'
 }
