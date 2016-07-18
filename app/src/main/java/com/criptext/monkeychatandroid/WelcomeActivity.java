@@ -6,6 +6,8 @@ import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
+import com.criptext.ClientData;
+
 public class WelcomeActivity extends AppCompatActivity {
 
     private SharedPreferences prefs;
@@ -17,10 +19,9 @@ public class WelcomeActivity extends AppCompatActivity {
 
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
-        if(prefs.getBoolean("isRegistered",false)){
-            MonkeyChat.startMonkeyService(WelcomeActivity.this, prefs.getString("fullname",""),
-                    prefs.getString("sessionid",""), MonkeyChat.APP_ID, MonkeyChat.APP_KEY);
-            startActivity(new Intent(WelcomeActivity.this, MainActivity.class));
+        if(prefs.getBoolean(MonkeyChat.IS_REGISTERED,false)){
+            Intent mainIntent =new Intent(this,MainActivity.class);
+            startActivity(mainIntent);
         }
         else{
             startActivity(new Intent(WelcomeActivity.this, RegisterActivity.class));

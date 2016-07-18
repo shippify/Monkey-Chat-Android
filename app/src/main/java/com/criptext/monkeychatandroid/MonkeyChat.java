@@ -1,28 +1,40 @@
 package com.criptext.monkeychatandroid;
 
-import android.app.ActivityManager;
 import android.app.Application;
-import android.content.Context;
-
-import com.criptext.lib.MonkeyKit;
 
 import io.realm.DynamicRealm;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
 import io.realm.RealmMigration;
-import io.realm.RealmSchema;
 
 /**
+ * Application class. This class is only used to store a few global constants. It also holds the
+ * configuration for the default realm.
  * Created by Daniel Tigse on 4/19/16.
  */
 
 public class MonkeyChat extends Application{
 
-    public static String APP_ID = "idkgwf6ghcmyfvvrxqiwwmi";
-    public static String APP_KEY = "9da5bbc32210ed6501de82927056b8d2";
+
     public String MONKEY_REALM = "SampleApp.MonkeyKitRealm";
-    private Realm monkeyRealm;
     private static MonkeyChat singleton;
+
+    /**
+     * Constant used to store in Shared Preferences the current user's monkey ID. You need this
+     * to start the MonkeyKitSocketService.
+     */
+    public static String MONKEY_ID = "MonkeyChat.MonkeyId";
+    /**
+     * Constant used to store in Shared Preferences a boolean that indicates whether the current
+     * user has registered with GCM and has successfully subscribed this device to the MonkeyKit Server
+     * in order to receive push notifications.
+     */
+    public static String IS_REGISTERED = "MonkeyChat.IsRegistered";
+    /**
+     * Constant used to store in Shared Preferences the name of the current user. this is also needed
+     * to start the MonkeyKitSocketService.
+     */
+    public static String FULLNAME = "MonkeyChat.FullName";
 
     @Override
     public void onCreate() {
@@ -34,39 +46,22 @@ public class MonkeyChat extends Application{
         return singleton;
     }
 
-    public static void startMonkeyService(Context c, String name, String sessionid, String CRIPTEXT_APP_ID, String CRIPTEXT_APP_KEY){
-        if(!isMyServiceRunning(MyServiceClass.class, c)){
-            MonkeyKit.startMonkeyService(c, MyServiceClass.class,
-                    name,
-                    sessionid,
-                    CRIPTEXT_APP_ID, CRIPTEXT_APP_KEY);
-        }
-    }
-
-    public static boolean isMyServiceRunning(Class<?> serviceClass, Context context) {
-        ActivityManager manager = (ActivityManager)context.getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public Realm getMonkeyKitRealm(){
-        if(monkeyRealm == null)
-            monkeyRealm = getNewMonkeyRealm();
-
-        return monkeyRealm;
-    }
-
+    /**
+     * Opens a new Realm instance with the configuration especified in getMonkeyConfig();
+     * @return A new realm instance. You must close this when you are done with it.
+     */
     public Realm getNewMonkeyRealm(){
         RealmConfiguration libraryConfig = getMonkeyConfig();
         return Realm.getInstance(libraryConfig);
     }
 
+    /**
+     * Create a realm configuration with an encrypted database. the key is stored in the SensitiveData
+     * class. It should be hidden as well as your MonkeyKit API key to avoid security risks.
+     * @return RealmConfiguration File;
+     */
     public RealmConfiguration getMonkeyConfig(){
-        byte[] encryptKey= "Zba1P^06@#$S&9=wB@N6Ly!118&Ofg4*4;}32fF4d#59g#6Vai08D3S7B*3MJP64".getBytes();
+        byte[] encryptKey= SensitiveData.REALM_KEY.getBytes();
         return new RealmConfiguration.Builder(this.getApplicationContext())
                 .name(MONKEY_REALM)
                 .encryptionKey(encryptKey)
@@ -81,29 +76,5 @@ public class MonkeyChat extends Application{
             //Example here https://realm.io/docs/java/latest/#migrations
         }
     };
-
-    public static String milliSecondsToTimer(long milliseconds){
-
-        String finalTimerString = "";
-        String secondsString = "";
-
-        // Convert total duration into time
-        int hours = (int)( milliseconds / (1000*60*60));
-        int minutes = (int)(milliseconds % (1000*60*60)) / (1000*60);
-        int seconds = (int) ((milliseconds % (1000*60*60)) % (1000*60) / 1000);
-        // Add hours if there
-        if(hours > 0){
-            finalTimerString = hours + ":";
-        }
-        // Prepending 0 to seconds if it is one digit
-        if(seconds < 10){
-            secondsString = "0" + seconds;
-        }else{
-            secondsString = "" + seconds;}
-
-        finalTimerString = finalTimerString + minutes + ":" + secondsString;
-        // return timer string
-        return finalTimerString;
-    }
 
 }

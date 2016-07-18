@@ -7,11 +7,14 @@ import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.ArrayList;
 
+import io.realm.Realm;
 import io.realm.RealmChangeListener;
 import io.realm.RealmResults;
 
 /**
- * Created by gesuwall on 5/14/16.
+ * Loads messages from the RealmDatabase using Pagination. Has a record of the loaded pages, so that
+ * it loads the "requested page" when the user scrolls up to a certain position
+ * Created by Gabriel on 5/14/16.
  */
 public class MessageLoader {
     private String senderId;
@@ -43,26 +46,35 @@ public class MessageLoader {
         this.adapter = adapter;
     }
 
-    public void loadNewPage(){
-        if(lastIndex == 0){
+    /**
+     * Loads a new page of messages from realm and adds them to the adapter.
+     * @param realm
+     */
+    public void loadNewPage(Realm realm){
+        if(lastIndex == 0){ // 0 means there are no more messages to load, goodbye.
             adapter.setHasReachedEnd(true);
             return;
         }
 
-        final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(senderId, receiverId);
+
+        //Make the query
+        final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(realm, senderId, receiverId);
+        //Add an async listener to the query
         realmResults.addChangeListener(new RealmChangeListener() {
             @Override
             public void onChange() {
                 realmResults.removeChangeListener(this);
                 final int totalMessages = realmResults.size();
                 ArrayList<MonkeyItem> messageModels;
-                if(totalMessages < pageSize){
+                if(totalMessages < pageSize){//Make copies of the Realm instances
                     messageModels = MessageItem.insertSortCopy(realmResults);
                     adapter.addOldMessages(messageModels, true);
                 } else {
+                    //Calculate the index for the beginning and ending of the requested page
                    int endIndex = Math.min(realmResults.size(), lastIndex);
                    int startIndex = Math.max(0, endIndex - pageSize);
 
+                    //Make a copy of the page and add it to the adapter.
                    messageModels = MessageItem.insertSortCopy(realmResults.subList(startIndex, endIndex));
                    adapter.addOldMessages(messageModels, messageModels.size() < pageSize);
                    lastIndex = startIndex;

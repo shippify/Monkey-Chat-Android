@@ -11,6 +11,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 
+import com.criptext.ClientData;
 import com.criptext.lib.MonkeyInit;
 
 public class RegisterActivity extends AppCompatActivity {
@@ -31,15 +32,21 @@ public class RegisterActivity extends AppCompatActivity {
     public void onContinue(final View v){
         v.setVisibility(View.GONE);
         progressBar.setVisibility(View.VISIBLE);
+        final String fullname = editTextName.getText().toString();
         MonkeyInit mStart = new MonkeyInit(RegisterActivity.this, null,
-                MonkeyChat.APP_ID, MonkeyChat.APP_KEY,
-                editTextName.getText().toString()){
+                SensitiveData.APP_ID, SensitiveData.APP_KEY, fullname){
             @Override
             public void onSessionOK(String sessionID){
-                prefs.edit().putBoolean("isRegistered",true).apply();
-                prefs.edit().putString("sessionid",sessionID).apply();
-                prefs.edit().putString("fullname",editTextName.getText().toString());
-                startActivity(new Intent(RegisterActivity.this,MainActivity.class));
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putBoolean(MonkeyChat.IS_REGISTERED,true);
+                editor.putString(MonkeyChat.MONKEY_ID,sessionID);
+                editor.putString(MonkeyChat.FULLNAME, fullname);
+                editor.apply();
+                Intent mainIntent =new Intent(RegisterActivity.this,MainActivity.class);
+                ClientData data = new ClientData(fullname, SensitiveData.APP_ID, SensitiveData.APP_KEY,
+                        sessionID);
+                data.fillIntent(mainIntent);
+                startActivity(mainIntent);
                 finish();
             }
 
