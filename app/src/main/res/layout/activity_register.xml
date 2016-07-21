@@ -30,7 +30,10 @@
             android:layout_marginLeft="60dp"
             android:layout_marginRight="60dp"
             android:layout_marginTop="20dp"
-            android:layout_marginBottom="20dp"/>
+            android:layout_marginBottom="20dp"
+            android:maxLines="1"
+            android:maxLength="30"
+            android:inputType="text"/>
 
         <Button
             android:layout_width="wrap_content"
