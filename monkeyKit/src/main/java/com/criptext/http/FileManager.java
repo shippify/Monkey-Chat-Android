@@ -10,6 +10,7 @@ import com.criptext.comunication.CBTypes;
 import com.criptext.comunication.Compressor;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
+import com.criptext.comunication.MonkeyHttpResponse;
 import com.criptext.lib.KeyStoreCriptext;
 import com.criptext.security.AESUtil;
 import com.criptext.security.RandomStringBuilder;
@@ -40,10 +41,10 @@ public class FileManager extends AQueryHttp{
          * @param filepath ruta absoluta del lugar donde se guardara el archivo
          * @param propsStr string con los props del MOKMessage que tenia el mensaje al ser transmitido
          * @param sender_id session ID del usuario que envio el archivo
-         * @param runnable Runnable con el codigo que se desee ejecutar una vez que la descarga termine.
+         * @param monkeyHttpResponse callback con el codigo que se desee ejecutar una vez que la descarga termine.
          */
         public void downloadFile(String filepath, final String propsStr, final String sender_id,
-                                 final Runnable runnable){
+                                 final MonkeyHttpResponse monkeyHttpResponse){
 
             MonkeyKitSocketService service = serviceRef.get();
             final JsonObject props = new JsonParser().parse(propsStr).getAsJsonObject();
@@ -90,7 +91,7 @@ public class FileManager extends AQueryHttp{
 
                             //LE PONGO LA EXTENSION SI LA TIENE
                             if (props.has("ext")) {
-                                System.out.println("MONKEY - chmod 777 " + file.getAbsolutePath());
+                                System.out.println("MONKEY - giving permissions " + file.getAbsolutePath());
                                 Runtime.getRuntime().exec("chmod 777 " + file.getAbsolutePath());
                                 //file.renameTo(new File(file.getAbsolutePath()+"."+message.getProps().get("ext").getAsString()));
                             }
@@ -99,12 +100,14 @@ public class FileManager extends AQueryHttp{
                             //message.setFile(file);
 
                             //EXCUTE CALLBACK
-                            runnable.run();
+                            monkeyHttpResponse.OnSuccess();
                         } catch (Exception e) {
                             e.printStackTrace();
+                            monkeyHttpResponse.OnError();
                         }
                     } else {
                         System.out.println("MONKEY - File failed to donwload - " + status.getCode() + " - " + status.getMessage());
+                        monkeyHttpResponse.OnError();
                     }
                 }
 
@@ -163,10 +166,10 @@ public class FileManager extends AQueryHttp{
             return json;
         }
 
-        private JsonObject createSendProps(String old_id){
+        private JsonObject createSendProps(String old_id, boolean encrypted){
             JsonObject props = new JsonObject();
             props.addProperty("str", "0");
-            props.addProperty("encr", "1");
+            props.addProperty("encr", encrypted?"1":"0");
             props.addProperty("device", "android");
             props.addProperty("old_id", old_id);
             return props;
@@ -182,9 +185,11 @@ public class FileManager extends AQueryHttp{
                 props.addProperty("old_id", newMessage.getMessage_id());
                 MonkeyKitSocketService service = serviceRef.get();
                 if(service != null)
-                service.processMessageFromHandler(CBTypes.onAcknowledgeReceived,
-                        new Object[]{new MOKMessage(response.getString("messageId"), newMessage.getRid(), this.monkeyID,
-                                newMessage.getMessage_id(), "", "2", new JsonObject(), props)});
+                    service.processMessageFromHandler(CBTypes.onAcknowledgeReceived
+                            , new Object[]{newMessage.getRid()
+                                    ,this.monkeyID,response.getString("messageId")
+                                    ,newMessage.getMessage_id(), false, 2});
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -196,12 +201,12 @@ public class FileManager extends AQueryHttp{
          * @param pushMessage Mensaje a mostrar en el push notification
          * @return el MOKMessage enviado.
          */
-        private MOKMessage sendFileMessage(final MOKMessage newMessage, final String pushMessage, final boolean persist){
+        private MOKMessage sendFileMessagePrivate(final MOKMessage newMessage, final String pushMessage, final boolean persist, final boolean encrypted){
 
                 try {
                     JsonObject propsMessage=null;
                     if(newMessage.getProps() == null) {
-                        propsMessage = createSendProps(newMessage.getMessage_id());
+                        propsMessage = createSendProps(newMessage.getMessage_id(), encrypted);
                         propsMessage.addProperty("cmpr", "gzip");
                         propsMessage.addProperty("file_type", newMessage.getType());
                         propsMessage.addProperty("ext", FilenameUtils.getExtension(newMessage.getMsg()));
@@ -225,7 +230,7 @@ public class FileManager extends AQueryHttp{
                     args.put("push", pushMessage);
 
                     final Map<String, Object> params = new HashMap<String, Object>();
-                    params.put("data", args.toString());
+
                     byte[] finalData= IOUtils.toByteArray(new FileInputStream(newMessage.getMsg()));
 
                     if(propsMessage!=null)
@@ -237,9 +242,10 @@ public class FileManager extends AQueryHttp{
                     finalData = compressor.gzipCompress(finalData);
 
                     //ENCRIPTAMOS
-                    finalData=aesUtil.encrypt(finalData);
+                    finalData=encrypted ? aesUtil.encrypt(finalData) : finalData;
 
                     params.put("file", finalData);
+                    params.put("data", args.toString());
 
                     MonkeyKitSocketService service = serviceRef.get();
                     if(persist && service != null) {
@@ -271,14 +277,14 @@ public class FileManager extends AQueryHttp{
          * @param pushMessage Mensaje a mostrar en el push notification
          * @return El MOKMessage enviado
          */
-        private MOKMessage sendFileMessage(final String pathToFile, final String sessionIDTo, final int file_type, final JsonObject gsonParamsMessage,
-                                    final String pushMessage, final boolean persist){
+        private MOKMessage sendFileMessagePrivate(final String pathToFile, final String sessionIDTo, final int file_type, final JsonObject gsonParamsMessage,
+                                    final String pushMessage, final boolean persist, final boolean encrypted){
 
             if(pathToFile.length()>0){
                 try {
 
                     final MOKMessage newMessage = createMOKMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage);
-                    JsonObject propsMessage = createSendProps(newMessage.getMessage_id());
+                    JsonObject propsMessage = createSendProps(newMessage.getMessage_id(), encrypted);
                     propsMessage.addProperty("cmpr", "gzip");
                     propsMessage.addProperty("file_type", file_type);
                     propsMessage.addProperty("ext", FilenameUtils.getExtension(pathToFile));
@@ -313,7 +319,7 @@ public class FileManager extends AQueryHttp{
                     finalData = compressor.gzipCompress(finalData);
 
                     //ENCRIPTAMOS
-                    finalData=aesUtil.encrypt(finalData);
+                    finalData=encrypted ? aesUtil.encrypt(finalData) : finalData;
 
                     params.put("file", finalData);
                     params.put("data", args.toString());
@@ -351,6 +357,9 @@ public class FileManager extends AQueryHttp{
                         handleSentFile(json, newMessage);
                     } else {
                         System.out.println("MONKEY - sendFileMessage error - " + status.getCode() + " - " + status.getMessage());
+                        MonkeyKitSocketService service = serviceRef.get();
+                        if(service != null)
+                            service.processMessageFromHandler(CBTypes.onFileFailsUpload, new Object[]{newMessage});
                     }
                 }
             });
@@ -364,8 +373,8 @@ public class FileManager extends AQueryHttp{
          * @param pushMessage Mensaje a mostrar en el push notification
          * @return MOKMessage enviado.
          */
-        public MOKMessage sendFileMessage(MOKMessage message, final String pushMessage){
-            return sendFileMessage(message, pushMessage, false);
+        public MOKMessage sendFileMessage(MOKMessage message, final String pushMessage, final boolean encrypted){
+            return sendFileMessagePrivate(message, pushMessage, false, encrypted);
         }
 
         /**
@@ -376,8 +385,8 @@ public class FileManager extends AQueryHttp{
          * @param pushMessage Mensaje a mostrar en el push notification
          * @return MOKMessage enviado.
          */
-        public MOKMessage persistFileMessageAndSend(MOKMessage message, final String pushMessage){
-            return sendFileMessage(message, pushMessage, true);
+        public MOKMessage persistFileMessageAndSend(MOKMessage message, final String pushMessage, final boolean encrypted){
+            return sendFileMessagePrivate(message, pushMessage, true, encrypted);
         }
         /**
          * Envia un archivo a traves de MonkeyKit. Se envia un mensaje por el socket con metadata del archivo
@@ -391,8 +400,8 @@ public class FileManager extends AQueryHttp{
          * @return MOKMessage enviado.
          */
         public MOKMessage sendFileMessage(final String pathToFile, final String sessionIDTo, final int file_type, final JsonObject gsonParamsMessage,
-                                          final String pushMessage){
-            return sendFileMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage, pushMessage, false);
+                                          final String pushMessage, final boolean encrypted){
+            return sendFileMessagePrivate(pathToFile, sessionIDTo, file_type, gsonParamsMessage, pushMessage, false, encrypted);
         }
 
         /**
@@ -407,8 +416,8 @@ public class FileManager extends AQueryHttp{
          * @return MOKMessage enviado.
          */
         public MOKMessage persistFileMessageAndSend(final String pathToFile, final String sessionIDTo, final int file_type, final JsonObject gsonParamsMessage,
-                                                    final String pushMessage){
-            return sendFileMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage, pushMessage, true);
+                                                    final String pushMessage, final boolean encrypted){
+            return sendFileMessagePrivate(pathToFile, sessionIDTo, file_type, gsonParamsMessage, pushMessage, true, encrypted);
         }
 
 }

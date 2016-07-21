@@ -5,6 +5,7 @@ import android.os.AsyncTask
 import android.util.Log
 import com.criptext.ClientData
 import com.criptext.MonkeyKitSocketService
+import com.criptext.OpenConvData
 import com.criptext.comunication.CBTypes
 import com.criptext.comunication.MOKMessage
 import com.criptext.lib.KeyStoreCriptext
@@ -24,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * Created by gesuwall on 6/6/16.
  */
 
-class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOKMessage) : AsyncTask<String, Void, MOKMessage>(){
+class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOKMessage) : AsyncTask<String, Void, OpenConvData>(){
    val serviceRef: WeakReference<MonkeyKitSocketService>
     val clientData: ClientData
     lateinit var newConvKey: String
@@ -44,7 +45,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
         return null
     }
 
-    override fun doInBackground(vararg p0: String?): MOKMessage? {
+    override fun doInBackground(vararg p0: String?): OpenConvData? {
         conversationId = p0[0]!!
         val response = sendOpenConversationRequest(p0[0]!!,clientData)
 
@@ -64,15 +65,15 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
                 clientData = clientData)
     }
 
-    override fun onPostExecute(message: MOKMessage?) {
+    override fun onPostExecute(openconvData: OpenConvData?) {
         val service = serviceRef.get()
-        if(service != null && message!= null){
+        if(service != null && openconvData!= null){
             KeyStoreCriptext.putString(service, conversationId, KeyStoreCriptext.encryptString(newConvKey))
-            service.processMessageFromHandler(CBTypes.onMessageReceived, Array<Any>(1, { i -> message}))
+            if(openconvData.messageOkDecrypted!=null)
+                service.processMessageFromHandler(CBTypes.onMessageReceived, Array<Any>(1, { i -> openconvData.messageOkDecrypted}))
+            else if(openconvData.messageFailDecrypted!=null)
+                service.processMessageFromHandler(CBTypes.onMessageFailDecrypt, Array<Any>(1, { i -> openconvData.messageFailDecrypted}))
         }
-
-
-
     }
 
     companion object {
@@ -129,7 +130,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
         fun attemptToDecryptPendingMessage(openConversationResponse: JsonObject, clientData: ClientData,
                                             aesutil: AESUtil, pendingMessage: MOKMessage)
-                : MOKMessage? {
+                : OpenConvData? {
 
             val data = openConversationResponse.getAsJsonObject("data");
             if (data == null) {
@@ -153,15 +154,17 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
             //1st attempt to decrypt, if it works add message to decrypted list
             if (DecryptTask.decryptMessage(EncryptedMsg.fromSecret(pendingMessage,
                     conversationKey))) {
-                return pendingMessage
+                return OpenConvData(pendingMessage, null)
             } else {
                 //Decryption didn't work with current key. Ask the server to encrypt again with current keys
                 //then do a 2nd attempt to decrypt, if it works add to decrypted list
                 pendingMessage.msg = getTextEncryptedWithLatestKeys(pendingMessage, clientData)
                 if (DecryptTask.decryptMessage((EncryptedMsg.fromSecret(pendingMessage, conversationKey))))
-                    return pendingMessage
-                else //The 2 decryption attempts have failed. Discard the message
+                    return OpenConvData(pendingMessage, null)
+                else { //The 2 decryption attempts have failed. Discard the message
                     Log.e("OpenConversationTask", "can't decrypt ${pendingMessage.message_id}. discarding")
+                    return OpenConvData(null, pendingMessage)
+                }
             }
             //return all the messages that were successfully decrypted
             return null

@@ -14,6 +14,9 @@ import android.widget.ProgressBar;
 import com.criptext.ClientData;
 import com.criptext.lib.MonkeyInit;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class RegisterActivity extends AppCompatActivity {
 
     private SharedPreferences prefs;
@@ -32,18 +35,25 @@ public class RegisterActivity extends AppCompatActivity {
     public void onContinue(final View v){
         v.setVisibility(View.GONE);
         progressBar.setVisibility(View.VISIBLE);
-        final String fullname = editTextName.getText().toString();
+
+        JSONObject userInfo = new JSONObject();
+        try {
+            userInfo.put("name", editTextName.getText().toString());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
         MonkeyInit mStart = new MonkeyInit(RegisterActivity.this, null,
-                SensitiveData.APP_ID, SensitiveData.APP_KEY, fullname){
+                SensitiveData.APP_ID, SensitiveData.APP_KEY, userInfo){
             @Override
             public void onSessionOK(String sessionID){
                 SharedPreferences.Editor editor = prefs.edit();
                 editor.putBoolean(MonkeyChat.IS_REGISTERED,true);
                 editor.putString(MonkeyChat.MONKEY_ID,sessionID);
-                editor.putString(MonkeyChat.FULLNAME, fullname);
+                editor.putString(MonkeyChat.FULLNAME, editTextName.getText().toString());
                 editor.apply();
                 Intent mainIntent =new Intent(RegisterActivity.this,MainActivity.class);
-                ClientData data = new ClientData(fullname, SensitiveData.APP_ID, SensitiveData.APP_KEY,
+                ClientData data = new ClientData(editTextName.getText().toString(), SensitiveData.APP_ID, SensitiveData.APP_KEY,
                         sessionID);
                 data.fillIntent(mainIntent);
                 startActivity(mainIntent);
