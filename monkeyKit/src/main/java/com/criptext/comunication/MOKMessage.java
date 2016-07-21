@@ -177,5 +177,16 @@ public class MOKMessage {
 		this.datetimeorder = datetimeorder;
 	}
 
+    public String getConversationID(){
+        return getRid().startsWith("G:")?getRid():getSid();
+    }
+
+    public String getSenderId(){
+        return getRid().startsWith("G:")?getSid():getRid();
+    }
+
+    public boolean isGroupConversation(){
+        return getRid().startsWith("G:");
+    }
 
 }

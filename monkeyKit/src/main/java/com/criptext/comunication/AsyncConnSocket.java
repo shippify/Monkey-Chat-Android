@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Base64;
 import android.util.Log;
 
 import com.criptext.ClientData;
@@ -225,6 +226,10 @@ public class AsyncConnSocket implements ComServerDelegate{
                         remote = createMOKMessageFromJSON(currentMessage, params, props);
                         if (remote.getProps().get("encr").getAsString().compareTo("1") == 0)
                             remote = getKeysAndDecryptMOKMessage(remote, false);
+                        else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
+                            if(remote.getProps().get("encoding").getAsString().equals("base64"))
+                                remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
+                        }
                         if (remote != null)
                             batch.add(remote);
 					}
@@ -329,14 +334,25 @@ public class AsyncConnSocket implements ComServerDelegate{
 	public int decryptMOKMessage(MOKMessage remote){
         String claves= KeyStoreCriptext.getString(service.getApplicationContext(), remote.getSid());
         if(claves.compareTo("")==0 && !remote.getSid().startsWith("legacy:")){
-            System.out.println("MONKEY - NO TENGO CLAVES DE AMIGO LAS MANDO A PEDIR");
-            return MessageTypes.MOKProtocolMessageNoKeys;
+            if(remote.getProps()!=null && remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1")==0) {
+                System.out.println("MONKEY - NO TENGO CLAVES DE AMIGO LAS MANDO A PEDIR");
+                return MessageTypes.MOKProtocolMessageNoKeys;
+            }
+            else if(remote.getProps()!=null && remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)){
+                if(remote.getProps().get("encoding").getAsString().equals("base64"))
+                    remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
+                return MessageTypes.MOKProtocolMessageHasKeys;
+            }
         }
         else{
             try {
-                if (remote.getProps().get("encr").getAsString().compareTo("1") == 0)
-                    remote.setMsg(AESUtil.decryptWithCustomKeyAndIV(remote.getMsg(),
-                            claves.split(":")[0], claves.split(":")[1]));
+                if (remote.getProps().get("encr").getAsString().compareTo("1") == 0 && !remote.getType().equals(MessageTypes.MOKFile)) {
+                    remote.setMsg(AESUtil.decryptWithCustomKeyAndIV(remote.getMsg(),claves.split(":")[0], claves.split(":")[1]));
+                }
+                else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
+                    if(remote.getProps().get("encoding").getAsString().equals("base64"))
+                        remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
+                }
             } catch (IOException ex){
                 Log.d("MonkeyKit", "Message with content no encrypted");
             }
@@ -359,7 +375,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	 *                   esta funcion debe de hacerse con false.
 	 * @return El mensaje con su texto decriptado. Si no se pudo decriptar retorna null
 	 */
-	private MOKMessage getKeysAndDecryptMOKMessage(MOKMessage remote, boolean lastChance){
+	public MOKMessage getKeysAndDecryptMOKMessage(MOKMessage remote, boolean lastChance){
 		int what = decryptMOKMessage(remote);
 
 		if(lastChance && what != MessageTypes.MOKProtocolMessageHasKeys)
@@ -378,12 +394,13 @@ public class AsyncConnSocket implements ComServerDelegate{
             if(newClaves != null && !newClaves.equals(claves))
                 return getKeysAndDecryptMOKMessage(remote, false);
             else if (newClaves != null){
-				String newMsg = service.requestTextWithLatestKeys(remote.getMsg());
+				String newMsg = service.requestTextWithLatestKeys(remote.getMessage_id());
 				if(newMsg != null) {
 					remote.setMsg(newMsg);
 					return getKeysAndDecryptMOKMessage(remote, true);
 				} else {
 					Log.d("BatchGET", "Message discarded due to wrong keys");
+                    service.processMessageFromHandler(CBTypes.onMessageFailDecrypt, new Object[]{remote});
 					return null;
 				}
 			}

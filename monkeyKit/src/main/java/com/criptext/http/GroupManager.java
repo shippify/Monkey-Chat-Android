@@ -24,13 +24,14 @@ public class GroupManager extends AQueryHttp {
         super(service, aesUtil);
     }
 
-/**
-     * Crea un nuevo chat de grupo de forma asincrona. Si no hay errores en el servidor la respuesta
-     * llegara en onCreateGroupOK() del MonkeyKitDelegate, De lo contrario se ejecuta onCreateGroupError()
-     * @param members String con los sessionID de los miembros del grupo separados por comas.
-     * @param groupname String con el nombre del grupo
+    /**
+     * Create a group asynchronously. If there are not errors with the server, the answers arrive via onCreateGroupOK()
+     * from MonkeyKitDelegate, otherwise arrive via onCreateGroupError()
+     * @param members String with the sessionIDs of the members of the group.
+     * @param groupname String with the group name
+     * @param group_id String with the group id (optional)
      */
-    public void createGroup(String members, String groupname){
+    public void createGroup(String members, String groupname, String group_id){
         try {
 
             String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL() +"/group/create";
@@ -43,6 +44,8 @@ public class GroupManager extends AQueryHttp {
             localJSONObject1.put("members",members);
             localJSONObject1.put("info",localJSONObjectInfo);
             localJSONObject1.put("session_id", monkeyID);
+            if(group_id!=null)
+                localJSONObject1.put("group_id", group_id);
 
             Map<String, Object> params = new HashMap<String, Object>();
             params.put("data", localJSONObject1.toString());
@@ -76,9 +79,9 @@ public class GroupManager extends AQueryHttp {
     /************************************************************************/
 
     /**
-     * Elimina un grupo de manera asincrona en el servidor de MonkeyKit. Si no hay errores en el servidor la respuesta
-     * llegara en onDeleteGroupOK() del MonkeyKitDelegate, De lo contrario se ejecuta onDeleteGroupError()
-     * @param groupID ID del grupo
+     * Delete a group asynchronously int the Monkey server. If there are not errors with the server, the answers arrive via
+     * onDeleteGroupOK() from MonkeyKitDelegate, otherwise arrive via onDeleteGroupError()
+     * @param groupID ID of the group
      */
     public void deleteGroup(String groupID){
         try {
@@ -124,10 +127,10 @@ public class GroupManager extends AQueryHttp {
     /************************************************************************/
 
     /**
-     * Agrega un miembro a un grupo de manera asincrona. Si no hay errores en el servidor la respuesta
-     * llegara en onAddMemberToGroupOK() del MonkeyKitDelegate, De lo contrario se ejecuta onAddMemberToGroupError()
-     * @param new_member Session ID del nuevo miembro del grupo
-     * @param groupID ID del grupo
+     * Add a member to a group asynchronously. If there are not errors with the server, the answers arrive via
+     * onAddMemberToGroupOK() from MonkeyKitDelegate, otherwise arrive via onAddMemberToGroupError()
+     * @param new_member Session ID of the new member
+     * @param groupID ID of the group
      */
     public void addMemberToGroup(String new_member, String groupID){
         try {

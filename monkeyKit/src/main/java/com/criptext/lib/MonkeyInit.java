@@ -41,18 +41,19 @@ import java.lang.ref.WeakReference;
  * Created by gesuwall on 2/10/16.
  */
 public class MonkeyInit {
-    private AsyncTask<String, String, String> async;
+    private AsyncTask<Object, String, String> async;
     private WeakReference<Context> ctxRef;
     private AESUtil aesUtil;
-    final String urlUser, urlPass, fullname, myOldMonkeyId;
+    private JSONObject userInfo;
+    final String urlUser, urlPass, myOldMonkeyId;
 
-    public MonkeyInit(Context context, String sessionId, String user, String pass, String fullname){
+    public MonkeyInit(Context context, String sessionId, String user, String pass, JSONObject userInfo){
         this.myOldMonkeyId = sessionId == null ? "" : sessionId;
         this.urlUser = user;
         this.urlPass = pass;
-        this.fullname = fullname;
+        this.userInfo = userInfo;
         ctxRef = new WeakReference<>(context);
-        async = new AsyncTask<String, String, String>(){
+        async = new AsyncTask<Object, String, String>(){
 
             @Override
             protected void onPostExecute(String res){
@@ -64,12 +65,12 @@ public class MonkeyInit {
             }
 
             @Override
-            protected String doInBackground(String... params) {
+            protected String doInBackground(Object... params) {
                 try {
                     //Generate keys
                     if(myOldMonkeyId.isEmpty()) {
                         aesUtil = new AESUtil(ctxRef.get(), myOldMonkeyId);
-                        return getSessionHTTP(params[0], params[1], params[2]);
+                        return getSessionHTTP((String)params[0], (String)params[1], (JSONObject)params[2]);
                     } else {
                         return userSync(myOldMonkeyId);
                     }
@@ -94,7 +95,7 @@ public class MonkeyInit {
      * Debes de llamar a este metodo para que de forma asincrona se registre el usuario con MonkeyKit
      */
     public void register(){
-        async.execute(urlUser, urlPass, fullname);
+        async.execute(urlUser, urlPass, userInfo);
     }
 
     public void cancel(){
@@ -112,7 +113,7 @@ public class MonkeyInit {
 
     }
 
-    private String getSessionHTTP(String urlUser, String urlPass, String fullname) throws JSONException,
+    private String getSessionHTTP(String urlUser, String urlPass, JSONObject userInfo) throws JSONException,
             UnsupportedEncodingException, ClientProtocolException, IOException{
         // Create a new HttpClient and Post Header
         HttpClient httpclient = MonkeyHttpClient.newClient();
@@ -121,14 +122,11 @@ public class MonkeyInit {
 
         JSONObject localJSONObject1 = new JSONObject();
 
-        JSONObject user_info = new JSONObject();
-        user_info.put("name",fullname);
-
         localJSONObject1.put("username",urlUser);
         localJSONObject1.put("password",urlPass);
         localJSONObject1.put("session_id", myOldMonkeyId);
         localJSONObject1.put("expiring","0");
-        localJSONObject1.put("user_info",user_info);
+        localJSONObject1.put("user_info",userInfo);
 
         JSONObject params = new JSONObject();
         params.put("data", localJSONObject1.toString());
@@ -183,7 +181,7 @@ public class MonkeyInit {
             //Como fallo algo con esas keys las encero y creo unas nuevas
             KeyStoreCriptext.putString(ctxRef.get(), sessionId, "");
             aesUtil = new AESUtil(ctxRef.get(), sessionId);
-            return getSessionHTTP(this.urlUser, this.urlPass, this.fullname);
+            return getSessionHTTP(this.urlUser, this.urlPass, this.userInfo);
         }
 
         return sessionId;
