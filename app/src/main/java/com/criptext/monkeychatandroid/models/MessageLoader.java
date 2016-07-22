@@ -60,9 +60,9 @@ public class MessageLoader {
         //Make the query
         final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(realm, senderId, receiverId);
         //Add an async listener to the query
-        realmResults.addChangeListener(new RealmChangeListener() {
+        realmResults.addChangeListener(new RealmChangeListener<RealmResults<MessageModel>>() {
             @Override
-            public void onChange() {
+            public void onChange(RealmResults<MessageModel> element) {
                 realmResults.removeChangeListener(this);
                 final int totalMessages = realmResults.size();
                 ArrayList<MonkeyItem> messageModels;
@@ -71,13 +71,13 @@ public class MessageLoader {
                     adapter.addOldMessages(messageModels, true);
                 } else {
                     //Calculate the index for the beginning and ending of the requested page
-                   int endIndex = Math.min(realmResults.size(), lastIndex);
-                   int startIndex = Math.max(0, endIndex - pageSize);
+                    int endIndex = Math.min(realmResults.size(), lastIndex);
+                    int startIndex = Math.max(0, endIndex - pageSize);
 
                     //Make a copy of the page and add it to the adapter.
-                   messageModels = MessageItem.insertSortCopy(realmResults.subList(startIndex, endIndex));
-                   adapter.addOldMessages(messageModels, messageModels.size() < pageSize);
-                   lastIndex = startIndex;
+                    messageModels = MessageItem.insertSortCopy(realmResults.subList(startIndex, endIndex));
+                    adapter.addOldMessages(messageModels, messageModels.size() < pageSize);
+                    lastIndex = startIndex;
                 }
             }
         });

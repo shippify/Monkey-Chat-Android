@@ -16,6 +16,7 @@ import com.criptext.database.CriptextDBHandler
 import com.criptext.http.FileManager
 import com.criptext.http.MonkeyHttpClient
 import com.criptext.http.OpenConversationTask
+import com.criptext.http.UserManager
 import com.criptext.lib.*
 import com.criptext.security.AESUtil
 import com.criptext.security.AsyncAESInitializer
@@ -76,6 +77,10 @@ abstract class MonkeyKitSocketService : Service() {
      */
     internal lateinit var fileUploader: FileManager
     /**
+     * Object that manage user methods over http
+     */
+    internal lateinit var userManager: UserManager
+    /**
      * Delegate object that will execute callbacks
      */
     var delegate: MonkeyKitDelegate? = null
@@ -99,8 +104,8 @@ abstract class MonkeyKitSocketService : Service() {
         MOKMessageHandler(this)
     }
 
-    fun downloadFile(fileName: String, props: String, monkeyId: String, runnable: Runnable){
-        fileUploader.downloadFile(fileName, props, monkeyId, runnable)
+    fun downloadFile(fileName: String, props: String, monkeyId: String, monkeyHttpResponse: MonkeyHttpResponse){
+        fileUploader.downloadFile(fileName, props, monkeyId, monkeyHttpResponse)
     }
 
     private fun initializeMonkeyKitService(){
@@ -218,9 +223,12 @@ abstract class MonkeyKitSocketService : Service() {
         when (method) {
             CBTypes.onAcknowledgeReceived -> {
                 Log.d("MonkeyKitSocketService", "ack rec.")
-                delegate?.onAcknowledgeRecieved(info[0] as MOKMessage)
+                delegate?.onAcknowledgeRecieved(info[0] as String, info[1] as String, info[2] as String
+                        , info[3] as String, info[4] as Boolean, info[5] as Int)
             }
-
+            CBTypes.onConversationOpenResponse -> {
+                delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean, info[2] as String, info[3] as String)
+            }
             CBTypes.onSocketConnected -> {
                 delegate?.onSocketConnected()
                 sendSync(lastTimeSynced)
@@ -264,7 +272,7 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onNetworkError();
             }*/
             CBTypes.onDeleteReceived -> {
-                delegate?.onDeleteRecieved(info[0] as MOKMessage);
+                delegate?.onDeleteRecieved(info[0] as String, info[1] as String, info[2] as String, info[3] as String);
             }
             CBTypes.onCreateGroupOK -> {
                 delegate?.onCreateGroupOK(info[0] as String);
@@ -288,7 +296,25 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onGetGroupInfoError(info[0] as String);
             }
             CBTypes.onNotificationReceived -> {
-                delegate?.onNotificationReceived(info[0] as MOKMessage);
+                delegate?.onNotificationReceived(info[0] as String, info[1] as String, info[2] as String, info[3] as JsonObject, info[4] as String);
+            }
+            CBTypes.onMessageFailDecrypt -> {
+                delegate?.onMessageFailDecrypt(info[0] as MOKMessage);
+            }
+            CBTypes.onGroupAdded -> {
+                delegate?.onGroupAdded(info[0] as String, info[1] as String, info[2] as JsonObject);
+            }
+            CBTypes.onGroupNewMember -> {
+                delegate?.onGroupNewMember(info[0] as String, info[1] as String);
+            }
+            CBTypes.onGroupRemovedMember -> {
+                delegate?.onGroupRemovedMember(info[0] as String, info[1] as String);
+            }
+            CBTypes.onGroupsRecover -> {
+                delegate?.onGroupsRecover(info[0] as String);
+            }
+            CBTypes.onFileFailsUpload -> {
+                delegate?.onFileFailsUpload(info[0] as MOKMessage);
             }
         }
     }
@@ -387,17 +413,17 @@ abstract class MonkeyKitSocketService : Service() {
         return message;
     }
 
-    private fun createSendProps(old_id: String): JsonObject {
+    private fun createSendProps(old_id: String, encrypted: Boolean): JsonObject {
         val props = JsonObject();
         props.addProperty("str", "0");
-        props.addProperty("encr", "1");
+        props.addProperty("encr", if (encrypted) "1" else "0")
         props.addProperty("device", "android");
         props.addProperty("old_id", old_id);
         return props;
     }
 
     private fun createSendJSON(idnegative: String, sessionIDTo: String, elmensaje: String,
-                               pushMessage: PushMessage, params: JsonObject, props: JsonObject): JsonObject {
+                               pushMessage: PushMessage, params: JsonObject, props: JsonObject, encrypted: Boolean): JsonObject {
 
         val args= JsonObject();
         val json= JsonObject();
@@ -407,13 +433,16 @@ abstract class MonkeyKitSocketService : Service() {
             args.addProperty("id", idnegative);
             args.addProperty("sid", clientData.monkeyId);
             args.addProperty("rid", sessionIDTo);
-            args.addProperty("msg", aesutil.encrypt(elmensaje));
+            args.addProperty("msg", if (encrypted) aesutil.encrypt(elmensaje) else Base64.encodeToString(elmensaje.toByteArray(), Base64.NO_WRAP));
             args.addProperty("type", MessageTypes.MOKText);
             args.addProperty("push", pushMessage.toString());
             if (params != null)
                 args.addProperty("params", params.toString());
-            if (props != null)
+            if (props != null) {
+                if (!encrypted)
+                    props.addProperty("encoding", "base64")
                 args.addProperty("props", props.toString());
+            }
 
             json.add("args", args);
             json.addProperty("cmd", MessageTypes.MOKProtocolMessage);
@@ -426,6 +455,109 @@ abstract class MonkeyKitSocketService : Service() {
 
     fun sendJsonThroughSocket(json: JsonObject) {
         asyncConnSocket.sendMessage(json);
+    }
+
+    /**
+     * Envia una notificación a traves de MonkeyKit. Las notificaciones no se persisten. Si el
+     * destinatario no la pudo recibir a tiempo, no la recibira nunca
+     * @param sessionIDTo session ID del usuario que recibira la notificacion
+     * @param paramsObject JsonObject con parametros adicionales que necesita la aplicacion
+     * @param pushMessage Mensaje a mostrar en el push notification
+     */
+    fun sendNotification(sessionIDTo: String, paramsObject: JSONObject, pushMessage: String) {
+
+        try {
+            val args = JsonObject()
+            val json = JsonObject()
+
+            val idNegative = "-" + System.currentTimeMillis() / 1000
+            args.addProperty("id", idNegative)
+            args.addProperty("sid", clientData.monkeyId)
+            args.addProperty("rid", sessionIDTo)
+            args.addProperty("params", paramsObject.toString())
+            args.addProperty("type", MessageTypes.MOKNotif)
+            args.addProperty("msg", "")
+            args.addProperty("push", pushMessage.replace("\\\\", "\\"))
+
+            val props = JsonObject()
+            props.addProperty("old_id", idNegative)
+            args.addProperty("props", props.toString())
+
+            json.add("args", args)
+            json.addProperty("cmd", MessageTypes.MOKProtocolMessage)
+
+            if(isSocketConnected()){
+                System.out.println("MONKEY - Enviando notificacion:" + json.toString())
+                sendJsonThroughSocket(json)
+            }
+            else {
+                System.out.println("MONKEY - no pudo enviar notificacion - socket desconectado " + asyncConnSocket.socketStatus);
+                Thread.dumpStack()
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+    }
+
+    /**
+     * Envia una notificación temporal. Si la notificacion no llega al destinatario con el primer intento
+     * no se vuelve a enviar.
+     * @param sessionIDTo session ID del destinatario de la notificacion
+     * @param paramsObject JsonObject con parametros a enviar en la notificacion
+     */
+    fun sendTemporalNotification(sessionIDTo: String, paramsObject: JSONObject) {
+
+        try {
+
+            val args = JsonObject()
+            val json = JsonObject()
+
+            args.addProperty("sid", clientData.monkeyId)
+            args.addProperty("rid", sessionIDTo)
+            args.addProperty("params", paramsObject.toString())
+            args.addProperty("type", MessageTypes.MOKTempNote)
+            args.addProperty("msg", "")
+
+            json.add("args", args)
+            json.addProperty("cmd", MessageTypes.MOKProtocolMessage)
+
+            if(isSocketConnected()){
+                System.out.println("MONKEY - Enviando temp notificacion:" + json.toString())
+                sendJsonThroughSocket(json)
+            }
+            else {
+                System.out.println("MONKEY - no pudo enviar temp notificacion - socket desconectado " + asyncConnSocket.socketStatus);
+                Thread.dumpStack()
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+    }
+
+    fun updateUserObject(monkeyId: String, userInfo: JSONObject, runnable: Runnable) {
+        userManager.updateUserObject(monkeyId,userInfo,runnable)
+    }
+
+    /**
+     * Intenta decriptar un MOKMessage. Si no tiene llaves o estan mal, hace los requerimientos
+     * pertinentes al servidor y recursivamente vuelve a intentar. Si no tiene llaves, las pide al server.
+     * Si estan mal las llaves, pide las ultimas llaves al server, si son iguales a las que ya tiene,
+     * pide al server el texto del mensaje encriptado con las ultimas llaves. Si nada de eso funciona
+     * retorna null
+     * @param message El mensaje a decriptar
+     * *
+     * @return El mensaje con su texto decriptado. Si no se pudo decriptar retorna null
+     */
+
+    fun getKeysAndDecryptMOKMessage(message: MOKMessage): MOKMessage? {
+        if (asyncConnSocket != null) {
+            return asyncConnSocket.getKeysAndDecryptMOKMessage(message, false)
+        }
+        return null
     }
 
     /**
@@ -443,19 +575,19 @@ abstract class MonkeyKitSocketService : Service() {
 
 
     private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: PushMessage,
-                            params: JsonObject, persist: Boolean): MOKMessage{
+                            params: JsonObject, persist: Boolean, encrypted: Boolean): MOKMessage{
 
         if(elmensaje.length > 0){
             try {
 
                 val newMessage = createMOKMessage(elmensaje, sessionIDTo, MessageTypes.blMessageDefault, params);
 
-                val props = createSendProps(newMessage.message_id);
+                val props = createSendProps(newMessage.message_id, encrypted);
                 newMessage.props = props;
 
 
                 val json= createSendJSON(newMessage.message_id, sessionIDTo, elmensaje, pushMessage,
-                        params, props);
+                        params, props, encrypted);
 
 
                 addMessageToWatchdog(json);
@@ -487,19 +619,15 @@ abstract class MonkeyKitSocketService : Service() {
      * @param params JsonObject con el params a enviar en el MOKMessage
      * @return el MOKMessage enviado.
      */
-    private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: PushMessage, params: JsonObject): MOKMessage {
-        return sendMessage(elmensaje, sessionIDTo, pushMessage, params, false);
+    private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: PushMessage, params: JsonObject, encrypted: Boolean): MOKMessage {
+        return sendMessage(elmensaje, sessionIDTo, pushMessage, params, false, encrypted);
 
     }
 
-    fun uploadFile(json: JSONObject, message: MOKMessage){
-        //TODO UPLOAD WITH OKHTTP
-    }
-
-    private fun createSendProps(old_id: String, filepath: String, fileType: Int, originalSize: Int): JsonObject{
+    private fun createSendProps(old_id: String, filepath: String, fileType: Int, originalSize: Int, encrypted: Boolean): JsonObject{
         val props = JsonObject();
         props.addProperty("str", "0");
-        props.addProperty("encr", "1");
+        props.addProperty("encr", if (encrypted) "1" else "0")
         props.addProperty("device", "android");
         props.addProperty("old_id", old_id);
 
@@ -514,7 +642,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun persistFileMessageAndSend(pathToFile: String, sessionIDTo: String, file_type: Int,
-                                  pushMessage: PushMessage, gsonParamsMessage: JsonObject): MOKMessage{
+                                  pushMessage: PushMessage, gsonParamsMessage: JsonObject, encrypted: Boolean): MOKMessage{
         //TODO PERSIST FILE & SEND
         /*
         val newMessage = createMOKMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage);
@@ -530,12 +658,12 @@ abstract class MonkeyKitSocketService : Service() {
         return MOKMessage();
         */
         return fileUploader.persistFileMessageAndSend(pathToFile, sessionIDTo, file_type,
-                        gsonParamsMessage, pushMessage.toString())
+                        gsonParamsMessage, pushMessage.toString(), encrypted)
     }
 
     fun persistMessageAndSend(messageText: String, sessionIDTo: String,
-                              pushMessage: PushMessage, gsonParamsMessage: JsonObject): MOKMessage{
-        return sendMessage(messageText, sessionIDTo, pushMessage, gsonParamsMessage, true);
+                              pushMessage: PushMessage, gsonParamsMessage: JsonObject, encrypted: Boolean): MOKMessage{
+        return sendMessage(messageText, sessionIDTo, pushMessage, gsonParamsMessage, true, encrypted);
     }
 
     /**

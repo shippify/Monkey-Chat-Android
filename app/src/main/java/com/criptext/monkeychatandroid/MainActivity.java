@@ -16,6 +16,7 @@ import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
+import com.criptext.comunication.MonkeyHttpResponse;
 import com.criptext.comunication.PushMessage;
 import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.lib.MKDelegateActivity;
@@ -88,7 +89,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         initRealm();
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
-        myFriendID = "iq2halrqq519fgko9di8jjor";
+        myFriendID = myMonkeyID;
 
         //Check play services. if available try to register with GCM so that we get Push notifications
         if(MonkeyRegistrationService.Companion.checkPlayServices(this))
@@ -219,15 +220,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                             params.addProperty("length",""+item.getAudioDuration());
 
                             mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myFriendID,
-                                    MessageTypes.FileTypes.Audio, new PushMessage("Test Push Message"), params);
+                                    MessageTypes.FileTypes.Audio, new PushMessage("Test Push Message"), params, true);
                             break;
                         case photo:
                             mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myFriendID,
-                                    MessageTypes.FileTypes.Photo, new PushMessage("Test Push Message"), new JsonObject());
+                                    MessageTypes.FileTypes.Photo, new PushMessage("Test Push Message"), new JsonObject(), true);
                             break;
                         default:
                             mokMessage = socketService.persistMessageAndSend(item.getMessageText(),
-                                    myFriendID, new PushMessage("Test Push Message"), params);
+                                    myFriendID, new PushMessage("Test Push Message"), params, true);
                             break;
                     }
 
@@ -285,10 +286,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     /**
      * Updates a sent message and updates de UI so that the user can see that it has been
      * successfully delivered
-     * @param message The sent message.
+     * @param oldId The old Id of the message.
      */
-    private void markMessageAsDelivered(MOKMessage message){
-        MessageItem monkeyItem = (MessageItem) searchMessage(message.getOldId());
+    private void markMessageAsDelivered(String oldId){
+        MessageItem monkeyItem = (MessageItem) searchMessage(oldId);
         if(monkeyItem != null) {
             monkeyItem.setStatus(MonkeyItem.OutgoingMessageStatus.delivered);
             DatabaseHandler.updateMessageOutgoingStatus(realm, monkeyItem.model, MonkeyItem.OutgoingMessageStatus.delivered);
@@ -346,10 +347,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
             DatabaseHandler.updateMessageDownloadingStatus(realm, messageItem.model, true);
             //The socket service will download the file for us and let us add callback to execute when it finishes
             socketService.downloadFile(messageItem.getFilePath(), messageItem.getProps().toString(),
-                    myMonkeyID, new Runnable() {
+                    myMonkeyID, new MonkeyHttpResponse() {
                         @Override
-                        public void run() {
+                        public void OnSuccess() {
                             //When then Download is done, update the RecyclerView.
+                            adapter.notifyDataSetChanged();
+                        }
+
+                        @Override
+                        public void OnError() {
                             adapter.notifyDataSetChanged();
                         }
                     });
@@ -360,6 +366,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     public void onLoadMoreData(int i) {
         //If the adapter requires to load older messages, delegate this task to our messageLoader object
         messageLoader.loadNewPage(realm);
+    }
+
+    @Override
+    public void onNetworkError(Exception exception) {
+
     }
 
     /******
@@ -414,21 +425,55 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     @Override
-    public void onAcknowledgeRecieved(MOKMessage message) {
+    public void onMessageFailDecrypt(MOKMessage message) {
+
+    }
+
+    @Override
+    public void onGroupAdded(String groupid, String members, JsonObject info) {
+
+    }
+
+    @Override
+    public void onGroupNewMember(String groupid, String new_member) {
+
+    }
+
+    @Override
+    public void onGroupRemovedMember(String groupid, String removed_member) {
+
+    }
+
+    @Override
+    public void onGroupsRecover(String groupids) {
+
+    }
+
+    @Override
+    public void onFileFailsUpload(MOKMessage message) {
+
+    }
+
+    @Override
+    public void onAcknowledgeRecieved(String senderId, String recipientId, String newId, String oldId, Boolean read, int messageType) {
 
         Log.d("MainActivity", "Ack received");
-        int tipo = Integer.parseInt(message.getType());
-        switch (tipo) {
+        switch (messageType) {
             case 1:
             case 2:
-                markMessageAsDelivered(message);
+                markMessageAsDelivered(oldId);
                 break;
         }
 
     }
 
     @Override
-    public void onDeleteRecieved(MOKMessage message) {
+    public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe) {
+
+    }
+
+    @Override
+    public void onDeleteRecieved(String messageId, String senderId, String recipientId, String datetime) {
         //Server requested to delete a message, we could implement it here, but for now we wont
     }
 
@@ -436,7 +481,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     public void onContactOpenMyConversation(String sessionID) {   }
 
     @Override
-    public void onNotificationReceived(MOKMessage notification) {   }
+    public void onNotificationReceived(String messageId, String senderId, String recipientId, JsonObject params, String datetime) {   }
 
     @NotNull
     @Override
