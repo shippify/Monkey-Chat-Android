@@ -41,7 +41,7 @@ import java.lang.ref.WeakReference;
  * Created by gesuwall on 2/10/16.
  */
 public class MonkeyInit {
-    private AsyncTask<Object, String, String> async;
+    private AsyncTask<Object, String, ServerResponse> async;
     private WeakReference<Context> ctxRef;
     private AESUtil aesUtil;
     private JSONObject userInfo;
@@ -53,31 +53,35 @@ public class MonkeyInit {
         this.urlPass = pass;
         this.userInfo = userInfo;
         ctxRef = new WeakReference<>(context);
-        async = new AsyncTask<Object, String, String>(){
+        async = new AsyncTask<Object, String, ServerResponse>(){
 
             @Override
-            protected void onPostExecute(String res){
-                if(!res.endsWith("Exception"))
-                    onSessionOK(res);
+            protected void onPostExecute(ServerResponse res){
+                if(!res.isError())
+                    onSessionOK(res.getContent());
                 else
-                    onSessionError(res);
+                    onSessionError(res.getContent());
 
             }
 
             @Override
-            protected String doInBackground(Object... params) {
+            protected ServerResponse doInBackground(Object... params) {
                 try {
                     //Generate keys
+                    String session;
                     if(myOldMonkeyId.isEmpty()) {
                         aesUtil = new AESUtil(ctxRef.get(), myOldMonkeyId);
-                        return getSessionHTTP((String)params[0], (String)params[1], (JSONObject)params[2]);
+                        session = getSessionHTTP((String)params[0], (String)params[1], (JSONObject)params[2]);
                     } else {
-                        return userSync(myOldMonkeyId);
+                        session = userSync(myOldMonkeyId);
                     }
+                    return new ServerResponse(false, session);
 
-                }catch (Exception ex){
+                }catch(IllegalArgumentException ex){
+                    return new ServerResponse(true, ex.getMessage());
+                } catch(Exception ex){
                     ex.printStackTrace();
-                    return ex.getClass().getName();
+                    return new ServerResponse(true, ex.getClass().getName());
                 }
             }
         };
@@ -211,5 +215,19 @@ public class MonkeyInit {
         return finalResult.getString("sessionId");
 
 
+    }
+
+    public class ServerResponse {
+        private boolean error;
+        private String content;
+
+        public ServerResponse(boolean error, String content){
+            this.error = error;
+            this.content = content;
+        }
+
+        public boolean isError(){ return error; }
+
+        public String getContent(){ return content; }
     }
 }
