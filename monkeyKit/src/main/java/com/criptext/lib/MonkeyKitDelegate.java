@@ -121,7 +121,7 @@ public interface MonkeyKitDelegate {
      * @param lastSeen timestamp of the last time the conversation was online
      * @param lastOpenMe timestamp of the last time the conversation open my conversation
      */
-    void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe);
+    void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online);
 
     /**
      * When a message is deleted from the server, MonkeyKit receive a notification.

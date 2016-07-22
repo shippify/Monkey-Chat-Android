@@ -14,6 +14,7 @@ import android.widget.ProgressBar;
 import com.criptext.ClientData;
 import com.criptext.lib.MonkeyInit;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -37,6 +38,7 @@ public class RegisterActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
 
         JSONObject userInfo = new JSONObject();
+        JSONArray ignore_params = new JSONArray();
         try {
             userInfo.put("name", editTextName.getText().toString());
         } catch (JSONException e) {
@@ -44,7 +46,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         MonkeyInit mStart = new MonkeyInit(RegisterActivity.this, null,
-                SensitiveData.APP_ID, SensitiveData.APP_KEY, userInfo){
+                SensitiveData.APP_ID, SensitiveData.APP_KEY, userInfo, ignore_params){
             @Override
             public void onSessionOK(String sessionID){
                 SharedPreferences.Editor editor = prefs.edit();

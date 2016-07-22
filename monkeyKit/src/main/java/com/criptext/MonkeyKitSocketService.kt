@@ -13,10 +13,7 @@ import android.util.Log
 import android.webkit.MimeTypeMap
 import com.criptext.comunication.*
 import com.criptext.database.CriptextDBHandler
-import com.criptext.http.FileManager
-import com.criptext.http.MonkeyHttpClient
-import com.criptext.http.OpenConversationTask
-import com.criptext.http.UserManager
+import com.criptext.http.*
 import com.criptext.lib.*
 import com.criptext.security.AESUtil
 import com.criptext.security.AsyncAESInitializer
@@ -80,6 +77,10 @@ abstract class MonkeyKitSocketService : Service() {
      * Object that manage user methods over http
      */
     internal lateinit var userManager: UserManager
+    /**
+     * Object that manage group methods over http
+     */
+    internal lateinit var groupManager : GroupManager
     /**
      * Delegate object that will execute callbacks
      */
@@ -145,7 +146,9 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData) {
         clientData = cdata
-        fileUploader = FileManager(this, aesUtil);
+        fileUploader = FileManager(this, aesUtil)
+        userManager = UserManager(this, aesUtil)
+        groupManager = GroupManager(this, aesUtil)
         this.aesutil = aesUtil
         startSocketConnection()
     }
@@ -226,7 +229,7 @@ abstract class MonkeyKitSocketService : Service() {
                         , info[3] as String, info[4] as Boolean, info[5] as Int)
             }
             CBTypes.onConversationOpenResponse -> {
-                delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean, info[2] as String, info[3] as String)
+                delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean, info[2] as String, info[3] as String, info[4] as String)
             }
             CBTypes.onSocketConnected -> {
                 delegate?.onSocketConnected()
@@ -433,7 +436,6 @@ abstract class MonkeyKitSocketService : Service() {
         try {
 
             args.addProperty("id", idnegative);
-            args.addProperty("sid", clientData.monkeyId);
             args.addProperty("rid", sessionIDTo);
             args.addProperty("msg", if (encrypted) aesutil.encrypt(elmensaje) else Base64.encodeToString(elmensaje.toByteArray(), Base64.NO_WRAP));
             args.addProperty("type", MessageTypes.MOKText);
@@ -535,7 +537,6 @@ bject con parametros adicionales que necesita la aplicacion
             val args = JsonObject()
             val json = JsonObject()
 
-            args.addProperty("sid", clientData.monkeyId)
             args.addProperty("rid", sessionIDTo)
             args.addProperty("params", paramsObject.toString())
             args.addProperty("type", MessageTypes.MOKTempNote)
@@ -559,8 +560,72 @@ bject con parametros adicionales que necesita la aplicacion
 
     }
 
-    fun updateUserObject(monkeyId: String, userInfo: JSONObject, runnable: Runnable) {
-        userManager.updateUserObject(monkeyId,userInfo,runnable)
+    /**
+     * Get info of a group or a user.
+     * @param monkeyid monkeyid ID of the user or group.
+     * @param monkeyJsonResponse callback to receive the response.
+     */
+    fun getInfoById(monkeyId: String, monkeyJsonResponse: MonkeyJsonResponse){
+        userManager.getInfoById(monkeyId, monkeyJsonResponse)
+    }
+
+    /**
+     * Update the metada of a user
+     * @param monkeyid monkeyid ID of the user.
+     * @param userInfo JSONObject that contains user data.
+     * @param monkeyHttpResponse callback to receive the response.
+     */
+    fun updateUserObject(monkeyId: String, userInfo: JSONObject, monkeyHttpResponse: MonkeyHttpResponse) {
+        userManager.updateUserObject(monkeyId,userInfo,monkeyHttpResponse)
+    }
+
+    /**
+     * Get all conversation of a user using the monkey ID.
+     * @param monkeyJsonResponse callback to receive the response.
+     */
+    fun getAllConversations(monkeyJsonResponse: MonkeyJsonResponse){
+        userManager.getConversations(clientData.monkeyId, asyncConnSocket, monkeyJsonResponse)
+    }
+
+    /**
+     * Get all messages of a conversation.
+     * @param monkeyid monkeyid ID of the user.
+     * @param monkeyJsonResponse callback to receive the response.
+     */
+    fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String, monkeyJsonResponse: MonkeyJsonResponse){
+        userManager.getConversationMessages(clientData.monkeyId, conversationId, numberOfMessages, lastTimeStamp, asyncConnSocket, monkeyJsonResponse)
+    }
+
+    /**
+     * Create a group asynchronously and receive response via monkeyJsonResponse
+     * @param members String with the sessionIDs of the members of the group.
+     * @param group_name String with the group name
+     * @param group_id String with the group id (optional)
+     * @param monkeyJsonResponse callback to receive the response.
+     */
+    fun createGroup(members: String, group_name: String, group_id: String, monkeyJsonResponse: MonkeyJsonResponse){
+        groupManager.createGroup(members, group_name, group_id, monkeyJsonResponse)
+    }
+
+    /**
+     * Remove a group member asynchronously int the Monkey server. This method help you to delete yourself
+     * of the group. Response is delivered via monkeyJsonResponse.
+     * @param group_id ID of the group
+     * @param monkey_id ID of member to delete
+     * @param monkeyJsonResponse callback to receive the response.
+     */
+    fun removeGroupMember(group_id: String, monkey_id: String, monkeyJsonResponse: MonkeyJsonResponse){
+        groupManager.removeGroupMember(group_id, monkey_id, monkeyJsonResponse)
+    }
+
+    /**
+     * Add a member to a group asynchronously.
+     * @param new_member Session ID of the new member
+     * @param group_id ID of the group
+     * @param monkeyJsonResponse callback to receive the response.
+     */
+    fun addGroupMember(new_member: String, group_id: String, monkeyJsonResponse: MonkeyJsonResponse){
+        groupManager.addGroupMember(new_member, group_id, monkeyJsonResponse)
     }
 
     /**

@@ -13,6 +13,7 @@ import com.criptext.security.RSAUtil;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -45,13 +46,15 @@ public class MonkeyInit {
     private WeakReference<Context> ctxRef;
     private AESUtil aesUtil;
     private JSONObject userInfo;
+    private JSONArray ignore_params;
     final String urlUser, urlPass, myOldMonkeyId;
 
-    public MonkeyInit(Context context, String sessionId, String user, String pass, JSONObject userInfo){
+    public MonkeyInit(Context context, String sessionId, String user, String pass, JSONObject userInfo, JSONArray ignore_params){
         this.myOldMonkeyId = sessionId == null ? "" : sessionId;
         this.urlUser = user;
         this.urlPass = pass;
         this.userInfo = userInfo;
+        this.ignore_params = ignore_params;
         ctxRef = new WeakReference<>(context);
         async = new AsyncTask<Object, String, ServerResponse>(){
 
@@ -71,7 +74,7 @@ public class MonkeyInit {
                     String session;
                     if(myOldMonkeyId.isEmpty()) {
                         aesUtil = new AESUtil(ctxRef.get(), myOldMonkeyId);
-                        session = getSessionHTTP((String)params[0], (String)params[1], (JSONObject)params[2]);
+                        return getSessionHTTP((String)params[0], (String)params[1], (JSONObject)params[2], (JSONArray) params[3]);
                     } else {
                         session = userSync(myOldMonkeyId);
                     }
@@ -99,7 +102,7 @@ public class MonkeyInit {
      * Debes de llamar a este metodo para que de forma asincrona se registre el usuario con MonkeyKit
      */
     public void register(){
-        async.execute(urlUser, urlPass, userInfo);
+        async.execute(urlUser, urlPass, userInfo, ignore_params);
     }
 
     public void cancel(){
@@ -117,7 +120,7 @@ public class MonkeyInit {
 
     }
 
-    private String getSessionHTTP(String urlUser, String urlPass, JSONObject userInfo) throws JSONException,
+    private String getSessionHTTP(String urlUser, String urlPass, JSONObject userInfo, JSONArray ignore_params) throws JSONException,
             UnsupportedEncodingException, ClientProtocolException, IOException{
         // Create a new HttpClient and Post Header
         HttpClient httpclient = MonkeyHttpClient.newClient();
@@ -148,7 +151,7 @@ public class MonkeyInit {
         String encriptedKeys = storeKeysIV(sessionId, pubKey);
 
         //retornar el session solo despues del connect exitoso
-        return  connectHTTP(finalResult.getString("sessionId"), encriptedKeys);
+        return  connectHTTP(finalResult.getString("sessionId"), encriptedKeys, ignore_params);
 
     }
 
@@ -185,14 +188,14 @@ public class MonkeyInit {
             //Como fallo algo con esas keys las encero y creo unas nuevas
             KeyStoreCriptext.putString(ctxRef.get(), sessionId, "");
             aesUtil = new AESUtil(ctxRef.get(), sessionId);
-            return getSessionHTTP(this.urlUser, this.urlPass, this.userInfo);
+            return getSessionHTTP(this.urlUser, this.urlPass, this.userInfo, this.ignore_params);
         }
 
         return sessionId;
 
 
     }
-    private String connectHTTP(String sessionId, String encriptedKeys) throws JSONException,
+    private String connectHTTP(String sessionId, String encriptedKeys, JSONArray ignore_params) throws JSONException,
             UnsupportedEncodingException, ClientProtocolException, IOException{
  // Create a new HttpClient and Post Header
         HttpClient httpclient = MonkeyHttpClient.newClient();
@@ -203,6 +206,7 @@ public class MonkeyInit {
 
         localJSONObject1.put("usk", encriptedKeys);
         localJSONObject1.put("session_id", sessionId);
+        localJSONObject1.put("ignore_params", ignore_params);
 
         JSONObject params = new JSONObject();
         params.put("data", localJSONObject1.toString());
