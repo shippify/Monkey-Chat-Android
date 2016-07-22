@@ -468,7 +468,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     @Override
-    public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe) {
+    public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online) {
 
     }
 

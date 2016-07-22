@@ -227,7 +227,7 @@ abstract class MonkeyKitSocketService : Service() {
                         , info[3] as String, info[4] as Boolean, info[5] as Int)
             }
             CBTypes.onConversationOpenResponse -> {
-                delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean, info[2] as String, info[3] as String)
+                delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean, info[2] as String, info[3] as String, info[4] as String)
             }
             CBTypes.onSocketConnected -> {
                 delegate?.onSocketConnected()
@@ -431,7 +431,6 @@ abstract class MonkeyKitSocketService : Service() {
         try {
 
             args.addProperty("id", idnegative);
-            args.addProperty("sid", clientData.monkeyId);
             args.addProperty("rid", sessionIDTo);
             args.addProperty("msg", if (encrypted) aesutil.encrypt(elmensaje) else Base64.encodeToString(elmensaje.toByteArray(), Base64.NO_WRAP));
             args.addProperty("type", MessageTypes.MOKText);
@@ -514,7 +513,6 @@ abstract class MonkeyKitSocketService : Service() {
             val args = JsonObject()
             val json = JsonObject()
 
-            args.addProperty("sid", clientData.monkeyId)
             args.addProperty("rid", sessionIDTo)
             args.addProperty("params", paramsObject.toString())
             args.addProperty("type", MessageTypes.MOKTempNote)
