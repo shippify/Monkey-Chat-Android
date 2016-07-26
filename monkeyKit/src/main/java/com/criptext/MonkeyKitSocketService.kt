@@ -316,6 +316,9 @@ abstract class MonkeyKitSocketService : Service() {
             CBTypes.onFileFailsUpload -> {
                 delegate?.onFileFailsUpload(info[0] as MOKMessage);
             }
+            CBTypes.onConnectionRefused -> {
+                delegate?.onConnectionRefused();
+            }
         }
     }
 

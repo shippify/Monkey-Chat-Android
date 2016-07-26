@@ -19,6 +19,13 @@ public interface MonkeyKitDelegate {
     void onNetworkError(Exception exception);
 
     /**
+     * Callback executed when the server refused the connection because the credentials could
+     * not be validated. The service won't attempt to reconnect. You should show a message to the
+     * user informing that the service is unavailable. Retry after checking your credentials.
+     */
+    void onConnectionRefused();
+
+    /**
      * Cuando MonkeyKit logra conectar el socket, y esta listo para enviar y recibir mensajes, ejecuta
      * este callback. Este es un buen momento para hacer "sendSet" para decirle a los otros usuarios
      * que estas online.
