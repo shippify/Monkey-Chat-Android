@@ -11,6 +11,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.MenuInflater;
+import android.widget.Toast;
 
 import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
@@ -219,12 +220,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                             params = new JsonObject();
                             params.addProperty("length",""+item.getAudioDuration());
 
-                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myFriendID,
-                                    MessageTypes.FileTypes.Audio, new PushMessage("Test Push Message"), params, true);
+                            mokMessage = persistFileMessageAndSend(item.getFilePath(), myFriendID,
+                                    MessageTypes.FileTypes.Audio, params, new PushMessage("Test Push Message"), true);
                             break;
                         case photo:
-                            mokMessage = socketService.persistFileMessageAndSend(item.getFilePath(), myFriendID,
-                                    MessageTypes.FileTypes.Photo, new PushMessage("Test Push Message"), new JsonObject(), true);
+                            mokMessage = persistFileMessageAndSend(item.getFilePath(), myFriendID,
+                                    MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage("Test Push Message"), true);
                             break;
                         default:
                             mokMessage = socketService.persistMessageAndSend(item.getMessageText(),
@@ -283,18 +284,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         return null;
     }
 
+    private void updateMessage(String id, MonkeyItem.DeliveryStatus newStatus){
+        MessageItem monkeyItem = (MessageItem) searchMessage(id);
+        if(monkeyItem != null) {
+            monkeyItem.setStatus(newStatus);
+            DatabaseHandler.updateMessageOutgoingStatus(realm, monkeyItem.model, newStatus);
+            adapter.notifyDataSetChanged();
+        }
+    }
     /**
      * Updates a sent message and updates de UI so that the user can see that it has been
      * successfully delivered
      * @param oldId The old Id of the message.
      */
     private void markMessageAsDelivered(String oldId){
-        MessageItem monkeyItem = (MessageItem) searchMessage(oldId);
-        if(monkeyItem != null) {
-            monkeyItem.setStatus(MonkeyItem.OutgoingMessageStatus.delivered);
-            DatabaseHandler.updateMessageOutgoingStatus(realm, monkeyItem.model, MonkeyItem.OutgoingMessageStatus.delivered);
-            adapter.notifyDataSetChanged();
-        }
+        updateMessage(oldId, MonkeyItem.DeliveryStatus.delivered);
     }
 
     /**
@@ -338,9 +342,18 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     @Override
-    public void onFileDownloadRequested(int position, @NotNull MonkeyItem item) {
+    public void onFileUploadRequested(@NotNull MonkeyItem item) {
+        if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
+            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
+            adapter.rebindMonkeyItem(item, recycler);
+        }
+        resendFile(item.getMessageId());
+    }
 
-        MessageItem messageItem = (MessageItem) item;
+    @Override
+    public void onFileDownloadRequested(@NotNull MonkeyItem item) {
+
+        final MessageItem messageItem = (MessageItem) item;
         final MonkeyKitSocketService socketService = getService();
         if(socketService !=null && !messageItem.isDownloading()) {
             messageItem.setDownloading(true); //Make the bubble show a downloading animation
@@ -351,6 +364,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                         @Override
                         public void OnSuccess() {
                             //When then Download is done, update the RecyclerView.
+                            updateMessage(messageItem.getMessageId(), MonkeyItem.DeliveryStatus.delivered);
                             adapter.notifyDataSetChanged();
                         }
 
@@ -451,19 +465,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     @Override
     public void onFileFailsUpload(MOKMessage message) {
-
+        updateMessage(message.getMessage_id(), MonkeyItem.DeliveryStatus.error);
     }
 
     @Override
     public void onAcknowledgeRecieved(String senderId, String recipientId, String newId, String oldId, Boolean read, int messageType) {
 
-        Log.d("MainActivity", "Ack received");
-        switch (messageType) {
-            case 1:
-            case 2:
-                markMessageAsDelivered(oldId);
-                break;
-        }
+        markMessageAsDelivered(oldId);
 
     }
 
@@ -499,5 +507,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         else{
             setActionBarTitle(1);
         }
+    }
+
+    @Override
+    public  void onConnectionRefused(){
+        setActionBarTitle(2);
+        Log.d("MainActivity", "Connection Refused");
+        Toast.makeText(this, "Login failed. Please check your Monkey Kit credentials", Toast.LENGTH_LONG).show();
     }
 }

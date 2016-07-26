@@ -30,7 +30,7 @@ public class MessageItem implements MonkeyItem {
     private String senderSessionId, recieverSessionId, messageId, messageContent;
     private long timestamp;
     private boolean isIncoming;
-    private OutgoingMessageStatus status;
+    private DeliveryStatus status;
     private MonkeyItemType itemType;
     /*AUDIO*/
     private long duration;
@@ -52,7 +52,7 @@ public class MessageItem implements MonkeyItem {
         this.itemType = itemType;
         this.placeHolderFilePath = "";
         this.duration = 0;
-        this.status = OutgoingMessageStatus.sending;
+        this.status = DeliveryStatus.sending;
         this.isDownloading = false;
 
         model = new MessageModel(senderId, recieverId, messageId, messageContent, timestamp, isIncoming, itemType);
@@ -68,7 +68,7 @@ public class MessageItem implements MonkeyItem {
         this.itemType = MonkeyItemType.values()[messageModel.getItemType()];
         this.placeHolderFilePath = messageModel.getPlaceHolderFilePath();
         this.duration = messageModel.getDuration();
-        this.status = OutgoingMessageStatus.values()[messageModel.getStatus()];
+        this.status = DeliveryStatus.values()[messageModel.getStatus()];
         this.isDownloading = messageModel.isDownloading();
 
         if(messageModel.getParams().length()>0){
@@ -88,7 +88,7 @@ public class MessageItem implements MonkeyItem {
         return model;
     }
 
-    public void setStatus (OutgoingMessageStatus status){
+    public void setStatus (DeliveryStatus status){
         this.status = status;
     }
 
@@ -156,7 +156,7 @@ public class MessageItem implements MonkeyItem {
 
     @NotNull
     @Override
-    public OutgoingMessageStatus getOutgoingMessageStatus() {
+    public DeliveryStatus getDeliveryStatus() {
         return status;
     }
 
