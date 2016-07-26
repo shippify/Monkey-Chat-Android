@@ -127,6 +127,10 @@ public class MOKMessageHandler extends Handler {
                         service.processMessageFromHandler(CBTypes.onSocketConnected, new Object[]{""});
                         break;
                     }
+                    case MessageTypes.MessageSocketUnauthorized:{
+                        service.processMessageFromHandler(CBTypes.onConnectionRefused, new Object[]{""});
+                        break;
+                    }
                     case MessageTypes.MessageSocketDisconnected:{
                         service.processMessageFromHandler(CBTypes.onSocketDisconnected, new Object[]{""});//new Object[]{""}
                         //If socket disconnected and this handler is still alive we should reconnect

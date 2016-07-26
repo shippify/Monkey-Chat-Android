@@ -127,7 +127,7 @@ public class DatabaseHandler {
 
     }
 
-    public static void updateMessageOutgoingStatus(Realm realm, final MessageModel model, final MonkeyItem.OutgoingMessageStatus outgoingMessageStatus) {
+    public static void updateMessageOutgoingStatus(Realm realm, final MessageModel model, final MonkeyItem.DeliveryStatus outgoingMessageStatus) {
 
         realm.executeTransactionAsync(new Realm.Transaction() {
             @Override

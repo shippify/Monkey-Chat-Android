@@ -5,6 +5,7 @@ package com.criptext.comunication;
  */
 public class MessageTypes {
 
+	public static final int MessageSocketUnauthorized = -3;
 	public static final int MessageSocketDisconnected = -2;
 	public static final int MessageSocketConnected = -1;
 

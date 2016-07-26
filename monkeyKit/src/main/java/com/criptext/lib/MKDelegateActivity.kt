@@ -9,12 +9,17 @@ import android.os.IBinder
 import android.util.Log
 import com.criptext.ClientData
 import com.criptext.MonkeyKitSocketService
+import com.criptext.comunication.LocalizedPushMessage
+import com.criptext.comunication.MOKMessage
+import com.criptext.comunication.PushMessage
 import com.criptext.socket.SecureSocketService
+import com.google.gson.JsonObject
+import java.util.*
+import javax.crypto.EncryptedPrivateKeyInfo
 
 abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     var service: MonkeyKitSocketService? = null
-    private set
 
     abstract val serviceClassName: Class<*>
 
@@ -46,4 +51,23 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     abstract fun onBoundToService()
+
+    fun persistFileMessageAndSend(filePath: String, monkeyIDTo: String, fileType: Int,
+                                  params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
+        val socketService = service
+        if(socketService != null){
+            val pushStr = pushMessage.toString();
+            return socketService.fileUploader.persistFileMessageAndSend(filePath, monkeyIDTo, fileType,
+                    params, pushStr, isEncrypted)
+        } else
+            throw IllegalStateException("MonkeyKitSocketService is not ready yet.")
+    }
+
+    fun resendFile(fileMessageId: String){
+        val socketService = service
+        if(socketService != null){
+            socketService.fileUploader.resendFile(fileMessageId)
+        } else
+            throw IllegalStateException("MonkeyKitSocketService is not ready yet.")
+    }
 }

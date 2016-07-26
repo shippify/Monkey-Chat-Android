@@ -2,6 +2,7 @@ package com.criptext.comunication;
 
 import org.json.JSONObject;
 
+import android.accounts.NetworkErrorException;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -34,12 +35,13 @@ public class AsyncConnSocket implements ComServerDelegate{
 	public DarkStarClient socketClient;
 	protected ComServerListener userServerListener;
 	private HandlerThread handlerThread;
+	Thread connThread;
 	private Void response;
 
 	public static int isdisconectfinal=-1;
 
-	public enum Status {sinIniciar, conectado, reconectando, desconectado};
-	public Status socketStatus;
+	public enum Status {unauthorized, sinIniciar, conectado, reconectando, desconectado};
+	private Status socketStatus;
 	private Handler mainMessageHandler;
 	private Handler socketMessageHandler;
 	private Runnable lastAction = null;
@@ -76,7 +78,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 
 
 	public void fireInTheHole(){
-		if(socketStatus != Status.conectado)
+		if(shouldTryToConnect())
 			initConnection();
 		if(handlerThread != null){
 			handlerThread.quit();
@@ -113,7 +115,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 					}
 					else if(msg.obj.toString().compareTo("conectar")==0){
 
-						if(!isConnected()){
+						if(shouldTryToConnect()){
 							initConnection();
 						}
 
@@ -151,19 +153,23 @@ public class AsyncConnSocket implements ComServerDelegate{
 		socketStatus = Status.reconectando; userServerListener=new ComServerListener((ComServerDelegate) this);
 		socketClient = new DarkStarSocketClient(MonkeyKitSocketService.Companion.getBaseURL(),
 				1139,(DarkStarListener)userServerListener);
-		Thread connThread = new Thread(new Runnable() {
+		connThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
 				try {
+					final int STRIKES = 5;
 
-					while (AsyncConnSocket.this.getSocketStatus() != Status.conectado) {
-						System.out.println("RECONNECTING - "+sessionId);
-						socketClient.connect();
-						AsyncConnSocket.this.socketClient.login(AsyncConnSocket.this.sessionId, urlPassword);
+					for(int i = 1; i <= STRIKES; i++)
+                        if (AsyncConnSocket.this.getSocketStatus() != Status.conectado) {
+                            System.out.println("RECONNECTING - "+sessionId + " " + (System.currentTimeMillis()/1000));
+                            socketClient.connect();
+                            AsyncConnSocket.this.socketClient.login(AsyncConnSocket.this.sessionId, urlPassword);
 
-						Thread.sleep(2000);
-					}
+                            Thread.sleep((int) (1000L * Math.pow(2, i)));
+                        }
 
+					if(AsyncConnSocket.this.getSocketStatus() != Status.conectado)
+						throw(new NetworkErrorException("Cannot establish connection with service. Please contact support"));
 
 					Handler handler = new Handler(Looper.getMainLooper());
 					handler.post(new Runnable() {
@@ -176,12 +182,17 @@ public class AsyncConnSocket implements ComServerDelegate{
 					});
 
 
-				} catch (Exception e) {
+				} catch (InterruptedException e){
+					e.printStackTrace();
+				}
+				catch (Exception e) {
                     socketStatus=Status.desconectado;
 					e.printStackTrace();
+					//TODO tell a delegate that we cant establish connection
 				}
 			}
 		});
+		//Log.d("AsyncConnSocket", "start connection Thread");
 		connThread.start();
 
 
@@ -280,6 +291,11 @@ public class AsyncConnSocket implements ComServerDelegate{
 	}
 	public boolean isConnected(){
 		return socketStatus == Status.conectado;
+	}
+
+	public boolean shouldTryToConnect(){
+		return socketStatus != Status.conectado
+				&& socketStatus != Status.reconectando && socketStatus != Status.unauthorized;
 	}
 
 	@Override
@@ -555,18 +571,24 @@ public class AsyncConnSocket implements ComServerDelegate{
 			mainMessageHandler.sendMessage(msg);
 		}
 		else if(evid==ComMessageProtocol.FAILLOGGINMSG){
-			//REMOTE LOGOUT DESDE EL SOCKET
-			socketStatus = Status.desconectado;
-			System.out.println("Desconectado del Socket!!");
-			Message msg = mainMessageHandler.obtainMessage();			      
-			msg.what=MessageTypes.MessageSocketDisconnected;
-			mainMessageHandler.sendMessage(msg);
+			//REMOTE LOGOUT UNAUTHORIZED
+			socketStatus = Status.unauthorized;
+			if(connThread != null) {
+				connThread.interrupt();
+				connThread = null;
+			}
+			System.out.println("UNAUTHORIZED");
+            socketStatus = Status.unauthorized;
+            Message msg = mainMessageHandler.obtainMessage();
+            msg.what = MessageTypes.MessageSocketUnauthorized;
+            mainMessageHandler.sendMessage(msg);
+
 		}else if(evid==ComMessageProtocol.FAILLOGGINMSGDISCONECT){
 			//REMOTE LOGOUT DESDE EL SOCKET
 			socketStatus = Status.desconectado;
 			//This logout should only occur when the watchdo
 			System.out.println("Desconectado del Socket!");
-			if(mainMessageHandler != null) {
+			if(mainMessageHandler != null && isConnected()) {
 				Message msg = mainMessageHandler.obtainMessage();
 				msg.what = MessageTypes.MessageSocketDisconnected;
 				mainMessageHandler.sendMessage(msg);
@@ -588,7 +610,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	}
 	@Override
 	public void disconnected(){
-		if(socketStatus != Status.desconectado)
+		if(socketStatus != Status.desconectado && socketStatus != Status.reconectando)
 			initConnection();
 
 	}
@@ -648,7 +670,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 
 	public void conectSocket(){
 		try {
-			if(!isConnected()){
+			if(shouldTryToConnect()){
 				if(socketMessageHandler==null || handlerThread == null || !handlerThread.isAlive()){
 					System.out.println("MONKEY - mandaron a conectar pero no esta inicializado el socketMessageHandler");
 					fireInTheHole();
