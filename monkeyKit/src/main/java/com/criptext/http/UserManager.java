@@ -5,9 +5,12 @@ import com.androidquery.auth.BasicHandle;
 import com.androidquery.callback.AjaxCallback;
 import com.androidquery.callback.AjaxStatus;
 import com.criptext.MonkeyKitSocketService;
+import com.criptext.comunication.AsyncConnSocket;
+import com.criptext.comunication.MonkeyHttpResponse;
 import com.criptext.comunication.MonkeyJsonResponse;
 import com.criptext.security.AESUtil;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -23,9 +26,7 @@ public class UserManager extends AQueryHttp {
         super(service, aesUtil);
     }
 
-    /************************************************************************/
-
-    public void updateUserObject(String monkeyId, JSONObject userInfo, final Runnable runnable){
+    public void updateUserObject(String monkeyId, JSONObject userInfo, final MonkeyHttpResponse monkeyHttpResponse){
 
         try {
             String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/info/update";
@@ -40,7 +41,10 @@ public class UserManager extends AQueryHttp {
             aq.auth(handle).ajax(urlconnect, params, JSONObject.class, new AjaxCallback<JSONObject>(){
                 @Override
                 public void callback(String url, JSONObject response, AjaxStatus status) {
-                    runnable.run();
+                    if(response!=null)
+                        monkeyHttpResponse.OnSuccess();
+                    else
+                        monkeyHttpResponse.OnError();
                 }
             });
 
@@ -50,17 +54,9 @@ public class UserManager extends AQueryHttp {
 
     }
 
-    /**
-     * Get all conversation of a user using the monkey ID.
-     * @param monkeyid monkeyid ID of the user.
-     * @param monkeyJsonResponse callback to receive the response.
-     */
-
     public void getConversations(String monkeyid, final MonkeyJsonResponse monkeyJsonResponse){
 
         String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/"+monkeyid+"/conversations";
-        AjaxCallback<JSONObject> cb = new AjaxCallback<JSONObject>();
-
         aq.auth(handle).ajax(urlconnect, JSONObject.class, new AjaxCallback<JSONObject>(){
             @Override
             public void callback(String url, JSONObject response, AjaxStatus status) {
@@ -71,6 +67,29 @@ public class UserManager extends AQueryHttp {
                         e.printStackTrace();
                         monkeyJsonResponse.OnError(status);
                     }
+                else
+                    monkeyJsonResponse.OnError(status);
+            }
+        });
+
+    }
+
+    public void getConversationMessages(String monkeyid, String conversationId, int numberOfMessages
+            , String lastMessageId, AsyncConnSocket asyncConnSocket, final MonkeyJsonResponse monkeyJsonResponse){
+
+        String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/conversation/messages/"+monkeyid+"/"+conversationId+"/"+numberOfMessages+"/"+lastMessageId;
+        aq.auth(handle).ajax(urlconnect, JSONObject.class, new AjaxCallback<JSONObject>(){
+            @Override
+            public void callback(String url, JSONObject response, AjaxStatus status) {
+                if(response!=null){
+                    try {
+                        JSONArray jsonArrayMessages = response.getJSONObject("data").getJSONArray("messages");
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        monkeyJsonResponse.OnError(status);
+                    }
+                }
                 else
                     monkeyJsonResponse.OnError(status);
             }

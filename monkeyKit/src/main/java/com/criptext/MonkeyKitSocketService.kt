@@ -536,8 +536,35 @@ abstract class MonkeyKitSocketService : Service() {
 
     }
 
-    fun updateUserObject(monkeyId: String, userInfo: JSONObject, runnable: Runnable) {
-        userManager.updateUserObject(monkeyId,userInfo,runnable)
+    /**
+     * Update the metada of a user
+     * @param monkeyid monkeyid ID of the user.
+     * @param monkeyHttpResponse callback to receive the response.
+     */
+
+    fun updateUserObject(monkeyId: String, userInfo: JSONObject, monkeyHttpResponse: MonkeyHttpResponse) {
+        userManager.updateUserObject(monkeyId,userInfo,monkeyHttpResponse)
+    }
+
+    /**
+     * Get all conversation of a user using the monkey ID.
+     * @param monkeyid monkeyid ID of the user.
+     * @param monkeyJsonResponse callback to receive the response.
+     */
+
+    fun getAllConversations(monkeyJsonResponse: MonkeyJsonResponse){
+        userManager.getConversations(clientData.monkeyId, monkeyJsonResponse)
+        //TODO desencrypt messages
+    }
+
+    /**
+     * Get all messages of a conversation.
+     * @param monkeyid monkeyid ID of the user.
+     * @param monkeyJsonResponse callback to receive the response.
+     */
+
+    fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastMessageId: String, monkeyJsonResponse: MonkeyJsonResponse){
+        userManager.getConversationMessages(clientData.monkeyId, conversationId, numberOfMessages, lastMessageId, asyncConnSocket, monkeyJsonResponse)
     }
 
     /**
