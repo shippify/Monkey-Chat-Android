@@ -242,7 +242,7 @@ abstract class MonkeyKitSocketService : Service() {
                     tipo == MessageTypes.blMessageScreenCapture ||
                     tipo == MessageTypes.blMessageShareAFriend ||
                     tipo == MessageTypes.blMessageDefault)
-                    storeMessage(message, true, Runnable {
+                    storeReceivedMessage(message, Runnable {
                         //Message received and stored, update lastTimeSynced with with the timestamp
                         //that the server gave the message
                         lastTimeSynced = message.datetime.toLong();
@@ -464,7 +464,26 @@ abstract class MonkeyKitSocketService : Service() {
      * Envia una notificación a traves de MonkeyKit. Las notificaciones no se persisten. Si el
      * destinatario no la pudo recibir a tiempo, no la recibira nunca
      * @param sessionIDTo session ID del usuario que recibira la notificacion
-     * @param paramsObject JsonObject con parametros adicionales que necesita la aplicacion
+     * @param paramsObject JsonOfun persistFileMessageAndSend(pathToFile: String, sessionIDTo: String, file_type: Int,
+                                  pushMessage: PushMessage, gsonParamsMessage: JsonObject, encrypted: Boolean): MOKMessage{
+        //TODO PERSIST FILE & SEND
+        /*
+        val newMessage = createMOKMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage);
+        val file = FileInputStream(pathToFile)
+        val fileSize = file.available()
+        file.close()
+        val props = createSendProps(newMessage.message_id, pathToFile, file_type, fileSize)
+        newMessage.props = props
+        storeMessage(newMessage, false, Runnable {
+            FileUploadService.startUpload(this, newMessage.message_id, pathToFile, clientData, sessionIDTo,
+                    file_type, props.toString(), gsonParamsMessage.toString(), pushMessage)
+        })
+        return MOKMessage();
+        */
+        return fileUploader.persistFileMessageAndSend(pathToFile, sessionIDTo, file_type,
+                        gsonParamsMessage, pushMessage.toString(), encrypted)
+    }
+bject con parametros adicionales que necesita la aplicacion
      * @param pushMessage Mensaje a mostrar en el push notification
      */
     fun sendNotification(sessionIDTo: String, paramsObject: JSONObject, pushMessage: String) {
@@ -577,54 +596,28 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
 
-    private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: PushMessage,
-                            params: JsonObject, persist: Boolean, encrypted: Boolean): MOKMessage{
+    fun sendMessage(newMessage: MOKMessage, pushMessage: PushMessage, encrypted: Boolean): MOKMessage{
 
-        if(elmensaje.length > 0){
             try {
-
-                val newMessage = createMOKMessage(elmensaje, sessionIDTo, MessageTypes.blMessageDefault, params);
 
                 val props = createSendProps(newMessage.message_id, encrypted);
                 newMessage.props = props;
 
 
-                val json= createSendJSON(newMessage.message_id, sessionIDTo, elmensaje, pushMessage,
-                        params, props, encrypted);
+                val json= createSendJSON(newMessage.message_id, newMessage.rid, newMessage.msg, pushMessage,
+                        newMessage.params, props, encrypted);
 
 
                 addMessageToWatchdog(json);
-                if(persist) {
-                    storeMessage(newMessage, false, Runnable {
-                            sendJsonThroughSocket(json);
-                        })
-                }
-                else{
-                    sendJsonThroughSocket(json);
-                }
+                sendJsonThroughSocket(json);
 
-                return newMessage;
             }
             catch (e: Exception) {
                 e.printStackTrace();
                 return MOKMessage() ;
             }
-        }
 
-        return MOKMessage();
-    }
-
-    /**
-     * Envia un mensaje sin guardarlo en la base de datos.
-     * @param elmensaje el texto del mensaje
-     * @param sessionIDTo session ID del remitente
-     * @param pushMessage mensaje a enviar en el push notification
-     * @param params JsonObject con el params a enviar en el MOKMessage
-     * @return el MOKMessage enviado.
-     */
-    private fun sendMessage(elmensaje: String, sessionIDTo: String, pushMessage: PushMessage, params: JsonObject, encrypted: Boolean): MOKMessage {
-        return sendMessage(elmensaje, sessionIDTo, pushMessage, params, false, encrypted);
-
+        return newMessage;
     }
 
     private fun createSendProps(old_id: String, filepath: String, fileType: Int, originalSize: Int, encrypted: Boolean): JsonObject{
@@ -642,31 +635,6 @@ abstract class MonkeyKitSocketService : Service() {
         props.addProperty("mime_type", MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext));
         props.addProperty("size", originalSize);
         return props;
-    }
-
-    fun persistFileMessageAndSend(pathToFile: String, sessionIDTo: String, file_type: Int,
-                                  pushMessage: PushMessage, gsonParamsMessage: JsonObject, encrypted: Boolean): MOKMessage{
-        //TODO PERSIST FILE & SEND
-        /*
-        val newMessage = createMOKMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage);
-        val file = FileInputStream(pathToFile)
-        val fileSize = file.available()
-        file.close()
-        val props = createSendProps(newMessage.message_id, pathToFile, file_type, fileSize)
-        newMessage.props = props
-        storeMessage(newMessage, false, Runnable {
-            FileUploadService.startUpload(this, newMessage.message_id, pathToFile, clientData, sessionIDTo,
-                    file_type, props.toString(), gsonParamsMessage.toString(), pushMessage)
-        })
-        return MOKMessage();
-        */
-        return fileUploader.persistFileMessageAndSend(pathToFile, sessionIDTo, file_type,
-                        gsonParamsMessage, pushMessage.toString(), encrypted)
-    }
-
-    fun persistMessageAndSend(messageText: String, sessionIDTo: String,
-                              pushMessage: PushMessage, gsonParamsMessage: JsonObject, encrypted: Boolean): MOKMessage{
-        return sendMessage(messageText, sessionIDTo, pushMessage, gsonParamsMessage, true, encrypted);
     }
 
     /**
@@ -723,7 +691,7 @@ abstract class MonkeyKitSocketService : Service() {
             }
             else {
                 System.out.println("MONKEY - no pudo enviar Sync - socket desconectado " + asyncConnSocket.socketStatus);
-                Thread.dumpStack();
+                //Thread.dumpStack();
             }
 
 
@@ -865,7 +833,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param incoming
      * @param runnable Este runnable debe ejecutarse despues de guardar el mensaje
      */
-    abstract fun storeMessage(message: MOKMessage, incoming: Boolean, runnable: Runnable)
+    abstract fun storeReceivedMessage(message: MOKMessage, runnable: Runnable)
 
     /**
      * Guarda un grupo de mensajes de MonkeyKit que se recibieron despues de un sync en la base de datos.

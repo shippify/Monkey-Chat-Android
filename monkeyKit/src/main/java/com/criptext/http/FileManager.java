@@ -117,26 +117,7 @@ public class FileManager extends AQueryHttp{
             });
         }
 
-        /**
-         * Crea un nuevo MOKMessage con Id unico y con un timestamp actual. Al crear un nuevo MOKMessage
-         * para ser enviado siempre debe de usarse este metodo en lugar del constructor por defecto que
-         * tiene MOKMessage ya que inicializa varios atributos de la manera correcta para ser enviado.
-         * @param textMessage texto a enviar en el mensaje
-         * @param sessionIDTo session ID del destinatario
-         * @param type tipo del mensaje. Debe de ser uno de los valores de MessageTypes.FileTypes
-         * @param params JsonObject con parametros adicionales a enviar.
-         * @return Una nueva instancia de MOK Message lista para ser enviada por el socket.
-         */
-        public MOKMessage createMOKMessage(String textMessage, String sessionIDTo, int type, JsonObject params){
-            long datetimeorder = System.currentTimeMillis();
-            long datetime = datetimeorder/1000;
-            String srand = RandomStringBuilder.build(3);
-            final String idnegative = "-" + datetime;
-            MOKMessage message = new MOKMessage(idnegative + srand, this.monkeyID, sessionIDTo, textMessage,
-                   "" + datetime, "" + type, params, null);
-            message.setDatetimeorder(datetimeorder);
-            return message;
-        }
+
 
         private JSONObject createSendJSON(String idnegative, String sessionIDTo, String elmensaje,
                                           String pushMessage, JsonObject params, JsonObject props){
@@ -169,14 +150,7 @@ public class FileManager extends AQueryHttp{
             return json;
         }
 
-        private JsonObject createSendProps(String old_id, boolean encrypted){
-            JsonObject props = new JsonObject();
-            props.addProperty("str", "0");
-            props.addProperty("encr", encrypted?"1":"0");
-            props.addProperty("device", "android");
-            props.addProperty("old_id", old_id);
-            return props;
-        }
+
 
         private void handleSentFile(JSONObject json, MOKMessage newMessage){
             System.out.println(json);
@@ -200,35 +174,30 @@ public class FileManager extends AQueryHttp{
 
     public void resendFile(String fileMessageId){
         FileMOKMessage fileMOKMessage = pendingFiles.get(fileMessageId);
-        if(fileMOKMessage != null && !fileMOKMessage.failed) {
-            Log.e("FileManager", "File " + fileMessageId + " is already sending!");
-            return;
-        } else if(fileMOKMessage != null){
-            fileMOKMessage.failed = false;
-        }
+        if(fileMOKMessage != null) {
+            if (!fileMOKMessage.failed) {
+                Log.e("FileManager", "File " + fileMessageId + " is already sending!");
+                return;
+            } else {
+                fileMOKMessage.failed = false;
+            }
 
-        sendFileMessagePrivate(fileMOKMessage.message, fileMOKMessage.pushStr,false, fileMOKMessage.isEncrypted);
+            sendFileMessage(fileMOKMessage.message, fileMOKMessage.pushStr,fileMOKMessage.isEncrypted);
+        } else
+            Log.e("MonkeyKit", "FileManager tried to resend a file that has not been sent yet!");
     }
     /**
-         * Envia un archivo a traves de MonkeyKit. Se envia un mensaje por el socket con metadata del archivo
-         * y posteriormente el archivo es subido por HTTP al servidor
-         * @param newMessage MOKMessage a enviar
-         * @param pushMessage Mensaje a mostrar en el push notification
-         * @return el MOKMessage enviado.
-         */
-        private MOKMessage sendFileMessagePrivate(final MOKMessage newMessage, final String pushMessage, final boolean persist, final boolean encrypted){
+     * Envia un archivo a traves de MonkeyKit. Se envia un mensaje por el socket con metadata del archivo
+     * y posteriormente el archivo es subido por HTTP al servidor
+     * @param newMessage MOKMessage a enviar
+     * @param pushMessage Mensaje a mostrar en el push notification
+     * @return el MOKMessage enviado.
+     */
+    public MOKMessage sendFileMessage(final MOKMessage newMessage, final String pushMessage, final boolean encrypted){
 
+        Log.d("FileManager", "send file: " + newMessage.getMsg());
+        if(!pendingFiles.containsKey(newMessage.getMessage_id()))
             try {
-                JsonObject propsMessage=null;
-                if(newMessage.getProps() == null) {
-                    propsMessage = createSendProps(newMessage.getMessage_id(), encrypted);
-                    propsMessage.addProperty("cmpr", "gzip");
-                    propsMessage.addProperty("file_type", newMessage.getType());
-                    propsMessage.addProperty("ext", FilenameUtils.getExtension(newMessage.getMsg()));
-                    propsMessage.addProperty("filename", FilenameUtils.getName(newMessage.getMsg()));
-                    propsMessage.addProperty("mime_type", MimeTypeMap.getSingleton().getMimeTypeFromExtension(FilenameUtils.getExtension(newMessage.getMsg())));
-                    newMessage.setProps(propsMessage);
-                }
 
                 JSONObject args = new JSONObject();
                 JSONObject paramsMessage = new JSONObject();
@@ -248,8 +217,7 @@ public class FileManager extends AQueryHttp{
 
                 byte[] finalData= IOUtils.toByteArray(new FileInputStream(newMessage.getMsg()));
 
-                if(propsMessage!=null)
-                    propsMessage.addProperty("size",finalData.length);
+                newMessage.getProps().addProperty("size",finalData.length);
                 args.put("props", new JSONObject(newMessage.getProps().toString()));
 
                 //COMPRIMIMOS CON GZIP
@@ -262,108 +230,15 @@ public class FileManager extends AQueryHttp{
                 params.put("file", finalData);
                 params.put("data", args.toString());
 
-                MonkeyKitSocketService service = serviceRef.get();
-                if(persist && service != null) {
-                    service.storeMessage(newMessage, false, new Runnable() {
-                                                        @Override
-                                                        public void run() {
-                            uploadFile(params, newMessage);
-                    }
-                });
-                }
-                else{
-                    uploadFile(params, newMessage);
-                }
+                uploadFile(params, newMessage);
 
                 return newMessage;
             }  catch (Exception e) {
                 e.printStackTrace();
             }
 
-            return newMessage;
-        }
-        /**
-         * Envia un archivo a traves de MonkeyKit. Se envia un mensaje por el socket con metadata del archivo
-         * y posteriormente el archivo es subido por HTTP al servidor
-         * @param pathToFile Ruta del archivo
-         * @param sessionIDTo session ID del destinatario del archivo
-         * @param file_type tipo de archivo. Debe de ser igual a una de las constantes de MessageTypes.FileTypes
-         * @param gsonParamsMessage JsonObject con parametros adicionales que necesita la aplicacion
-         * @param pushMessage Mensaje a mostrar en el push notification
-         * @return El MOKMessage enviado
-         */
-        private MOKMessage sendFileMessagePrivate(final String pathToFile, final String sessionIDTo, final int file_type, final JsonObject gsonParamsMessage,
-                                    final String pushMessage, final boolean persist, final boolean encrypted){
-
-            if(pathToFile.length()>0){
-                try {
-
-                    final MOKMessage newMessage = createMOKMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage);
-                    JsonObject propsMessage = createSendProps(newMessage.getMessage_id(), encrypted);
-                    propsMessage.addProperty("cmpr", "gzip");
-                    propsMessage.addProperty("file_type", file_type);
-                    propsMessage.addProperty("ext", FilenameUtils.getExtension(pathToFile));
-                    propsMessage.addProperty("filename", FilenameUtils.getName(pathToFile));
-                    propsMessage.addProperty("mime_type", MimeTypeMap.getSingleton().getMimeTypeFromExtension(FilenameUtils.getExtension(pathToFile)));
-
-                    newMessage.setProps(propsMessage);
-
-                    pendingFiles.put(newMessage.getMessage_id(),
-                            new FileMOKMessage(newMessage, pushMessage, encrypted));
-
-                    JSONObject args = new JSONObject();
-                    JSONObject paramsMessage = new JSONObject();
-
-                    args.put("sid",this.monkeyID);
-                    args.put("rid",sessionIDTo);
-
-                    if(gsonParamsMessage != null) {
-                        paramsMessage = new JSONObject(gsonParamsMessage.toString());
-                    }
-
-                    args.put("params", paramsMessage);
-                    args.put("id", newMessage.getMessage_id());
-                    args.put("push", pushMessage);
-
-                    final Map<String, Object> params = new HashMap<String, Object>();
-
-                    byte[] finalData= IOUtils.toByteArray(new FileInputStream(pathToFile));
-
-                    propsMessage.addProperty("size",finalData.length);
-                    args.put("props", new JSONObject(propsMessage.toString()));
-
-                    //COMPRIMIMOS CON GZIP
-                    Compressor compressor = new Compressor();
-                    finalData = compressor.gzipCompress(finalData);
-
-                    //ENCRIPTAMOS
-                    finalData=encrypted ? aesUtil.encrypt(finalData) : finalData;
-
-                    params.put("file", finalData);
-                    params.put("data", args.toString());
-
-                    MonkeyKitSocketService service = serviceRef.get();
-                    if(persist) {
-                        service.storeMessage(newMessage, false, new Runnable() {
-                            @Override
-                            public void run() {
-                                uploadFile(params, newMessage);
-                            }
-                        });
-                    }
-                    else{
-                        uploadFile(params, newMessage);
-                    }
-
-                    return newMessage;
-
-                }  catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-
-            return null;
-        }
+        return newMessage;
+    }
 
         public void uploadFile(Map<String, Object> params, final MOKMessage newMessage){
             System.out.println("send file: " + params);
@@ -385,62 +260,6 @@ public class FileManager extends AQueryHttp{
                 }
             });
         }
-
-        /**
-         * Envia un archivo a traves de MonkeyKit. Se envia un mensaje por el socket con metadata del archivo
-         * y posteriormente el archivo es subido por HTTP al servidor. El mensaje no se guarda en la base
-         * de datos local.
-         * @param message MOKMessage a enviar. La ruta absoluta del archivo a enviar debe de estar en msg.
-         * @param pushMessage Mensaje a mostrar en el push notification
-         * @return MOKMessage enviado.
-         */
-        protected MOKMessage sendFileMessage(MOKMessage message, final String pushMessage, final boolean encrypted){
-            return sendFileMessagePrivate(message, pushMessage, false, encrypted);
-        }
-
-        /**
-         * Envia un archivo a traves de MonkeyKit. Se envia un mensaje por el socket con metadata del archivo
-         * y posteriormente el archivo es subido por HTTP al servidor. El mensaje se guarda en la base
-         * de datos local antes de enviarse.
-         * @param message MOKMessage a enviar. La ruta absoluta del archivo a enviar debe de estar en msg.
-         * @param pushMessage Mensaje a mostrar en el push notification
-         * @return MOKMessage enviado.
-         */
-        protected MOKMessage persistFileMessageAndSend(MOKMessage message, final String pushMessage, final boolean encrypted){
-            return sendFileMessagePrivate(message, pushMessage, true, encrypted);
-        }
-        /**
-         * Envia un archivo a traves de MonkeyKit. Se envia un mensaje por el socket con metadata del archivo
-         * y posteriormente el archivo es subido por HTTP al servidor. El mensaje no se guarda en la base
-         * de datos local.
-         * @param pathToFile Ruta del archivo
-         * @param sessionIDTo session ID del destinatario del archivo
-         * @param file_type tipo de archivo. Debe de ser igual a una de las constantes de MessageTypes.FileTypes
-         * @param gsonParamsMessage JsonObject con parametros adicionales que necesita la aplicacion
-         * @param pushMessage Mensaje a mostrar en el push notification
-         * @return MOKMessage enviado.
-         */
-        public MOKMessage sendFileMessage(final String pathToFile, final String sessionIDTo, final int file_type, final JsonObject gsonParamsMessage,
-                                          final String pushMessage, final boolean encrypted){
-            return sendFileMessagePrivate(pathToFile, sessionIDTo, file_type, gsonParamsMessage, pushMessage, false, encrypted);
-        }
-
-        /**
-         * Envia un archivo a traves de MonkeyKit. Se envia un mensaje por el socket con metadata del archivo
-         * y posteriormente el archivo es subido por HTTP al servidor. El mensaje se guarda en la base
-         * de datos local antes de enviarse.
-         * @param pathToFile Ruta del archivo
-         * @param sessionIDTo session ID del destinatario del archivo
-         * @param file_type tipo de archivo. Debe de ser igual a una de las constantes de MessageTypes.FileTypes
-         * @param gsonParamsMessage JsonObject con parametros adicionales que necesita la aplicacion
-         * @param pushMessage Mensaje a mostrar en el push notification
-         * @return MOKMessage enviado.
-         */
-        public MOKMessage persistFileMessageAndSend(final String pathToFile, final String sessionIDTo, final int file_type, final JsonObject gsonParamsMessage,
-                                                    final String pushMessage, final boolean encrypted){
-            return sendFileMessagePrivate(pathToFile, sessionIDTo, file_type, gsonParamsMessage, pushMessage, true, encrypted);
-        }
-
 
      class FileMOKMessage{
          final MOKMessage message;

@@ -107,7 +107,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
         linearLayoutManager.setStackFromEnd(true);
         recycler.setLayoutManager(linearLayoutManager);
-        recycler.setAdapter(adapter);
 
         //Initialize the inputview so that the user can send messages,
         initInputView();
@@ -160,9 +159,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     @Override
+    protected void onRestart(){
+        super.onRestart();
+        initRealm();
+    }
+    @Override
     protected void onStart(){
         super.onStart();
-        initRealm();
         voiceNotePlayer.initPlayer();
     }
 
@@ -205,12 +208,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                 @Override
                 public void onNewItem(@NotNull MonkeyItem item) {
 
-                    final MonkeyKitSocketService socketService = getService();
-                    if (socketService == null) {
-                        Log.e("MainActivity", "Can't send message. service is null");
-                        return;
-                    }
-
                     JsonObject params = new JsonObject();
                     MOKMessage mokMessage;
 
@@ -220,16 +217,16 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                             params = new JsonObject();
                             params.addProperty("length",""+item.getAudioDuration());
 
-                            mokMessage = persistFileMessageAndSend(item.getFilePath(), myFriendID,
+                            mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
                                     MessageTypes.FileTypes.Audio, params, new PushMessage("Test Push Message"), true);
                             break;
                         case photo:
-                            mokMessage = persistFileMessageAndSend(item.getFilePath(), myFriendID,
+                            mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
                                     MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage("Test Push Message"), true);
                             break;
                         default:
-                            mokMessage = socketService.persistMessageAndSend(item.getMessageText(),
-                                    myFriendID, new PushMessage("Test Push Message"), params, true);
+                            mokMessage = persistMessageAndSend(item.getMessageText(), myMonkeyID,
+                                    myFriendID, params, new PushMessage("Test Push Message"), true);
                             break;
                     }
 
@@ -306,7 +303,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
      * @param message
      */
     private void processIncomingMessage(MOKMessage message){
-        Log.d("MainActivity", "Received " + message.getMessage_id());
         MessageItem newItem = DatabaseHandler.createMessage(message, this, myMonkeyID, true);
         adapter.smoothlyAddNewItem(newItem, recycler);
     }
@@ -318,12 +314,31 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         if (resultCode != RESULT_OK) {
             return;
         }
+
+        initRealm();
         //Since our InputView uses different activities to take and edit photos, we must forward
         // the onActivityResult event to it so that it can react to the results of take photo, choose
         //photo and edit photo.
         if(inputView!=null)
             inputView.getCameraHandler().onActivityResult(requestCode,resultCode, data);
 
+    }
+
+    @Override
+    public void storeSentMessage(final MOKMessage message) {
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        DatabaseHandler.storeSendingMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), true),
+            new Realm.Transaction.OnSuccess() {
+                @Override
+                public void onSuccess() {
+                }
+            }, new Realm.Transaction.OnError() {
+                @Override
+                public void onError(Throwable error) {
+                    error.printStackTrace();
+                }
+            });
     }
 
     /***
@@ -393,7 +408,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     @Override
     public void onSocketConnected() {
-        Log.d("MainActivity", "onSocketConnected");
+        super.onSocketConnected();
         setActionBarTitle(2); }
 
     @Override
@@ -501,6 +516,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     @Override
     public void onBoundToService() {
+
+        recycler.setAdapter(adapter);
         if(getService().isSocketConnected()) {
             setActionBarTitle(2);
         }

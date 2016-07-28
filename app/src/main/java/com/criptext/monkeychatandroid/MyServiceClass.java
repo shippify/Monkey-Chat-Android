@@ -23,11 +23,11 @@ public class MyServiceClass extends MonkeyKitSocketService{
     private Realm realm;
 
     @Override
-    public void storeMessage(MOKMessage message, boolean incoming, final Runnable runnable) {
+    public void storeReceivedMessage(MOKMessage message, final Runnable runnable) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         openDatabase();
-        DatabaseHandler.saveMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), incoming),
+        DatabaseHandler.saveMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), true),
             new Realm.Transaction.OnSuccess() {
                 @Override
                 public void onSuccess() {

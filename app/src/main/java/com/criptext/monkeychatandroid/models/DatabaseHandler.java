@@ -22,12 +22,31 @@ public class DatabaseHandler {
         realm.executeTransactionAsync(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
+                Log.d("DatabaseHandler", "save new message");
                 if (!existMessage(realm, messageItem.getMessageId())) //NO DUPLICATED
                     realm.copyToRealm(messageItem.getModel());
+                else
+                    Log.d("DatabaseHandler", "wtf it already exists");
             }
         }, onSuccess, onError);
     }
+    public static void storeSendingMessage(Realm realm, final MessageItem messageItem, final Realm.Transaction.OnSuccess onSuccess, final Realm.Transaction.OnError onError) {
 
+        realm.executeTransactionAsync(new Realm.Transaction() {
+            @Override
+            public void execute(Realm realm) {
+                Log.d("DatabaseHandler", "save new out message");
+                if (!existMessage(realm, messageItem.getMessageId())) { //NO DUPLICATED
+                    //Since this is a mirror chat, all messages have the same sender ID.
+                    //We have to explicitly sent this message as Outgoing, otherwise it
+                    // will be stored differently.
+                    messageItem.getModel().setIncoming(false);
+                    realm.copyToRealm(messageItem.getModel());
+                } else
+                    Log.d("DatabaseHandler", "wtf it already exists");
+            }
+        }, onSuccess, onError);
+    }
     public static void saveMessageBatch(Realm realm, final ArrayList<MOKMessage> messages, final Context context, final String userSession, final Realm.Transaction.OnSuccess onSuccess, final Realm.Transaction.OnError onError) {
 
         final WeakReference<Context> weakContext = new WeakReference<>(context);
