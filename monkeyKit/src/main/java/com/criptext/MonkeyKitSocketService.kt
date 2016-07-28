@@ -147,6 +147,7 @@ abstract class MonkeyKitSocketService : Service() {
     fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData) {
         clientData = cdata
         fileUploader = FileManager(this, aesUtil);
+        userManager = UserManager(this, aesUtil)
         this.aesutil = aesUtil
         startSocketConnection()
     }
@@ -553,8 +554,7 @@ abstract class MonkeyKitSocketService : Service() {
      */
 
     fun getAllConversations(monkeyJsonResponse: MonkeyJsonResponse){
-        userManager.getConversations(clientData.monkeyId, monkeyJsonResponse)
-        //TODO desencrypt messages
+        userManager.getConversations(clientData.monkeyId, asyncConnSocket, monkeyJsonResponse)
     }
 
     /**
@@ -563,8 +563,8 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyJsonResponse callback to receive the response.
      */
 
-    fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastMessageId: String, monkeyJsonResponse: MonkeyJsonResponse){
-        userManager.getConversationMessages(clientData.monkeyId, conversationId, numberOfMessages, lastMessageId, asyncConnSocket, monkeyJsonResponse)
+    fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String, monkeyJsonResponse: MonkeyJsonResponse){
+        userManager.getConversationMessages(clientData.monkeyId, conversationId, numberOfMessages, lastTimeStamp, asyncConnSocket, monkeyJsonResponse)
     }
 
     /**
