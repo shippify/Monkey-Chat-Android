@@ -1,6 +1,7 @@
 package com.criptext.monkeychatandroid.models;
 
 import android.provider.ContactsContract;
+import android.util.Log;
 
 import com.criptext.monkeykitui.recycler.MonkeyAdapter;
 import com.criptext.monkeykitui.recycler.MonkeyItem;

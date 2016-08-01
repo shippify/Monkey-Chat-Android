@@ -6,10 +6,10 @@ import android.support.v7.app.AppCompatActivity
 import android.os.IBinder
 import android.util.Log
 import android.webkit.MimeTypeMap
-import com.criptext.ClientData
 import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
+import com.criptext.comunication.MonkeyHttpResponse
 import com.criptext.comunication.PushMessage
 import com.criptext.security.RandomStringBuilder
 import com.google.gson.JsonObject
@@ -25,7 +25,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     val isSocketConnected: Boolean
         get () =  service?.isSocketConnected() ?: false
 
-    private val thingsToDoOnceConnected = ArrayList<Runnable>()
+    private val messagesToForwardToService = ArrayList<DelegateMOKMessage>()
+    val pendingFiles = HashMap<String, DelegateMOKMessage>();
+    val pendingDownloads = HashMap<String, DownloadMessage>();
 
     private val monkeyKitConnection = object : ServiceConnection {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
@@ -34,14 +36,34 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             val sService = binder.getService(this@MKDelegateActivity)
             service = sService
 
-            onBoundToService()
+            val removeTexts =  { it: DelegateMOKMessage ->
+                it.message.type.toInt() == MessageTypes.blMessageDefault }
+            val sendTexts = { ss: MonkeyKitSocketService, it: DelegateMOKMessage ->
+                val res = ss.sendMessage(it.message, it.push, it.isEncrypted)
+            }
 
+            removeAndSend(sService, removeTexts, sendTexts)
+            onBoundToService()
 
         }
 
         override fun onServiceDisconnected(p0: ComponentName?) {
             service = null
         }
+    }
+
+    fun removeAndSend(socketService: MonkeyKitSocketService,
+                      removeCondition: (DelegateMOKMessage) -> Boolean?,
+                      sendAction: (MonkeyKitSocketService, DelegateMOKMessage) -> Unit){
+        var i = messagesToForwardToService.size - 1
+            while(i > -1){
+                val shouldRemove = removeCondition.invoke(messagesToForwardToService[i]) ?: false
+                if(shouldRemove){
+                    val msg = messagesToForwardToService.removeAt(i)
+                    sendAction.invoke(socketService, msg)
+                }
+                i -= 1
+            }
     }
 
     override fun onStart() {
@@ -69,7 +91,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * @return Una nueva instancia de MOK Message lista para ser enviada por el socket.
      */
 
-    private fun createMOKMessage(textMessage: String, sessionIDfrom: String, sessionIDTo: String,
+    fun createMOKMessage(textMessage: String, sessionIDfrom: String, sessionIDTo: String,
         type: Int, params: JsonObject): MOKMessage{
         val datetimeorder = System.currentTimeMillis();
         val datetime = datetimeorder/1000;
@@ -89,6 +111,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             props.addProperty("old_id", old_id);
             return props;
         }
+
     fun persistFileMessageAndSend(filePath: String, monkeyIDFrom: String, monkeyIDTo: String, fileType: Int,
                                   params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
         val newMessage = createMOKMessage(filePath, monkeyIDFrom, monkeyIDTo, fileType, params)
@@ -102,13 +125,10 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
         newMessage.props = propsMessage;
 
+        pendingFiles[newMessage.message_id] = DelegateMOKMessage(newMessage, pushMessage, isEncrypted)
+
         if(isSocketConnected){
-            val pushStr = pushMessage.toString();
-            service!!.fileUploader.sendFileMessage(newMessage, pushStr, isEncrypted)
-        }
-          else {
-            thingsToDoOnceConnected.add(Runnable { service!!.fileUploader.
-                    sendFileMessage(newMessage, pushMessage.toString(), isEncrypted) })
+            service!!.fileUploader.sendFileMessage(newMessage, pushMessage, isEncrypted)
         }
 
         storeSentMessage(newMessage)
@@ -120,32 +140,87 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
                               pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
         val newMessage = createMOKMessage(text, monkeyIDFrom, monkeyIDTo,
                 MessageTypes.blMessageDefault, params)
-        if(isSocketConnected){
-            service!!.sendMessage(newMessage, pushMessage, isEncrypted)
+        val socketService = service
+        if(socketService != null ){
+            socketService.sendMessage(newMessage, pushMessage, isEncrypted)
         } else {
-            thingsToDoOnceConnected.add(Runnable {
-                service!!.sendMessage(newMessage, pushMessage, isEncrypted)
-            })
+            messagesToForwardToService.add(DelegateMOKMessage(newMessage, pushMessage, isEncrypted))
         }
         storeSentMessage(newMessage)
         return newMessage
     }
 
-    fun resendFile(fileMessageId: String){
-        if(isSocketConnected){
-            service!!.fileUploader.resendFile(fileMessageId)
-        } else
-            thingsToDoOnceConnected.add(Runnable { service!!.fileUploader.resendFile(fileMessageId) })
-    }
-
     abstract fun storeSentMessage(message: MOKMessage)
 
     override fun onSocketConnected() {
-        for(toDo in thingsToDoOnceConnected)
-            toDo.run()
-        thingsToDoOnceConnected.clear()
+        for(file in pendingFiles.values){
+            service!!.fileUploader.sendFileMessage(file.message, file.push, file.isEncrypted)
+        }
     }
 
+    override fun onAcknowledgeRecieved(senderId: String?, recipientId: String?, newId: String?,
+                                       oldId: String?, read: Boolean?, messageType: Int) {
+        pendingFiles.remove(oldId)
+    }
+
+    override fun onFileFailsUpload(message: MOKMessage) {
+        val sentFile = pendingFiles[message.message_id]
+        sentFile?.failed = true
+    }
+
+    fun resendFile(fileMessage: MOKMessage, pushMessage: PushMessage, isEncrypted: Boolean) {
+        if(!pendingFiles.containsKey(fileMessage.message_id)){
+           pendingFiles[fileMessage.message_id] = DelegateMOKMessage(fileMessage, pushMessage, isEncrypted)
+           if(isSocketConnected){
+                service!!.fileUploader.sendFileMessage(fileMessage, pushMessage, isEncrypted)
+           }
+        }
+    }
+
+    fun resendFile(fileMessageId: String): Boolean{
+        val fileMOKMessage = pendingFiles[fileMessageId];
+        if(fileMOKMessage != null) {
+            if (!fileMOKMessage.failed) {
+                Log.e("FileManager", "File $fileMessageId is already sending!");
+                return true;
+            } else {
+                fileMOKMessage.failed = false;
+            }
+
+            service?.fileUploader?.sendFileMessage(fileMOKMessage.message,
+                    fileMOKMessage.push,fileMOKMessage.isEncrypted) ?:
+                    Log.e("MonkeyKit", "can't resend file. $CONNECTION_NOT_READY_ERROR")
+            return true;
+        } else{
+            Log.e("MonkeyKit", "FileManager tried to resend a file that has not been sent yet!");
+            return false
+        }
+    }
+
+    fun downloadFile(filepath: String, props: JsonObject, monkeyId: String, response: MonkeyHttpResponse){
+        if(!pendingDownloads.containsKey(filepath)){
+            service?.downloadFile(filepath, props.toString(), monkeyId, response)
+
+            pendingDownloads.put(filepath, DownloadMessage(filepath, props, response))
+        }
+    }
+
+    abstract fun onDestroyWithPendingMessages(errorMessages: ArrayList<MOKMessage>)
+
+    override fun onDestroy() {
+        super.onDestroy()
+        val errorMessages = ArrayList<MOKMessage>()
+        for(message in messagesToForwardToService)
+            errorMessages.add(message.message)
+        for(message in pendingFiles.values)
+            errorMessages.add(message.message)
+
+        if(errorMessages.isNotEmpty())
+            onDestroyWithPendingMessages(errorMessages)
+
+    }
+
+    data class DownloadMessage(val filepath: String, val props: JsonObject, val response: MonkeyHttpResponse)
     companion object{
         val  CONNECTION_NOT_READY_ERROR = "MonkeyKitSocketService is not ready yet."
     }

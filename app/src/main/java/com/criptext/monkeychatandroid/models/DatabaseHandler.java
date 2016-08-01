@@ -4,12 +4,14 @@ import android.content.Context;
 import android.util.Log;
 
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MessageManager;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 import io.realm.Realm;
+import io.realm.RealmQuery;
 import io.realm.RealmResults;
 
 /**
@@ -22,11 +24,8 @@ public class DatabaseHandler {
         realm.executeTransactionAsync(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
-                Log.d("DatabaseHandler", "save new message");
                 if (!existMessage(realm, messageItem.getMessageId())) //NO DUPLICATED
                     realm.copyToRealm(messageItem.getModel());
-                else
-                    Log.d("DatabaseHandler", "wtf it already exists");
             }
         }, onSuccess, onError);
     }
@@ -152,7 +151,7 @@ public class DatabaseHandler {
             @Override
             public void execute(Realm realm) {
                 MessageModel result = realm.where(MessageModel.class).equalTo("messageId", model.getMessageId()).findFirst();
-                if(result!=null)
+                if (result != null)
                     result.setStatus(outgoingMessageStatus.ordinal());
             }
         }, new Realm.Transaction.OnSuccess() {
@@ -165,9 +164,33 @@ public class DatabaseHandler {
                 Log.i("DB", error.getMessage());
             }
         });
+    }
 
 
 
+    public static void markMessagesAsError(Realm realm, final ArrayList<MOKMessage> errorMessages) {
+
+        realm.executeTransactionAsync(new Realm.Transaction() {
+            @Override
+            public void execute(Realm realm) {
+                RealmQuery<MessageModel> query = realm.where(MessageModel.class);
+                for(MOKMessage errorMsg : errorMessages)
+                    query.equalTo("messageId", errorMsg.getMessage_id());
+
+                RealmResults<MessageModel> results = query.findAll();
+                for(MessageModel model : results)
+                    model.setStatus(MonkeyItem.DeliveryStatus.error.ordinal());
+            }
+        }, new Realm.Transaction.OnSuccess() {
+            @Override
+            public void onSuccess() {
+            }
+        }, new Realm.Transaction.OnError() {
+            @Override
+            public void onError(Throwable error) {
+                Log.i("DB", error.getMessage());
+            }
+        });
 
 
     }

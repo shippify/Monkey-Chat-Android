@@ -109,7 +109,6 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     private fun initializeMonkeyKitService(){
-        Log.d("MonkeyKitSocketService", "init")
         status = ServiceStatus.initializing
         openDatabase();
         val asyncAES = AsyncAESInitializer(this)

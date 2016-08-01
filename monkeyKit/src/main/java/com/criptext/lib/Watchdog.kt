@@ -39,7 +39,7 @@ class Watchdog(service: MonkeyKitSocketService){
                 if(!cancelled) {
                     service?.forceDisconnect()
                     val newTimeout = BASE_TIMEOUT + Math.pow(2.0, attempts).toLong() * 1000L
-                    Log.d("KotlinWatchdog", "next: $newTimeout")
+                    Log.d("Watchdog", "next: $newTimeout")
                     handler.postDelayed(runnable, newTimeout);
                 };
             };

@@ -7,6 +7,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -90,6 +91,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         initRealm();
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
+        Log.d("MonkeyId", myMonkeyID);
         myFriendID = myMonkeyID;
 
         //Check play services. if available try to register with GCM so that we get Push notifications
@@ -362,7 +364,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
             updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
             adapter.rebindMonkeyItem(item, recycler);
         }
-        resendFile(item.getMessageId());
+        boolean msgIsResending = resendFile(item.getMessageId());
+        if(!msgIsResending){
+            MessageItem message = (MessageItem) item;
+            MOKMessage resendMessage = new MOKMessage(message.getMessageId(), myMonkeyID, myFriendID,
+                    message.getMessageText(), "" + message.getMessageTimestamp(), "" + message.getMessageType(),
+                    message.getParams(), message.getProps());
+            resendFile(resendMessage, new PushMessage("Test Push Message"), true);
+        }
+
     }
 
     @Override
@@ -370,7 +380,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
         final MessageItem messageItem = (MessageItem) item;
         final MonkeyKitSocketService socketService = getService();
-        if(socketService !=null && !messageItem.isDownloading()) {
+
+        if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
+            Log.d("MainActivity", "Mark message as sending");
+            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
+            adapter.rebindMonkeyItem(item, recycler);
+        } else  if(socketService !=null && !messageItem.isDownloading()) {
             messageItem.setDownloading(true); //Make the bubble show a downloading animation
             DatabaseHandler.updateMessageDownloadingStatus(realm, messageItem.model, true);
             //The socket service will download the file for us and let us add callback to execute when it finishes
@@ -379,12 +394,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                         @Override
                         public void OnSuccess() {
                             //When then Download is done, update the RecyclerView.
+                            Log.d("MainActivity", "download success");
                             updateMessage(messageItem.getMessageId(), MonkeyItem.DeliveryStatus.delivered);
                             adapter.notifyDataSetChanged();
                         }
 
                         @Override
                         public void OnError() {
+                            Log.d("MainActivity", "download success");
+                            updateMessage(messageItem.getMessageId(), MonkeyItem.DeliveryStatus.error);
                             adapter.notifyDataSetChanged();
                         }
                     });
@@ -480,12 +498,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     @Override
     public void onFileFailsUpload(MOKMessage message) {
+        super.onFileFailsUpload(message);
         updateMessage(message.getMessage_id(), MonkeyItem.DeliveryStatus.error);
     }
 
     @Override
     public void onAcknowledgeRecieved(String senderId, String recipientId, String newId, String oldId, Boolean read, int messageType) {
-
+        super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
         markMessageAsDelivered(oldId);
 
     }
@@ -531,5 +550,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         setActionBarTitle(2);
         Log.d("MainActivity", "Connection Refused");
         Toast.makeText(this, "Login failed. Please check your Monkey Kit credentials", Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onDestroyWithPendingMessages(@NotNull ArrayList<MOKMessage> errorMessages) {
+        Realm newRealm = MonkeyChat.getInstance().getNewMonkeyRealm();
+        DatabaseHandler.markMessagesAsError(newRealm, errorMessages);
+        newRealm.close();
     }
 }
