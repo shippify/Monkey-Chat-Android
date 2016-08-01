@@ -74,7 +74,7 @@ public class MonkeyInit {
                     String session;
                     if(myOldMonkeyId.isEmpty()) {
                         aesUtil = new AESUtil(ctxRef.get(), myOldMonkeyId);
-                        return getSessionHTTP((String)params[0], (String)params[1], (JSONObject)params[2], (JSONArray) params[3]);
+                        return new ServerResponse(false, getSessionHTTP((String)params[0], (String)params[1], (JSONObject)params[2], (JSONArray) params[3]));
                     } else {
                         session = userSync(myOldMonkeyId);
                     }
