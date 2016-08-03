@@ -210,4 +210,14 @@ public class MessageItem implements MonkeyItem {
         return arrayList;
     }
 
+    @Override
+    public long getMessageTimestampOrder() {
+        return 0;
+    }
+
+    @NotNull
+    @Override
+    public String getOldMessageId() {
+        return null;
+    }
 }

@@ -40,6 +40,15 @@ public interface MonkeyKitDelegate {
     void onSocketDisconnected();
 
     /**
+     * Callback executed when a file download operation finishes, successfully or not.
+     * With this callback you should update your UI to show an error message or a download
+     * complete message, depending on the result.
+     * @param fileMessageId The downloaded file's message id
+     * @param success true if the file was successfully downloaded, otherwise false
+     */
+    void onFileDownloadFinished(String fileMessageId, boolean success);
+
+    /**
      * Despues de crear un grupo con el metodo createGroup, el servidor respondera con el ID del
      * grupo si no ocurre ningun error. Cuando la respuesta este lista, MonkeyKit ejecutara este
      * callback. Aqui se deberia persistir ese ID con los demas datos de tu grupo como el nombre y

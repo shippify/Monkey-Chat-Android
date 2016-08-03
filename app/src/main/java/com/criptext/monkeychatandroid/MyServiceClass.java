@@ -84,4 +84,10 @@ public class MyServiceClass extends MonkeyKitSocketService{
         }
 
     }
+
+    @NotNull
+    @Override
+    public Class<?> getUploadServiceClass() {
+        return MyFileUploadService.class;
+    }
 }

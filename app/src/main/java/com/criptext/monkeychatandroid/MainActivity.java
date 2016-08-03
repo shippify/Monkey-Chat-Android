@@ -7,7 +7,6 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
-import android.provider.ContactsContract;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -18,7 +17,6 @@ import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
-import com.criptext.comunication.MonkeyHttpResponse;
 import com.criptext.comunication.PushMessage;
 import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.lib.MKDelegateActivity;
@@ -285,7 +283,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     private void updateMessage(String id, MonkeyItem.DeliveryStatus newStatus){
         MessageItem monkeyItem = (MessageItem) searchMessage(id);
-        if(monkeyItem != null) {
+        if(monkeyItem != null && realm != null) {
             monkeyItem.setStatus(newStatus);
             DatabaseHandler.updateMessageOutgoingStatus(realm, monkeyItem.model, newStatus);
             adapter.notifyDataSetChanged();
@@ -378,35 +376,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     public void onFileDownloadRequested(@NotNull MonkeyItem item) {
 
-        final MessageItem messageItem = (MessageItem) item;
-        final MonkeyKitSocketService socketService = getService();
-
         if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
-            Log.d("MainActivity", "Mark message as sending");
             updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
             adapter.rebindMonkeyItem(item, recycler);
-        } else  if(socketService !=null && !messageItem.isDownloading()) {
-            messageItem.setDownloading(true); //Make the bubble show a downloading animation
-            DatabaseHandler.updateMessageDownloadingStatus(realm, messageItem.model, true);
-            //The socket service will download the file for us and let us add callback to execute when it finishes
-            socketService.downloadFile(messageItem.getFilePath(), messageItem.getProps().toString(),
-                    myMonkeyID, new MonkeyHttpResponse() {
-                        @Override
-                        public void OnSuccess() {
-                            //When then Download is done, update the RecyclerView.
-                            Log.d("MainActivity", "download success");
-                            updateMessage(messageItem.getMessageId(), MonkeyItem.DeliveryStatus.delivered);
-                            adapter.notifyDataSetChanged();
-                        }
-
-                        @Override
-                        public void OnError() {
-                            Log.d("MainActivity", "download success");
-                            updateMessage(messageItem.getMessageId(), MonkeyItem.DeliveryStatus.error);
-                            adapter.notifyDataSetChanged();
-                        }
-                    });
+        } else {
+            final MessageItem messageItem = (MessageItem) item;
+            downloadFile(messageItem.getMessageId(), messageItem.getFilePath(),
+                    messageItem.getProps(), messageItem.getContactSessionId());
         }
+
     }
 
     @Override
@@ -432,6 +410,18 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     public void onSocketDisconnected() {
         setActionBarTitle(1);
+    }
+
+    @Override
+    public void onFileDownloadFinished(String fileMessageId, boolean success) {
+        //TODO use better search algorithm
+        super.onFileDownloadFinished(fileMessageId, success);
+        MessageItem message =(MessageItem) searchMessage(fileMessageId);
+        if(message != null) {
+            message.setStatus(success ? MonkeyItem.DeliveryStatus.delivered :
+                    MonkeyItem.DeliveryStatus.error);
+            adapter.notifyDataSetChanged();
+        }
     }
 
     @Override
