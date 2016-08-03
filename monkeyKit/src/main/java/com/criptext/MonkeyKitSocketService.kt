@@ -3,6 +3,7 @@ package com.criptext
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.os.AsyncTask
 import android.os.Binder
@@ -105,6 +106,8 @@ abstract class MonkeyKitSocketService : Service() {
         MOKMessageHandler(this)
     }
 
+    internal var receiver : ConnectionChangeReceiver? = null
+
     fun downloadFile(fileName: String, props: String, monkeyId: String, monkeyHttpResponse: MonkeyHttpResponse){
         fileUploader.downloadFile(fileName, props, monkeyId, monkeyHttpResponse)
     }
@@ -114,7 +117,7 @@ abstract class MonkeyKitSocketService : Service() {
         openDatabase();
         val asyncAES = AsyncAESInitializer(this)
         asyncAES.execute()
-
+        startConnectivityBoradcastReceiver()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -196,7 +199,17 @@ abstract class MonkeyKitSocketService : Service() {
         //persist last time synced
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
         closeDatabase();
+        if(receiver!=null)
+            unregisterReceiver(receiver)
+    }
 
+    fun startConnectivityBoradcastReceiver(){
+
+        if(receiver==null) {
+            receiver = ConnectionChangeReceiver(this)
+        }
+        val conn_changereceived = IntentFilter("android.net.conn.CONNECTIVITY_CHANGE")
+        registerReceiver(receiver, conn_changereceived)
     }
 
     inner class MonkeyBinder : Binder() {
@@ -659,6 +672,20 @@ bject con parametros adicionales que necesita la aplicacion
         }
     }
 
+    /**
+     * Disconnect the socket and try to connect no matters what. Useful for reconnecting.
+     */
+    fun smartReconnect(){
+
+        if(isSocketConnected()){
+            asyncConnSocket.sendDisconectFromPull()
+            delegate?.onSocketDisconnected()
+        }
+
+        Log.d("smartReconnect", "${asyncConnSocket.socketStatus}")
+        startSocketConnection();
+
+    }
 
     fun sendMessage(newMessage: MOKMessage, pushMessage: PushMessage, encrypted: Boolean): MOKMessage{
 
