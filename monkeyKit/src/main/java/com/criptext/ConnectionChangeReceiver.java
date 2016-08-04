@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.util.Log;
 
 /**
@@ -18,28 +19,38 @@ public class ConnectionChangeReceiver extends BroadcastReceiver {
         this.service = service;
     }
 
+    /** The absence of a connection type. */
+    private static final int NO_CONNECTION_TYPE = -1;
+
+    /** The last processed network type. */
+    private static int sLastType = 1;
+
     @Override
-    public void onReceive(Context context, Intent intent )
-    {
-        ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        if(cm!=null){
-            try{
-                if (cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isAvailable() && cm.getActiveNetworkInfo().isConnected()){
+    public void onReceive(Context context, Intent intent) {
+        ConnectivityManager connectivityManager = (ConnectivityManager)
+                context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        final int currentType = activeNetworkInfo != null
+                ? activeNetworkInfo.getType() : NO_CONNECTION_TYPE;
+
+        // Avoid handling multiple broadcasts for the same connection type
+        if (sLastType != currentType) {
+            if (activeNetworkInfo != null) {
+                boolean isConnectedOrConnecting = activeNetworkInfo.isConnectedOrConnecting();
+                if (isConnectedOrConnecting) {
                     if(service!=null)
-                        service.smartReconnect();
+                        service.startSocketConnection();
                 }
-                else if(cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)!= null && cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).isAvailable() && cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).isConnected()){
-                    if(service!=null)
-                        service.smartReconnect();
-                }else{
-                    Log.i("MonkeySDK","Waiting for network");
-                    if(service!=null && service.getDelegate()!=null)
-                        service.getDelegate().onSocketDisconnected();
-                }
-            }catch(Exception e){
-                e.printStackTrace();
+            } else {
+                //Disconnected
+                if(service!=null && service.getDelegate()!=null)
+                    service.getDelegate().onSocketDisconnected();
             }
+
+            sLastType = currentType;
         }
+
     }
 
 }

@@ -672,21 +672,6 @@ bject con parametros adicionales que necesita la aplicacion
         }
     }
 
-    /**
-     * Disconnect the socket and try to connect no matters what. Useful for reconnecting.
-     */
-    fun smartReconnect(){
-
-        if(isSocketConnected()){
-            asyncConnSocket.sendDisconectFromPull()
-            delegate?.onSocketDisconnected()
-        }
-
-        Log.d("smartReconnect", "${asyncConnSocket.socketStatus}")
-        startSocketConnection();
-
-    }
-
     fun sendMessage(newMessage: MOKMessage, pushMessage: PushMessage, encrypted: Boolean): MOKMessage{
 
             try {
