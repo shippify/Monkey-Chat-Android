@@ -4,7 +4,6 @@ import android.content.Context;
 import android.util.Log;
 
 import com.criptext.comunication.MOKMessage;
-import com.criptext.comunication.MessageManager;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.lang.ref.WeakReference;
@@ -145,14 +144,18 @@ public class DatabaseHandler {
 
     }
 
-    public static void updateMessageOutgoingStatus(Realm realm, final MessageModel model, final MonkeyItem.DeliveryStatus outgoingMessageStatus) {
+    public static void updateMessageOutgoingStatusBlocking(Realm realm, final String messageId,
+                                                   final MonkeyItem.DeliveryStatus outgoingMessageStatus){
+        MessageModel result = realm.where(MessageModel.class).equalTo("messageId", messageId).findFirst();
+        if (result != null)
+            result.setStatus(outgoingMessageStatus.ordinal());
+    }
 
+    public static void updateMessageOutgoingStatus(Realm realm, final String messageId, final MonkeyItem.DeliveryStatus outgoingMessageStatus) {
         realm.executeTransactionAsync(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
-                MessageModel result = realm.where(MessageModel.class).equalTo("messageId", model.getMessageId()).findFirst();
-                if (result != null)
-                    result.setStatus(outgoingMessageStatus.ordinal());
+                updateMessageOutgoingStatusBlocking(realm, messageId, outgoingMessageStatus);
             }
         }, new Realm.Transaction.OnSuccess() {
             @Override
@@ -166,7 +169,9 @@ public class DatabaseHandler {
         });
     }
 
-
+    public static void updateMessageOutgoingStatus(Realm realm, final MessageModel model, final MonkeyItem.DeliveryStatus outgoingMessageStatus) {
+        updateMessageOutgoingStatus(realm, model.getMessageId(), outgoingMessageStatus);
+    }
 
     public static void markMessagesAsError(Realm realm, final ArrayList<MOKMessage> errorMessages) {
 

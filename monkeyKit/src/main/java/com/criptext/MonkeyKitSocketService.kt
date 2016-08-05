@@ -1,14 +1,12 @@
 package com.criptext
 
 import android.app.Service
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.ServiceConnection
+import android.content.*
 import android.os.AsyncTask
 import android.os.Binder
 import android.os.IBinder
 import android.os.PowerManager
+import android.support.v4.content.LocalBroadcastManager
 import android.util.Base64
 import android.util.Log
 import android.webkit.MimeTypeMap
@@ -71,10 +69,6 @@ abstract class MonkeyKitSocketService : Service() {
      */
     protected lateinit var asyncConnSocket: AsyncConnSocket
     /**
-     * Object that uploads files over http
-     */
-    internal lateinit var fileUploader: FileManager
-    /**
      * Object that manage user methods over http
      */
     internal lateinit var userManager: UserManager
@@ -102,19 +96,35 @@ abstract class MonkeyKitSocketService : Service() {
      */
     val pendingMessages: MutableList<JsonObject> = mutableListOf();
 
+    var broadcastReceiver: BroadcastReceiver? = null
+
     val messageHandler: MOKMessageHandler by lazy {
         MOKMessageHandler(this)
     }
 
     internal var receiver : ConnectionChangeReceiver? = null
 
-    fun downloadFile(fileName: String, props: String, monkeyId: String, monkeyHttpResponse: MonkeyHttpResponse){
-        fileUploader.downloadFile(fileName, props, monkeyId, monkeyHttpResponse)
+    fun downloadFile(fileMessageId: String, fileName: String, props: String, monkeyId: String){
+        val intent = Intent(this, uploadServiceClass)
+        intent.putExtra(MOKMessage.MSG_KEY, fileName)
+        intent.putExtra(MOKMessage.PROPS_KEY, props)
+        intent.putExtra(MOKMessage.SID_KEY, monkeyId)
+        intent.putExtra(MOKMessage.ID_KEY, fileMessageId)
+        intent.putExtra(MonkeyFileService.ISUPLOAD_KEY, false)
+        intent.putExtra(MonkeyFileService.APPID_KEY, clientData.appId)
+        intent.putExtra(MonkeyFileService.APPKEY_KEY, clientData.appKey)
+
+        startService(intent)
     }
 
     private fun initializeMonkeyKitService(){
         status = ServiceStatus.initializing
         openDatabase();
+        broadcastReceiver = FileBroadcastReceiver(this)
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
+                IntentFilter(MonkeyFileService.UPLOAD_ACTION))
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
+                IntentFilter(MonkeyFileService.DOWNLOAD_ACTION))
         val asyncAES = AsyncAESInitializer(this)
         asyncAES.execute()
         startConnectivityBoradcastReceiver()
@@ -135,7 +145,6 @@ abstract class MonkeyKitSocketService : Service() {
         else
             status = ServiceStatus.bound
 
-
         return MonkeyBinder()
     }
 
@@ -149,7 +158,6 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData) {
         clientData = cdata
-        fileUploader = FileManager(this, aesUtil)
         userManager = UserManager(this, aesUtil)
         groupManager = GroupManager(this, aesUtil)
         this.aesutil = aesUtil
@@ -196,6 +204,8 @@ abstract class MonkeyKitSocketService : Service() {
             task.execute()
         }
 
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
         //persist last time synced
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
         closeDatabase();
@@ -294,6 +304,9 @@ abstract class MonkeyKitSocketService : Service() {
             }
             CBTypes.onCreateGroupError -> {
                 delegate?.onCreateGroupOK(info[0] as String);
+            }
+            CBTypes.onFileDownloadFinished -> {
+                delegate?.onFileDownloadFinished(info[0] as String, info[1] as Boolean);
             }
             CBTypes.onDeleteGroupOK -> {
                 delegate?.onDeleteGroupOK(info[0] as String);
@@ -426,7 +439,7 @@ abstract class MonkeyKitSocketService : Service() {
         val srand = RandomStringBuilder.build(3);
         val idnegative = "-" + datetime;
         val message = MOKMessage(idnegative + srand, clientData.monkeyId, sessionIDTo, textMessage,
-                "" + datetime, "" + type, params, null);
+                "" + datetime, "" + type, params, JsonObject());
         message.datetimeorder = datetimeorder;
         return message;
     }
@@ -478,26 +491,7 @@ abstract class MonkeyKitSocketService : Service() {
      * Envia una notificación a traves de MonkeyKit. Las notificaciones no se persisten. Si el
      * destinatario no la pudo recibir a tiempo, no la recibira nunca
      * @param sessionIDTo session ID del usuario que recibira la notificacion
-     * @param paramsObject JsonOfun persistFileMessageAndSend(pathToFile: String, sessionIDTo: String, file_type: Int,
-                                  pushMessage: PushMessage, gsonParamsMessage: JsonObject, encrypted: Boolean): MOKMessage{
-        //TODO PERSIST FILE & SEND
-        /*
-        val newMessage = createMOKMessage(pathToFile, sessionIDTo, file_type, gsonParamsMessage);
-        val file = FileInputStream(pathToFile)
-        val fileSize = file.available()
-        file.close()
-        val props = createSendProps(newMessage.message_id, pathToFile, file_type, fileSize)
-        newMessage.props = props
-        storeMessage(newMessage, false, Runnable {
-            FileUploadService.startUpload(this, newMessage.message_id, pathToFile, clientData, sessionIDTo,
-                    file_type, props.toString(), gsonParamsMessage.toString(), pushMessage)
-        })
-        return MOKMessage();
-        */
-        return fileUploader.persistFileMessageAndSend(pathToFile, sessionIDTo, file_type,
-                        gsonParamsMessage, pushMessage.toString(), encrypted)
-    }
-bject con parametros adicionales que necesita la aplicacion
+     * @param paramsObject JsonObject con parametros adicionales que necesita la aplicacion
      * @param pushMessage Mensaje a mostrar en el push notification
      */
     fun sendNotification(sessionIDTo: String, paramsObject: JSONObject, pushMessage: String) {
@@ -676,12 +670,12 @@ bject con parametros adicionales que necesita la aplicacion
 
             try {
 
-                val props = createSendProps(newMessage.message_id, encrypted);
+                val props = createSendProps(newMessage.message_id!!, encrypted);
                 newMessage.props = props;
 
 
                 val json= createSendJSON(newMessage.message_id, newMessage.rid, newMessage.msg, pushMessage,
-                        newMessage.params, props, encrypted);
+                        newMessage.params ?: JsonObject(), props, encrypted);
 
 
                 addMessageToWatchdog(json);
@@ -690,10 +684,22 @@ bject con parametros adicionales que necesita la aplicacion
             }
             catch (e: Exception) {
                 e.printStackTrace();
-                return MOKMessage() ;
+                return newMessage;
             }
 
         return newMessage;
+    }
+
+    fun sendFileMessage(newMessage: MOKMessage, pushMessage: PushMessage, encrypted: Boolean){
+        val intent = Intent(this, uploadServiceClass)
+        newMessage.toIntent(intent)
+        intent.putExtra(MonkeyFileService.ISUPLOAD_KEY, true)
+        intent.putExtra(MonkeyFileService.PUSH_KEY, pushMessage.toString())
+        intent.putExtra(MonkeyFileService.ENCR_KEY, encrypted)
+        intent.putExtra(MonkeyFileService.APPID_KEY, clientData.appId)
+        intent.putExtra(MonkeyFileService.APPKEY_KEY, clientData.appKey)
+
+        startService(intent)
     }
 
     private fun createSendProps(old_id: String, filepath: String, fileType: Int, originalSize: Int, encrypted: Boolean): JsonObject{
@@ -896,6 +902,8 @@ bject con parametros adicionales que necesita la aplicacion
 
         return null;
     }
+
+    abstract val uploadServiceClass: Class<*>
 
     abstract fun openDatabase()
 

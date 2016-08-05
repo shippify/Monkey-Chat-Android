@@ -158,7 +158,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
             } else {
                 //Decryption didn't work with current key. Ask the server to encrypt again with current keys
                 //then do a 2nd attempt to decrypt, if it works add to decrypted list
-                pendingMessage.msg = getTextEncryptedWithLatestKeys(pendingMessage, clientData)
+                pendingMessage.msg = getTextEncryptedWithLatestKeys(pendingMessage, clientData) ?: ""
                 if (DecryptTask.decryptMessage((EncryptedMsg.fromSecret(pendingMessage, conversationKey))))
                     return OpenConvData(pendingMessage, null)
                 else { //The 2 decryption attempts have failed. Discard the message

@@ -22,6 +22,8 @@
 
         <service android:name=".MyServiceClass"/>
 
+        <service android:name=".MyFileUploadService"/>
+
         <activity
             android:name=".WelcomeActivity"
             android:theme="@style/Splash.Sample">

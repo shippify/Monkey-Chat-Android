@@ -36,13 +36,13 @@ class DecryptTask(service: MonkeyKitSocketService): AsyncTask<EncryptedMsg, MOKM
         fun decryptMessage(encrypted: EncryptedMsg): Boolean{
             try {
                 val message = encrypted.message
-                if (message.props.get("encr").asString.compareTo("1") == 0 && message.type != MessageTypes.MOKFile) {
+                if ((message.props?.get("encr")?.asString ?: "1").compareTo("1") == 0 && message.type != MessageTypes.MOKFile) {
                     message.msg = AESUtil.decryptWithCustomKeyAndIV(message.msg,
                             encrypted.key, encrypted.iv);
                     message.encr = "0" //This "encr" property doesn't seem to be of much use
                 }
-                else if (message.props.has("encoding") && message.type != MessageTypes.MOKFile) {
-                    if (message.props.get("encoding").asString == "base64")
+                else if ((message.props?.has("encoding") ?: false) && message.type != MessageTypes.MOKFile) {
+                    if (message.props!!.get("encoding")!!.asString == "base64")
                         message.msg = String(Base64.decode(message.msg.toByteArray(), Base64.NO_WRAP))
                 }
                 return true

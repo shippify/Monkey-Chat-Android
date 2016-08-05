@@ -27,7 +27,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     private val messagesToForwardToService = ArrayList<DelegateMOKMessage>()
     val pendingFiles = HashMap<String, DelegateMOKMessage>();
-    val pendingDownloads = HashMap<String, DownloadMessage>();
+    private val pendingDownloads = HashMap<String, DownloadMessage>();
 
     private val monkeyKitConnection = object : ServiceConnection {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
@@ -98,7 +98,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         val srand = RandomStringBuilder.build(3);
         val idnegative = "-" + datetime;
         val message = MOKMessage(idnegative + srand, sessionIDfrom,sessionIDTo, textMessage,
-               "" + datetime, "" + type, params, null);
+               "" + datetime, "" + type, params, JsonObject());
         message.datetimeorder = datetimeorder;
         return message;
     }
@@ -128,7 +128,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         pendingFiles[newMessage.message_id] = DelegateMOKMessage(newMessage, pushMessage, isEncrypted)
 
         if(isSocketConnected){
-            service!!.fileUploader.sendFileMessage(newMessage, pushMessage, isEncrypted)
+            service!!.sendFileMessage(newMessage, pushMessage, isEncrypted)
         }
 
         storeSentMessage(newMessage)
@@ -154,7 +154,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onSocketConnected() {
         for(file in pendingFiles.values){
-            service!!.fileUploader.sendFileMessage(file.message, file.push, file.isEncrypted)
+            service!!.sendFileMessage(file.message, file.push, file.isEncrypted)
         }
     }
 
@@ -168,11 +168,15 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         sentFile?.failed = true
     }
 
+    override fun onFileDownloadFinished(fileMessageId: String?, success: Boolean) {
+        pendingDownloads.remove(fileMessageId)
+    }
+
     fun resendFile(fileMessage: MOKMessage, pushMessage: PushMessage, isEncrypted: Boolean) {
         if(!pendingFiles.containsKey(fileMessage.message_id)){
            pendingFiles[fileMessage.message_id] = DelegateMOKMessage(fileMessage, pushMessage, isEncrypted)
            if(isSocketConnected){
-                service!!.fileUploader.sendFileMessage(fileMessage, pushMessage, isEncrypted)
+                service!!.sendFileMessage(fileMessage, pushMessage, isEncrypted)
            }
         }
     }
@@ -187,7 +191,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
                 fileMOKMessage.failed = false;
             }
 
-            service?.fileUploader?.sendFileMessage(fileMOKMessage.message,
+            service?.sendFileMessage(fileMOKMessage.message,
                     fileMOKMessage.push,fileMOKMessage.isEncrypted) ?:
                     Log.e("MonkeyKit", "can't resend file. $CONNECTION_NOT_READY_ERROR")
             return true;
@@ -197,11 +201,11 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
     }
 
-    fun downloadFile(filepath: String, props: JsonObject, monkeyId: String, response: MonkeyHttpResponse){
+    fun downloadFile(fileMessageId: String, filepath: String, props: JsonObject, monkeyId: String){
         if(!pendingDownloads.containsKey(filepath)){
-            service?.downloadFile(filepath, props.toString(), monkeyId, response)
+            service?.downloadFile(fileMessageId, filepath, props.toString(), monkeyId)
 
-            pendingDownloads.put(filepath, DownloadMessage(filepath, props, response))
+            pendingDownloads.put(filepath, DownloadMessage(fileMessageId, filepath, props))
         }
     }
 
@@ -220,7 +224,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     }
 
-    data class DownloadMessage(val filepath: String, val props: JsonObject, val response: MonkeyHttpResponse)
+    private data class DownloadMessage(val fileMessageId: String, val filepath: String, val props: JsonObject)
     companion object{
         val  CONNECTION_NOT_READY_ERROR = "MonkeyKitSocketService is not ready yet."
     }
