@@ -7,6 +7,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
 
+import com.criptext.comunication.AsyncConnSocket;
+
 /**
  * Created by danieltigse on 8/3/16.
  */
@@ -35,12 +37,11 @@ public class ConnectionChangeReceiver extends BroadcastReceiver {
                 ? activeNetworkInfo.getType() : NO_CONNECTION_TYPE;
 
         // Avoid handling multiple broadcasts for the same connection type
-        if (sLastType != currentType) {
+        if (sLastType != currentType && service!=null
+                && service.getAsyncConnSocket().getSocketStatus()!= AsyncConnSocket.Status.unauthorized) {
             if (activeNetworkInfo != null) {
-                boolean isConnectedOrConnecting = activeNetworkInfo.isConnectedOrConnecting();
-                if (isConnectedOrConnecting) {
-                    if(service!=null)
-                        service.startSocketConnection();
+                if (activeNetworkInfo.isConnectedOrConnecting() && service!=null) {
+                    service.startSocketConnection();
                 }
             } else {
                 //Disconnected
