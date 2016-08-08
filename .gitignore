@@ -37,3 +37,6 @@ captures/
 
 app/src/main/java/com/criptext/monkeychatandroid/SensitiveData.java
 
+# Symlinks
+monkeykitui
+circularAudioView

@@ -112,6 +112,19 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             return props;
         }
 
+    /**
+     * stores a file message into the database and uploads it asynchronously so that it can be sent
+     * to the conversation.
+     * @param filepath the absolute path to the file to upload
+     * @param monkeyIDFrom monkeyId of the user that sends the file.
+     * @param monkeyIDTo monkeyId of the user or group that will receive the file.
+     * @param fileType an Int describing the type of the file to upload. It should be a constant from
+     * MessageTypes
+     * @param params a JsonObject with any additional info that you wish to send with your file
+     * @param pushMessage a PushMessage object with the message that you wish to display in the push
+     * notification to send with the file
+     * @param isEncrypted true if the file should be sent using encryption.
+     */
     fun persistFileMessageAndSend(filePath: String, monkeyIDFrom: String, monkeyIDTo: String, fileType: Int,
                                   params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
         val newMessage = createMOKMessage(filePath, monkeyIDFrom, monkeyIDTo, fileType, params)
@@ -201,9 +214,17 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
     }
 
-    fun downloadFile(fileMessageId: String, filepath: String, props: JsonObject, monkeyId: String){
+    /**
+     * Asynchronously downloads a file from the MonkeyKit server. Once the the download is finished
+     * the onFileDownloadFinished will be executed.
+     * @param fileMessageId the ID of the file message to download
+     * @param filepath the absolute path where the downloaded file should be stored.
+     * @param props the props JsonObject of the file message to download
+     * @param senderId the monkey ID of the user who sent this file message
+     */
+    fun downloadFile(fileMessageId: String, filepath: String, props: JsonObject, senderId: String){
         if(!pendingDownloads.containsKey(filepath)){
-            service?.downloadFile(fileMessageId, filepath, props.toString(), monkeyId)
+            service?.downloadFile(fileMessageId, filepath, props.toString(), senderId)
 
             pendingDownloads.put(filepath, DownloadMessage(fileMessageId, filepath, props))
         }
@@ -222,6 +243,32 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         if(errorMessages.isNotEmpty())
             onDestroyWithPendingMessages(errorMessages)
 
+    }
+
+    /**
+     * request all the messages sent to the current user starting from a specific timestamp. When
+     * the messages are successfully received. the onMessageBatchReady() callback is executed
+     *
+     * The sync operation is done automatically every time the socket connects to the network. in
+     * most cases there is no need for you to call this method manually.
+     * @param from a timestamp to be used as reference. Messages received must not be older than
+     * this timestamp
+     */
+    fun sendSync(from: Long){
+        this.service?.sendSync(from)
+    }
+
+
+    /**
+     * request all the messages sent to the current user synce the last time it was synced. When
+     * the messages are successfully received. the onMessageBatchReady() callback is executed
+     *
+     * The sync operation is done automatically every time the socket connects to the network. in
+     * most cases there is no need for you to call this method manually.
+     */
+    fun sendSync(){
+        val socketService = service
+        socketService?.sendSync(socketService.lastTimeSynced)
     }
 
     private data class DownloadMessage(val fileMessageId: String, val filepath: String, val props: JsonObject)
