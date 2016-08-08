@@ -12,7 +12,6 @@ import android.util.Log;
 
 import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
-import com.criptext.MsgSenderService;
 import com.criptext.security.AESUtil;
 import com.criptext.lib.KeyStoreCriptext;
 import com.criptext.socket.DarkStarClient;
@@ -175,9 +174,6 @@ public class AsyncConnSocket implements ComServerDelegate{
 					handler.post(new Runnable() {
 						public void run() {
 							fireInTheHole();
-							//connection is successful, let's resend all pending messages
-							service.resendPendingMessages();
-
 						}
 					});
 

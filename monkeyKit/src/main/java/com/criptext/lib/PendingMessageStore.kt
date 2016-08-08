@@ -45,11 +45,9 @@ class PendingMessageStore {
                 val array: ByteArray = ByteArray(file.available())
                 file.read(array)
                 val jsonStr = String(array)
-                //Log.d("PendingMessageStore", "str: $jsonStr")
                 val jsonArray = jsonStr.split(separator)
                 val parser = JsonParser()
                 return jsonArray.map { it ->
-                    //Log.d("PendingMessageStore", "str: $it")
                     parser.parse(it).asJsonObject }
             } catch(ex: FileNotFoundException){
                 return listOf()

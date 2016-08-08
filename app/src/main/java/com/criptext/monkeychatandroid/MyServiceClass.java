@@ -27,7 +27,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         openDatabase();
-        DatabaseHandler.saveMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), true),
+        DatabaseHandler.saveIncomingMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), true),
             new Realm.Transaction.OnSuccess() {
                 @Override
                 public void onSuccess() {
@@ -36,6 +36,9 @@ public class MyServiceClass extends MonkeyKitSocketService{
             }, new Realm.Transaction.OnError() {
                 @Override
                 public void onError(Throwable error) {
+                    if(error instanceof IllegalArgumentException){
+                        Log.e("StoreReceivedMessage", error.getMessage());
+                    }
                     error.printStackTrace();
                 }
             });

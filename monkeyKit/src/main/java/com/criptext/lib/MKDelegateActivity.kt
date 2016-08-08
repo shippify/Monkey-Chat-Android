@@ -9,7 +9,6 @@ import android.webkit.MimeTypeMap
 import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
-import com.criptext.comunication.MonkeyHttpResponse
 import com.criptext.comunication.PushMessage
 import com.criptext.security.RandomStringBuilder
 import com.google.gson.JsonObject
@@ -36,13 +35,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             val sService = binder.getService(this@MKDelegateActivity)
             service = sService
 
-            val removeTexts =  { it: DelegateMOKMessage ->
-                it.message.type.toInt() == MessageTypes.blMessageDefault }
-            val sendTexts = { ss: MonkeyKitSocketService, it: DelegateMOKMessage ->
-                val res = ss.sendMessage(it.message, it.push, it.isEncrypted)
-            }
-
-            removeAndSend(sService, removeTexts, sendTexts)
+            forwardTextMsgsToService(sService)
             onBoundToService()
 
         }
@@ -52,18 +45,17 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
     }
 
-    fun removeAndSend(socketService: MonkeyKitSocketService,
-                      removeCondition: (DelegateMOKMessage) -> Boolean?,
-                      sendAction: (MonkeyKitSocketService, DelegateMOKMessage) -> Unit){
+    /**
+     * Forward to service all the messages that the delegate generated while the service was unavailable.
+     * @param socketService reference to the socketService that just bound with this delegate
+     */
+    fun forwardTextMsgsToService(socketService: MonkeyKitSocketService){
         var i = messagesToForwardToService.size - 1
-            while(i > -1){
-                val shouldRemove = removeCondition.invoke(messagesToForwardToService[i]) ?: false
-                if(shouldRemove){
-                    val msg = messagesToForwardToService.removeAt(i)
-                    sendAction.invoke(socketService, msg)
-                }
-                i -= 1
-            }
+        while(i > -1){
+            val msg = messagesToForwardToService.removeAt(i)
+            socketService.sendMessage(msg.message, msg.push, msg.isEncrypted)
+            i -= 1
+        }
     }
 
     override fun onStart() {
