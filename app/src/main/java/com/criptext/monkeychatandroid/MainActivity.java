@@ -82,7 +82,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.monkey_chat_layout);
 
 
         //First, initialize the database and the constants from SharedPreferences.
