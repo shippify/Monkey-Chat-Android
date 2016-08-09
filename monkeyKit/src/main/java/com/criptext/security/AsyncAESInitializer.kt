@@ -8,7 +8,6 @@ import android.provider.Settings
 import android.util.Log
 import com.criptext.ClientData
 import com.criptext.MonkeyKitSocketService
-import com.criptext.MsgSenderService
 import com.criptext.lib.KeyStoreCriptext
 import com.criptext.lib.PendingMessageStore
 
@@ -17,8 +16,11 @@ import com.google.gson.JsonObject
 import java.lang.ref.WeakReference
 
 /**
- * Asynchronously performs operations needed to start a socket service. the onPostExecute method
- * should call startSocketConnection at the end.
+ * Asynchronously performs operations needed to start a socket service. The list of operations is:
+ * - load from disk text messages that have not been yet successfully sent
+ * - load from disk the timestamp from the last sync
+ * - Initialize the AESUtil object
+ * the onPostExecute method must call call startSocketConnection at the end.
  * Created by gesuwall on 6/1/16.
  */
 class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Void, Void, AsyncAESInitializer.InitializerResult>() {
@@ -27,7 +29,8 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
 
     init {
         socketServiceRef = WeakReference(socketService)
-        isSyncService = !(socketService is MsgSenderService)
+        isSyncService = socketService.startedManually
+                && MonkeyKitSocketService.status != MonkeyKitSocketService.ServiceStatus.bound
     }
 
     val clientData: ClientData
@@ -58,8 +61,5 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
     data class InitializerResult(val pendingMessages: List<JsonObject>?, val util: AESUtil,
                                  val lastSync: Long, val clientData: ClientData)
 
-
-    companion object {
-    }
 
 }

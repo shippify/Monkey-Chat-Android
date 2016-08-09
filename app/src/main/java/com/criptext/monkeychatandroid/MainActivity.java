@@ -450,7 +450,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     public void onMessageBatchReady(ArrayList<MOKMessage> messages) {
         setActionBarTitle(2);
-        final MonkeyKitSocketService socketService = getService();
         for (int i=0;i<messages.size();i++) {
             if(i == messages.size()-1) {
                 processIncomingMessage(messages.get(i));

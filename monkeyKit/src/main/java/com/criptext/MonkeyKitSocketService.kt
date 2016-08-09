@@ -94,7 +94,7 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * List of messages that have not been successfully delivered yet
      */
-    val pendingMessages: MutableList<JsonObject> = mutableListOf();
+    private val pendingMessages: MutableList<JsonObject> = mutableListOf();
 
     var broadcastReceiver: BroadcastReceiver? = null
 
@@ -203,12 +203,13 @@ abstract class MonkeyKitSocketService : Service() {
             val task = PendingMessageStore.AsyncStoreTask(this, pendingMessages.toList())
             task.execute()
         }
-
+        //unregister file broadcast receivers
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
         //persist last time synced
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
         closeDatabase();
+        //unregister connectivity change receiver
         if(receiver!=null)
             unregisterReceiver(receiver)
     }
@@ -255,6 +256,7 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean, info[2] as String, info[3] as String, info[4] as String)
             }
             CBTypes.onSocketConnected -> {
+                resendPendingMessages()
                 delegate?.onSocketConnected()
                 sendSync(lastTimeSynced)
             }

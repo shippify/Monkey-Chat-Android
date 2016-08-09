@@ -18,13 +18,15 @@ import io.realm.RealmResults;
  */
 public class DatabaseHandler {
 
-    public static void saveMessage(Realm realm, final MessageItem messageItem, final Realm.Transaction.OnSuccess onSuccess, final Realm.Transaction.OnError onError) {
+    public static void saveIncomingMessage(Realm realm, final MessageItem messageItem, final Realm.Transaction.OnSuccess onSuccess, final Realm.Transaction.OnError onError) {
 
         realm.executeTransactionAsync(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
                 if (!existMessage(realm, messageItem.getMessageId())) //NO DUPLICATED
                     realm.copyToRealm(messageItem.getModel());
+                else
+                    throw new IllegalArgumentException("messageItem already exists");
             }
         }, onSuccess, onError);
     }
@@ -33,7 +35,6 @@ public class DatabaseHandler {
         realm.executeTransactionAsync(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
-                Log.d("DatabaseHandler", "save new out message");
                 if (!existMessage(realm, messageItem.getMessageId())) { //NO DUPLICATED
                     //Since this is a mirror chat, all messages have the same sender ID.
                     //We have to explicitly sent this message as Outgoing, otherwise it
@@ -41,7 +42,7 @@ public class DatabaseHandler {
                     messageItem.getModel().setIncoming(false);
                     realm.copyToRealm(messageItem.getModel());
                 } else
-                    Log.d("DatabaseHandler", "wtf it already exists");
+                    throw new IllegalArgumentException("messageItem already exists");
             }
         }, onSuccess, onError);
     }

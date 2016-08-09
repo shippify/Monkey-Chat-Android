@@ -48,6 +48,9 @@ class MOKMessage(var message_id: String,var sid: String,var rid: String,var msg:
         intent.putExtra(PROPS_KEY, this.props.toString())
     }
 
+    val fileType: Int
+        get() = props?.get("file_type")?.asInt ?: MessageTypes.blMessageDefault
+
     /**
      * Obtiene el estado del mensaje. Este valor debe de compararse con las constantes de
      * MessageTypes.Status. Si props es null, o no tiene estado, retorna 0.

@@ -16,6 +16,7 @@ class Watchdog(service: MonkeyKitSocketService){
     var attempts = 0.0
     get() {
         field += 1
+        if(field > 3) field = 0.0
         return field
     }
 
