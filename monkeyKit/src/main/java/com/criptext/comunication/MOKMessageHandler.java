@@ -21,6 +21,9 @@ public class MOKMessageHandler extends Handler {
             serviceRef = new WeakReference<>(service);
         }
 
+        public void clearServiceReference(){
+            serviceRef.clear();
+        }
         public void handleMessage(Message msg) {
 
             MOKMessage message = null;
@@ -155,5 +158,7 @@ public class MOKMessageHandler extends Handler {
                 }
 
         }
+
+
 
 }

@@ -23,7 +23,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
     private Realm realm;
 
     @Override
-    public void storeReceivedMessage(MOKMessage message, final Runnable runnable) {
+    public void storeReceivedMessage(final MOKMessage message, final Runnable runnable) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         openDatabase();
@@ -31,6 +31,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
             new Realm.Transaction.OnSuccess() {
                 @Override
                 public void onSuccess() {
+                    //Log.d("StoreReceivedMessage", "success " + message.getMessage_id());
                     runnable.run();
                 }
             }, new Realm.Transaction.OnError() {
@@ -38,8 +39,8 @@ public class MyServiceClass extends MonkeyKitSocketService{
                 public void onError(Throwable error) {
                     if(error instanceof IllegalArgumentException){
                         Log.e("StoreReceivedMessage", error.getMessage());
-                    }
-                    error.printStackTrace();
+                    } else
+                        error.printStackTrace();
                 }
             });
     }
