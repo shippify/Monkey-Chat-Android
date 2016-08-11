@@ -98,9 +98,7 @@ abstract class MonkeyKitSocketService : Service() {
 
     var broadcastReceiver: BroadcastReceiver? = null
 
-    val messageHandler: MOKMessageHandler by lazy {
-        MOKMessageHandler(this)
-    }
+    lateinit var messageHandler: MOKMessageHandler
 
     internal var receiver : ConnectionChangeReceiver? = null
 
@@ -118,6 +116,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     private fun initializeMonkeyKitService(){
+        messageHandler = MOKMessageHandler(this)
         status = ServiceStatus.initializing
         openDatabase();
         broadcastReceiver = FileBroadcastReceiver(this)
@@ -150,7 +149,6 @@ abstract class MonkeyKitSocketService : Service() {
 
     override fun onRebind(intent: Intent?) {
         super.onRebind(intent)
-
     }
 
     /**
@@ -165,6 +163,9 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun startSocketConnection() {
+        if(status == ServiceStatus.dead)
+            return //status should be equal to initializing, if dead dont do anything
+
         //At this point initialization is complete. We are ready to receive and send messages
         status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
 
@@ -173,7 +174,6 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        Log.d("MonkeyKitSocketService", "onUnbind");
         delegate = null
         status = ServiceStatus.running
         if(startedManually) { //if service started manually, stop it manually with a timeout task
@@ -186,11 +186,12 @@ abstract class MonkeyKitSocketService : Service() {
     override fun onDestroy() {
         super.onDestroy()
 
-        if(status >= ServiceStatus.running)
+        status = ServiceStatus.dead
+        messageHandler.clearServiceReference()
+
+        if(asyncSocketIsConnected)
             asyncConnSocket.disconectSocket()
 
-        status = ServiceStatus.dead
-        Log.d("MonkeyKitSocketService", "onDestroy");
         //let the CPU go to sleep by releasing the wake lock
         releaseWakeLock()
 
@@ -227,6 +228,7 @@ abstract class MonkeyKitSocketService : Service() {
 
         fun getService(delegate: MonkeyKitDelegate): MonkeyKitSocketService{
             this@MonkeyKitSocketService.delegate = delegate
+            status = ServiceStatus.bound
             Log.d("MonkeyKitSocketService", "set delegate. ${this@MonkeyKitSocketService.delegate != null}")
             return this@MonkeyKitSocketService;
         }
@@ -360,7 +362,16 @@ abstract class MonkeyKitSocketService : Service() {
 
     fun decryptAES(encryptedText: String) = aesutil.decrypt(encryptedText)
 
-    fun isSocketConnected(): Boolean = status >= ServiceStatus.running && asyncConnSocket.isConnected
+    fun isSocketConnected() = status >= ServiceStatus.running && asyncSocketIsConnected
+
+    private val asyncSocketIsConnected : Boolean
+     get() {
+         try {
+             return asyncConnSocket.isConnected
+         } catch (ex: UninitializedPropertyAccessException){
+             return false
+         }
+     }
 
     fun notifySyncSuccess() {
         if(pendingMessages.isEmpty()){
@@ -649,10 +660,7 @@ abstract class MonkeyKitSocketService : Service() {
      */
 
     fun getKeysAndDecryptMOKMessage(message: MOKMessage): MOKMessage? {
-        if (asyncConnSocket != null) {
-            return asyncConnSocket.getKeysAndDecryptMOKMessage(message, false)
-        }
-        return null
+        return asyncConnSocket.getKeysAndDecryptMOKMessage(message, false)
     }
 
     /**

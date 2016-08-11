@@ -26,7 +26,7 @@ public class DatabaseHandler {
                 if (!existMessage(realm, messageItem.getMessageId())) //NO DUPLICATED
                     realm.copyToRealm(messageItem.getModel());
                 else
-                    throw new IllegalArgumentException("messageItem already exists");
+                    throw new IllegalArgumentException("messageItem: " + messageItem.getMessageId() + " already exists");
             }
         }, onSuccess, onError);
     }
