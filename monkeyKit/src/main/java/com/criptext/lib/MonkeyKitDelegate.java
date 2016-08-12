@@ -3,20 +3,12 @@ package com.criptext.lib;
 import com.criptext.comunication.MOKMessage;
 import com.google.gson.JsonObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 
 public interface MonkeyKitDelegate {
-
-    /**
-     * Cuando MonkeyKit se conecta, realiza varios requerimientos HTTP antes de conectar el socket.
-     * Si alguno de estos falla por errores de conexion, MonkeyKit mostrara la excepcion al desarrollador
-     * a traves de este callback. MonkeyKit automaticamente tratara de reconectarse. Si tienes problemas
-     * de conexion, seria muy util ver las excepciones que se arrojan aqui y contactar soporte.
-     * @param exception La excepcion que se arrojo durante el error de conexion.
-     */
-    void onNetworkError(Exception exception);
 
     /**
      * Callback executed when the server refused the connection because the credentials could
@@ -26,16 +18,14 @@ public interface MonkeyKitDelegate {
     void onConnectionRefused();
 
     /**
-     * Cuando MonkeyKit logra conectar el socket, y esta listo para enviar y recibir mensajes, ejecuta
-     * este callback. Este es un buen momento para hacer "sendSet" para decirle a los otros usuarios
-     * que estas online.
+     * When MonkeyKit connect to the socket successfully and is ready to send and receive messages.
+     * After this happens it is recommend to use the sendSet function to notify all the users that you are online.
      */
     void onSocketConnected();
 
     /**
-     * Periodicamente el socket de MonkeyKit se desconecta. MonkeyKit automaticamente se volvera a
-     * conectar, pero este es un buen momento para mostrarle al usuario que el socket se esta
-     * reconectando.
+     * Our socket can get disconnect for network reasons but MonkeyKit will reconnect automatically. It is
+     * important to notify to the users that are disconnected.
      */
     void onSocketDisconnected();
 
@@ -49,61 +39,40 @@ public interface MonkeyKitDelegate {
     void onFileDownloadFinished(String fileMessageId, boolean success);
 
     /**
-     * Despues de crear un grupo con el metodo createGroup, el servidor respondera con el ID del
-     * grupo si no ocurre ningun error. Cuando la respuesta este lista, MonkeyKit ejecutara este
-     * callback. Aqui se deberia persistir ese ID con los demas datos de tu grupo como el nombre y
-     * la lista de miembros y ya puedes crear una vista para que el usuario comience a enviar y
-     * recibir mensajes a traves de este nuevo grupo.
-     * @param grupoID ID del nuevo grupo. Para enviar mensajes a este grupo los mensajes deben de
-     *                enviarse con este ID como RID
+     * After create a group with createGroup method, the server responds with the group ID
+     * using this delegate. Use this ID as rid to send messages.
+     * @param groupID ID of the new group.
      */
-    void onCreateGroupOK(String grupoID);
+    void onCreateGroup(String groupID, Exception e);
 
     /**
-     * Si ocurre algun error con la respuesta del servidor despues de llamar al metodo createGroup
-     * en este callback se envia el mensaje de error. La implementacion de este callback mostrar un
-     * mensaje de error y/o volver a intentar.
-     * @param errmsg Mensaje de error en la respuesta del servidor al crear grupo
+     * After add a group member with removeGroupMember method, the server will update the group from a remote DB.
+     * We recommend to update your group from your local DB as well.
+     * @param members new members of the group.
      */
-    void onCreateGroupError(String errmsg);
+    void onAddGroupMember(String members, Exception e);
 
     /**
-     * Despues de eliminar un grupo con el metodo deleteGroup, el servidor borrara el grupo de la
-     * base de datos remota. Cuando llegue la respuesta, y si no hay algun error se ejecutara este
-     * callback. MonkeyKit garantiza que ya no se podran recibir ni enviar mensajes a este grupo
-     * antes de llamar a esta funcion por lo cual en esta implementacion se puede borrar el grupo
-     * de la base de datos local de la aplicacion.
-     * @param grupoID id del grupo eliminado
+     * After delete a group member with removeGroupMember method, the server will update the group from a remote DB.
+     * We recommend to update your group from your local DB as well.
+     * @param members new members of the group.
      */
-    void onDeleteGroupOK(String grupoID);
+    void onRemoveGroupMember(String members, Exception e);
 
     /**
-     * Si ocurre algun error con la respuesta del servidor despues de llamar al metodo deleteGroup
-     * en este callback se envia el mensaje de error. La implementacion de este callback mostrar un
-     * mensaje de error y/o volver a intentar.
-     * @param errmsg Mensaje de error en la respuesta del servidor al eliminar grupo
-     */
-    void onDeleteGroupError(String errmsg);
-
-    /**
-     * Despues de pedir la informacion de un grupo con el metodo getGroupInfo(), el servidor respondera
-     * con un JSON que contenga la informacion del grupo. Cuando llegue la respuesta, y si no hay
-     * algun error se ejecutara este callback. La implementacion de este callback debe de guardar
-     * la informacion del grupo en la base de datos local.
+     * This method can use it for groups and users, this function will give you a JSON with the information required.
      * @param json JsonObject con la informacion del grupo requerida. Contiene 3 atributos:
      *             - "group_id" : un String con el ID del grupo
      *             - "members" : un JsonArray con los session ID de cada miembro del grupo
      *             - "group_info" : JSsonObject que contiene el nombre del grupo en el atributo "name"
      */
-    void onGetGroupInfoOK(JsonObject json);
+    void onGetInfo(JsonObject json, Exception e);
 
-    /**
-     * Si ocurre algun error con la respuesta del servidor despues de llamar al metodo getGroupInfo
-     * en este callback se envia el mensaje de error. La implementacion de este callback mostrar un
-     * mensaje de error y/o volver a intentar.
-     * @param errmsg Mensaje de error en la respuesta del servidor al pedir informacion del grupo
-     */
-    void onGetGroupInfoError(String errmsg);
+    void onUpdateUserData(Exception e);
+    void onUpdateGroupData(Exception e);
+
+    void onGetConversations(JSONArray conversations, Exception e);
+    void onGetConversationMessages(JSONArray messages, Exception e);
 
     /**
      * This function is executed when a message arrived and stored in the DB.

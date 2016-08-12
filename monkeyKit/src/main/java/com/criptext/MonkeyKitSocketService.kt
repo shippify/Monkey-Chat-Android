@@ -23,6 +23,7 @@ import org.apache.http.client.ClientProtocolException
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.params.BasicHttpParams
 import org.apache.http.params.HttpConnectionParams
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -296,36 +297,39 @@ abstract class MonkeyKitSocketService : Service() {
 
             CBTypes.onSocketDisconnected -> {
                 delegate?.onSocketDisconnected()
-            }/*
-            CBTypes.onNetworkError -> {
-                delegate?.onNetworkError();
-            }*/
+            }
             CBTypes.onDeleteReceived -> {
-                delegate?.onDeleteRecieved(info[0] as String, info[1] as String, info[2] as String, info[3] as String);
+                delegate?.onDeleteRecieved(info[0] as String, info[1] as String, info[2] as String, info[3] as String)
             }
-            CBTypes.onCreateGroupOK -> {
-                delegate?.onCreateGroupOK(info[0] as String);
+            CBTypes.onUpdateUserData -> {
+                delegate?.onUpdateUserData(info[0] as Exception)
             }
-            CBTypes.onCreateGroupError -> {
-                delegate?.onCreateGroupOK(info[0] as String);
+            CBTypes.onUpdateGroupData -> {
+                delegate?.onUpdateGroupData(info[0] as Exception)
+            }
+            CBTypes.onCreateGroup -> {
+                delegate?.onCreateGroup(info[0] as String, info[1] as Exception)
+            }
+            CBTypes.onRemoveGroupMember -> {
+                delegate?.onRemoveGroupMember(info[0] as String, info[1] as Exception)
+            }
+            CBTypes.onAddGroupMember -> {
+                delegate?.onAddGroupMember(info[0] as String, info[1] as Exception)
             }
             CBTypes.onFileDownloadFinished -> {
-                delegate?.onFileDownloadFinished(info[0] as String, info[1] as Boolean);
-            }
-            CBTypes.onDeleteGroupOK -> {
-                delegate?.onDeleteGroupOK(info[0] as String);
-            }
-            CBTypes.onDeleteGroupError -> {
-                delegate?.onDeleteGroupError(info[0] as String);
+                delegate?.onFileDownloadFinished(info[0] as String, info[1] as Boolean)
             }
             CBTypes.onContactOpenMyConversation -> {
-                delegate?.onContactOpenMyConversation(info[0] as String);
+                delegate?.onContactOpenMyConversation(info[0] as String)
             }
-            CBTypes.onGetGroupInfoOK -> {
-                delegate?.onGetGroupInfoOK(info[0] as JsonObject);
+            CBTypes.onGetInfo -> {
+                delegate?.onGetInfo(info[0] as JsonObject, info[1] as Exception)
             }
-            CBTypes.onGetGroupInfoError -> {
-                delegate?.onGetGroupInfoError(info[0] as String);
+            CBTypes.onGetConversations -> {
+                delegate?.onGetConversations(info[0] as JSONArray, info[1] as Exception)
+            }
+            CBTypes.onGetConversationMessages -> {
+                delegate?.onGetConversationMessages(info[0] as JSONArray, info[1] as Exception)
             }
             CBTypes.onNotificationReceived -> {
                 delegate?.onNotificationReceived(info[0] as String, info[1] as String, info[2] as String, info[3] as JsonObject, info[4] as String);
@@ -583,48 +587,52 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * Get info of a group or a user.
      * @param monkeyid monkeyid ID of the user or group.
-     * @param monkeyJsonResponse callback to receive the response.
      */
-    fun getInfoById(monkeyId: String, monkeyJsonResponse: MonkeyJsonResponse){
-        userManager.getInfoById(monkeyId, monkeyJsonResponse)
+    fun getInfoById(monkeyId: String){
+        userManager.getInfoById(monkeyId)
     }
 
     /**
      * Update the metada of a user
      * @param monkeyid monkeyid ID of the user.
      * @param userInfo JSONObject that contains user data.
-     * @param monkeyHttpResponse callback to receive the response.
      */
-    fun updateUserObject(monkeyId: String, userInfo: JSONObject, monkeyHttpResponse: MonkeyHttpResponse) {
-        userManager.updateUserObject(monkeyId,userInfo,monkeyHttpResponse)
+    fun updateUserData(monkeyId: String, userInfo: JSONObject) {
+        userManager.updateUserData(monkeyId, userInfo)
+    }
+
+    /**
+     * Update the metada of a group
+     * @param monkeyid monkeyid ID of the user.
+     * @param groupInfo JSONObject that contains group data.
+     */
+    fun updateGroupData(monkeyId: String, groupInfo: JSONObject) {
+        groupManager.updateGroupData(monkeyId, groupInfo)
     }
 
     /**
      * Get all conversation of a user using the monkey ID.
-     * @param monkeyJsonResponse callback to receive the response.
      */
-    fun getAllConversations(monkeyJsonResponse: MonkeyJsonResponse){
-        userManager.getConversations(clientData.monkeyId, asyncConnSocket, monkeyJsonResponse)
+    fun getAllConversations(){
+        userManager.getConversations(clientData.monkeyId, asyncConnSocket)
     }
 
     /**
      * Get all messages of a conversation.
      * @param monkeyid monkeyid ID of the user.
-     * @param monkeyJsonResponse callback to receive the response.
      */
-    fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String, monkeyJsonResponse: MonkeyJsonResponse){
-        userManager.getConversationMessages(clientData.monkeyId, conversationId, numberOfMessages, lastTimeStamp, asyncConnSocket, monkeyJsonResponse)
+    fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String){
+        userManager.getConversationMessages(clientData.monkeyId, conversationId, numberOfMessages, lastTimeStamp, asyncConnSocket)
     }
 
     /**
-     * Create a group asynchronously and receive response via monkeyJsonResponse
+     * Create a group asynchronously and receive response via delegate
      * @param members String with the sessionIDs of the members of the group.
      * @param group_name String with the group name
      * @param group_id String with the group id (optional)
-     * @param monkeyJsonResponse callback to receive the response.
      */
-    fun createGroup(members: String, group_name: String, group_id: String, monkeyJsonResponse: MonkeyJsonResponse){
-        groupManager.createGroup(members, group_name, group_id, monkeyJsonResponse)
+    fun createGroup(members: String, group_name: String, group_id: String){
+        groupManager.createGroup(members, group_name, group_id)
     }
 
     /**
@@ -632,20 +640,18 @@ abstract class MonkeyKitSocketService : Service() {
      * of the group. Response is delivered via monkeyJsonResponse.
      * @param group_id ID of the group
      * @param monkey_id ID of member to delete
-     * @param monkeyJsonResponse callback to receive the response.
      */
-    fun removeGroupMember(group_id: String, monkey_id: String, monkeyJsonResponse: MonkeyJsonResponse){
-        groupManager.removeGroupMember(group_id, monkey_id, monkeyJsonResponse)
+    fun removeGroupMember(group_id: String, monkey_id: String){
+        groupManager.removeGroupMember(group_id, monkey_id)
     }
 
     /**
      * Add a member to a group asynchronously.
      * @param new_member Session ID of the new member
      * @param group_id ID of the group
-     * @param monkeyJsonResponse callback to receive the response.
      */
-    fun addGroupMember(new_member: String, group_id: String, monkeyJsonResponse: MonkeyJsonResponse){
-        groupManager.addGroupMember(new_member, group_id, monkeyJsonResponse)
+    fun addGroupMember(new_member: String, group_id: String){
+        groupManager.addGroupMember(new_member, group_id)
     }
 
     /**

@@ -1,19 +1,13 @@
 package com.criptext.http;
 
-import android.os.Message;
 import android.util.Base64;
-import android.util.Log;
-
-import com.androidquery.AQuery;
-import com.androidquery.auth.BasicHandle;
 import com.androidquery.callback.AjaxCallback;
 import com.androidquery.callback.AjaxStatus;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.AsyncConnSocket;
+import com.criptext.comunication.CBTypes;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
-import com.criptext.comunication.MonkeyHttpResponse;
-import com.criptext.comunication.MonkeyJsonResponse;
 import com.criptext.security.AESUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -24,27 +18,27 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Created by danieltigse on 7/20/16.
  */
+
 public class UserManager extends AQueryHttp {
 
     public UserManager(MonkeyKitSocketService service, AESUtil aesUtil) {
         super(service, aesUtil);
     }
 
-    public void updateUserObject(String monkeyId, JSONObject userInfo, final MonkeyHttpResponse monkeyHttpResponse){
+    public void updateUserData(String monkeyId, JSONObject info){
 
         try {
-            String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/info/update";
+            String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/update";
 
             JSONObject localJSONObject1 = new JSONObject();
             localJSONObject1.put("monkeyId",monkeyId);
-            localJSONObject1.put("params",userInfo);
+            localJSONObject1.put("params",info);
 
             Map<String, Object> params = new HashMap<String, Object>();
             params.put("data", localJSONObject1.toString());
@@ -52,10 +46,15 @@ public class UserManager extends AQueryHttp {
             aq.auth(handle).ajax(urlconnect, params, JSONObject.class, new AjaxCallback<JSONObject>(){
                 @Override
                 public void callback(String url, JSONObject response, AjaxStatus status) {
+
+                    if(serviceRef.get()!=null)
+                        return;
+
                     if(response!=null)
-                        monkeyHttpResponse.OnSuccess();
+                        serviceRef.get().processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{null});
                     else
-                        monkeyHttpResponse.OnError();
+                        serviceRef.get().processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{
+                                "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
                 }
             });
 
@@ -65,7 +64,7 @@ public class UserManager extends AQueryHttp {
 
     }
 
-    public void getInfoById(String monkeyid, final MonkeyJsonResponse monkeyJsonResponse){
+    public void getInfoById(String monkeyid){
 
         String endpoint = "/info/" + monkeyid;
 
@@ -79,27 +78,38 @@ public class UserManager extends AQueryHttp {
         aq.auth(handle).ajax(MonkeyKitSocketService.Companion.getHttpsURL()+endpoint, JSONObject.class, new AjaxCallback<JSONObject>() {
             @Override
             public void callback(String url, JSONObject response, AjaxStatus status) {
+
+                if(serviceRef.get()!=null)
+                    return;
+
                 if (response != null) {
                     try {
-                        monkeyJsonResponse.OnSuccess(response.getJSONObject("data"));
+                        serviceRef.get().processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
+                                response.getJSONObject("data"), null});
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        monkeyJsonResponse.OnError(status);
+                        serviceRef.get().processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
+                                null, e});
                     }
                 }
                 else{
-                    monkeyJsonResponse.OnError(status);
+                    serviceRef.get().processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
+                            "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
                 }
             }
         });
     }
 
-    public void getConversations(String monkeyid, final AsyncConnSocket asyncConnSocket, final MonkeyJsonResponse monkeyJsonResponse){
+    public void getConversations(String monkeyid, final AsyncConnSocket asyncConnSocket){
 
         String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/"+monkeyid+"/conversations";
         aq.auth(handle).ajax(urlconnect, JSONObject.class, new AjaxCallback<JSONObject>(){
             @Override
             public void callback(String url, JSONObject response, AjaxStatus status) {
+
+                if(serviceRef.get()!=null)
+                    return;
+
                 if(response!=null)
                     try {
                         JsonParser parser = new JsonParser();
@@ -140,22 +150,24 @@ public class UserManager extends AQueryHttp {
                             }
                         }
 
-                        JSONObject resp = new JSONObject();
-                        resp.put("conversations", new JSONArray(array.toString()));
-                        monkeyJsonResponse.OnSuccess(resp);
+                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                                new JSONArray(array.toString()), null});
+
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        monkeyJsonResponse.OnError(status);
+                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                                null, e});
                     }
                 else
-                    monkeyJsonResponse.OnError(status);
+                    serviceRef.get().processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                            "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
             }
         });
 
     }
 
     public void getConversationMessages(String monkeyid, String conversationId, int numberOfMessages
-            , String lastTimeStamp, final AsyncConnSocket asyncConnSocket, final MonkeyJsonResponse monkeyJsonResponse){
+            , String lastTimeStamp, final AsyncConnSocket asyncConnSocket){
 
         String newlastTimeStamp = lastTimeStamp;
         if(lastTimeStamp==null || lastTimeStamp.length()==0 || lastTimeStamp.equals("0"))
@@ -165,6 +177,10 @@ public class UserManager extends AQueryHttp {
         aq.auth(handle).ajax(urlconnect, JSONObject.class, new AjaxCallback<JSONObject>(){
             @Override
             public void callback(String url, JSONObject response, AjaxStatus status) {
+
+                if(serviceRef.get()!=null)
+                    return;
+
                 if(response!=null){
                     try {
                         JsonParser parser = new JsonParser();
@@ -203,16 +219,17 @@ public class UserManager extends AQueryHttp {
                             }
                         }
 
-                        JSONObject resp = new JSONObject();
-                        resp.put("messages", new JSONArray(array.toString()));
-                        monkeyJsonResponse.OnSuccess(resp);
+                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
+                                new JSONArray(array.toString()), null});
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        monkeyJsonResponse.OnError(status);
+                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
+                                null, e});
                     }
                 }
                 else
-                    monkeyJsonResponse.OnError(status);
+                    serviceRef.get().processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
+                            "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
             }
         });
 

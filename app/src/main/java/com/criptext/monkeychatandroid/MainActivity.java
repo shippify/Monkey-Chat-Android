@@ -34,6 +34,7 @@ import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
 import com.google.gson.JsonObject;
 
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -393,11 +394,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         messageLoader.loadNewPage(realm);
     }
 
-    @Override
-    public void onNetworkError(Exception exception) {
-
-    }
-
     /******
      * These are the methods that MonkeyKit calls to inform us about new events.
      */
@@ -425,22 +421,44 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     @Override
-    public void onCreateGroupOK(String grupoID) {    }
+    public void onCreateGroup(String groupID, Exception e) {
+        
+    }
 
     @Override
-    public void onCreateGroupError(String errmsg) {    }
+    public void onAddGroupMember(String members, Exception e) {
+
+    }
 
     @Override
-    public void onDeleteGroupOK(String grupoID) {    }
+    public void onRemoveGroupMember(String members, Exception e) {
+
+    }
 
     @Override
-    public void onDeleteGroupError(String errmsg) {    }
+    public void onGetInfo(JsonObject json, Exception e) {
+
+    }
 
     @Override
-    public void onGetGroupInfoOK(JsonObject json) {     }
+    public void onUpdateUserData(Exception e) {
+
+    }
 
     @Override
-    public void onGetGroupInfoError(String errmsg) {     }
+    public void onUpdateGroupData(Exception e) {
+
+    }
+
+    @Override
+    public void onGetConversations(JSONArray conversations, Exception e) {
+
+    }
+
+    @Override
+    public void onGetConversationMessages(JSONArray messages, Exception e) {
+
+    }
 
     @Override
     public void onMessageRecieved(MOKMessage message) {
