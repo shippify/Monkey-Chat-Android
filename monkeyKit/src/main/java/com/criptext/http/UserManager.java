@@ -290,11 +290,11 @@ public class UserManager extends AQueryHttp {
                             }
                         }
 
-                        service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
-                                messageList, null});
+                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
+                                new JSONArray(array.toString()), null});
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
+                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
                                 null, e});
                     }
                 }

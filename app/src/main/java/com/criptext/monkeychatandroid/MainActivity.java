@@ -42,9 +42,10 @@ import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
 import com.criptext.monkeykitui.util.MonkeyFragmentManager;
 import com.google.gson.JsonObject;
 
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.jetbrains.annotations.Nullable;
-
+import org.json.JSONArray;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -399,7 +400,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onCreateGroup(String groupID, Exception e) {
-
     }
 
     @Override
@@ -413,17 +413,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onGetGroupInfo(MOKConversation mokConversation, Exception e) {
-
-    }
-
-    @Override
-    public void onGetUserInfo(MOKUser mokUser, Exception e) {
-
-    }
-
-    @Override
-    public void onGetUsersInfo(ArrayList<MOKUser> mokUserArrayList, Exception e) {
+    public void onGetInfo(JsonObject json, Exception e) {
 
     }
 
@@ -438,17 +428,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onGetConversations(ArrayList<MOKConversation> conversations, Exception e) {
+    public void onGetConversations(JSONArray conversations, Exception e) {
 
     }
 
     @Override
-    public void onDeleteConversation(String conversationId, Exception e) {
-
-    }
-
-    @Override
-    public void onGetConversationMessages(ArrayList<MOKMessage> messages, Exception e) {
+    public void onGetConversationMessages(JSONArray messages, Exception e) {
 
     }
 
