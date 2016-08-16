@@ -1,11 +1,8 @@
 package com.criptext.lib;
 
+import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
 import com.google.gson.JsonObject;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.util.ArrayList;
 
 public interface MonkeyKitDelegate {
@@ -68,11 +65,33 @@ public interface MonkeyKitDelegate {
      */
     void onGetInfo(JsonObject json, Exception e);
 
+    /**
+     * This function is executed after you update the metadata of a user.
+     * If exception is null the user was updated successfully.
+     * @param e the exception of the result
+     */
     void onUpdateUserData(Exception e);
+
+    /**
+     * This function is executed after you update the metadata of a group.
+     * If exception is null the group was updated successfully.
+     * @param e the exception of the result
+     */
     void onUpdateGroupData(Exception e);
 
-    void onGetConversations(JSONArray conversations, Exception e);
-    void onGetConversationMessages(JSONArray messages, Exception e);
+    /**
+     * This function is executed when you receive all your conversations.
+     * @param conversations array of the conversations required.
+     * @param e the exception of the result
+     */
+    void onGetConversations(ArrayList<MOKConversation> conversations, Exception e);
+
+    /**
+     * This function is executed when you receive all your conversation messages.
+     * @param messages array of the messages required.
+     * @param e the exception of the result
+     */
+    void onGetConversationMessages(ArrayList<MOKMessage> messages, Exception e);
 
     /**
      * This function is executed when a message arrived and stored in the DB.
@@ -113,7 +132,7 @@ public interface MonkeyKitDelegate {
     /**
      *Cuando un contacto abre una conversacion con el usuario se ejecuta este callback. La implementacion
      * de este callback debe de marcar como leido los mensajes que se le enviaron a ese contacto.
-     * @param sessionID
+     * @param sessionID session id of the contact
      */
     void onContactOpenMyConversation(String sessionID);
 

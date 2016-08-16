@@ -6,6 +6,7 @@ import com.androidquery.callback.AjaxStatus;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.AsyncConnSocket;
 import com.criptext.comunication.CBTypes;
+import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.security.AESUtil;
@@ -18,7 +19,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,6 +37,7 @@ public class UserManager extends AQueryHttp {
     public void updateUserData(String monkeyId, JSONObject info){
 
         try {
+            final MonkeyKitSocketService service = serviceRef.get();
             String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/update";
 
             JSONObject localJSONObject1 = new JSONObject();
@@ -47,13 +51,13 @@ public class UserManager extends AQueryHttp {
                 @Override
                 public void callback(String url, JSONObject response, AjaxStatus status) {
 
-                    if(serviceRef.get()!=null)
+                    if(service==null)
                         return;
 
                     if(response!=null)
-                        serviceRef.get().processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{null});
+                        service.processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{null});
                     else
-                        serviceRef.get().processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{
+                        service.processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{
                                 "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
                 }
             });
@@ -66,6 +70,7 @@ public class UserManager extends AQueryHttp {
 
     public void getInfoById(String monkeyid){
 
+        final MonkeyKitSocketService service = serviceRef.get();
         String endpoint = "/info/" + monkeyid;
 
         //check if it's a group
@@ -79,21 +84,21 @@ public class UserManager extends AQueryHttp {
             @Override
             public void callback(String url, JSONObject response, AjaxStatus status) {
 
-                if(serviceRef.get()!=null)
+                if(service==null)
                     return;
 
                 if (response != null) {
                     try {
-                        serviceRef.get().processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
+                        service.processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
                                 response.getJSONObject("data"), null});
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        serviceRef.get().processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
+                        service.processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
                                 null, e});
                     }
                 }
                 else{
-                    serviceRef.get().processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
+                    service.processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
                             "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
                 }
             }
@@ -102,24 +107,26 @@ public class UserManager extends AQueryHttp {
 
     public void getConversations(String monkeyid, final AsyncConnSocket asyncConnSocket){
 
+        final MonkeyKitSocketService service = serviceRef.get();
         String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/"+monkeyid+"/conversations";
         aq.auth(handle).ajax(urlconnect, JSONObject.class, new AjaxCallback<JSONObject>(){
             @Override
             public void callback(String url, JSONObject response, AjaxStatus status) {
 
-                if(serviceRef.get()!=null)
+                if(service==null)
                     return;
 
                 if(response!=null)
                     try {
+                        List<MOKConversation> conversationList = new ArrayList<MOKConversation>();
                         JsonParser parser = new JsonParser();
                         JsonObject props = new JsonObject(), params = new JsonObject();
                         JSONArray jsonArrayConversations = response.getJSONObject("data").getJSONArray("conversations");
                         JsonArray array = (JsonArray)parser.parse(jsonArrayConversations.toString());
-                        MOKMessage remote;
                         for (int i = 0; i < array.size(); i++) {
                             JsonObject currentConv = null;
                             JsonObject currentMessage = null;
+                            MOKMessage remote = null;
                             try {
                                 JsonElement jsonMessage = array.get(i);
                                 currentConv = jsonMessage.getAsJsonObject();
@@ -141,25 +148,31 @@ public class UserManager extends AQueryHttp {
                                         if(remote.getProps().get("encoding").getAsString().equals("base64"))
                                             remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
                                     }
-                                    if (remote != null)
-                                        currentMessage.addProperty("msg", remote.getMsg());
                                 }
+
+                                conversationList.add(new MOKConversation(currentConv.get("id").getAsString(),
+                                        currentConv.get("info").getAsJsonObject(),
+                                        currentConv.has("members") ? currentConv.get("members").getAsString().split(",") : new String[0],
+                                        remote, currentConv.get("last_seen").getAsLong(), currentConv.get("unread").getAsInt(),
+                                        currentConv.has("last_modified") ? currentConv.get("last_modified").getAsLong() : 0));
+
+                                System.out.println("size:"+conversationList.size());
                             }
                             catch( Exception ex){
                                 ex.printStackTrace();
                             }
                         }
 
-                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
-                                new JSONArray(array.toString()), null});
+                        service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                                conversationList, null});
 
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                        service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
                                 null, e});
                     }
                 else
-                    serviceRef.get().processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                    service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
                             "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
             }
         });
@@ -169,6 +182,7 @@ public class UserManager extends AQueryHttp {
     public void getConversationMessages(String monkeyid, String conversationId, int numberOfMessages
             , String lastTimeStamp, final AsyncConnSocket asyncConnSocket){
 
+        final MonkeyKitSocketService service = serviceRef.get();
         String newlastTimeStamp = lastTimeStamp;
         if(lastTimeStamp==null || lastTimeStamp.length()==0 || lastTimeStamp.equals("0"))
             newlastTimeStamp = "";
@@ -178,11 +192,12 @@ public class UserManager extends AQueryHttp {
             @Override
             public void callback(String url, JSONObject response, AjaxStatus status) {
 
-                if(serviceRef.get()!=null)
+                if(service==null)
                     return;
 
                 if(response!=null){
                     try {
+                        List<MOKMessage> messageList = new ArrayList<MOKMessage>();
                         JsonParser parser = new JsonParser();
                         JsonObject props = new JsonObject(), params = new JsonObject();
                         JSONArray jsonArrayMessages = response.getJSONObject("data").getJSONArray("messages");
@@ -211,7 +226,7 @@ public class UserManager extends AQueryHttp {
                                             remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
                                     }
                                     if (remote != null)
-                                        currentMessage.addProperty("msg", remote.getMsg());
+                                        messageList.add(remote);
                                 }
                             }
                             catch( Exception ex){
@@ -219,16 +234,16 @@ public class UserManager extends AQueryHttp {
                             }
                         }
 
-                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
-                                new JSONArray(array.toString()), null});
+                        service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
+                                messageList, null});
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        serviceRef.get().processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
+                        service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
                                 null, e});
                     }
                 }
                 else
-                    serviceRef.get().processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
+                    service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
                             "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
             }
         });

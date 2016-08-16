@@ -15,6 +15,7 @@ import android.widget.Toast;
 
 import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
+import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.comunication.PushMessage;
@@ -401,7 +402,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     public void onSocketConnected() {
         super.onSocketConnected();
-        setActionBarTitle(2); }
+        setActionBarTitle(2);
+    }
 
     @Override
     public void onSocketDisconnected() {
@@ -422,7 +424,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     @Override
     public void onCreateGroup(String groupID, Exception e) {
-        
+
     }
 
     @Override
@@ -451,12 +453,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     @Override
-    public void onGetConversations(JSONArray conversations, Exception e) {
+    public void onGetConversations(ArrayList<MOKConversation> conversations, Exception e) {
 
     }
 
     @Override
-    public void onGetConversationMessages(JSONArray messages, Exception e) {
+    public void onGetConversationMessages(ArrayList<MOKMessage> messages, Exception e) {
 
     }
 

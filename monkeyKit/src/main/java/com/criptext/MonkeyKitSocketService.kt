@@ -326,10 +326,10 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onGetInfo(info[0] as JsonObject, info[1] as Exception)
             }
             CBTypes.onGetConversations -> {
-                delegate?.onGetConversations(info[0] as JSONArray, info[1] as Exception)
+                delegate?.onGetConversations(info[0] as ArrayList<MOKConversation>, info[1] as Exception)
             }
             CBTypes.onGetConversationMessages -> {
-                delegate?.onGetConversationMessages(info[0] as JSONArray, info[1] as Exception)
+                delegate?.onGetConversationMessages(info[0] as ArrayList<MOKMessage>, info[1] as Exception)
             }
             CBTypes.onNotificationReceived -> {
                 delegate?.onNotificationReceived(info[0] as String, info[1] as String, info[2] as String, info[3] as JsonObject, info[4] as String);
