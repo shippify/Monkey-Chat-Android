@@ -328,6 +328,9 @@ abstract class MonkeyKitSocketService : Service() {
             CBTypes.onGetConversations -> {
                 delegate?.onGetConversations(info[0] as ArrayList<MOKConversation>, info[1] as Exception)
             }
+            CBTypes.onDeleteConversation -> {
+                delegate?.onDeleteConversation(info[0] as String, info[1] as Exception)
+            }
             CBTypes.onGetConversationMessages -> {
                 delegate?.onGetConversationMessages(info[0] as ArrayList<MOKMessage>, info[1] as Exception)
             }
@@ -623,6 +626,14 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String){
         userManager.getConversationMessages(clientData.monkeyId, conversationId, numberOfMessages, lastTimeStamp, asyncConnSocket)
+    }
+
+    /**
+     * Delete a conversation.
+     * @param monkeyid monkeyid ID of the user.
+     */
+    fun deleteConversation(conversationId: String){
+        userManager.deleteConversation(clientData.monkeyId, conversationId)
     }
 
     /**

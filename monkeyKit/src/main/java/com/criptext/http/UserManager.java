@@ -250,4 +250,45 @@ public class UserManager extends AQueryHttp {
 
     }
 
+    public void deleteConversation(String monkeyid, String conversation_id){
+
+        try{
+            String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/delete/conversation";
+            final MonkeyKitSocketService service = serviceRef.get();
+
+            JSONObject localJSONObject1 = new JSONObject();
+            localJSONObject1.put("conversation_id", conversation_id);
+            localJSONObject1.put("monkey_id", monkeyid);
+
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("data", localJSONObject1.toString());
+
+            aq.auth(handle).ajax(urlconnect, params, JSONObject.class, new AjaxCallback<JSONObject>(){
+                @Override
+                public void callback(String url, JSONObject response, AjaxStatus status) {
+
+                    if(service==null)
+                        return;
+
+                    if(response!=null)
+                        try {
+                            service.processMessageFromHandler(CBTypes.onDeleteConversation, new Object[]{
+                                    response.getJSONObject("data").getString("conversation"), null});
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            service.processMessageFromHandler(CBTypes.onDeleteConversation, new Object[]{
+                                    null, e});
+                        }
+                    else{
+                        service.processMessageFromHandler(CBTypes.onDeleteConversation, new Object[]{
+                                "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
+                    }
+                }
+            });
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
 }

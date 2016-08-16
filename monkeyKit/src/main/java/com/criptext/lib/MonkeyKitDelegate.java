@@ -87,6 +87,13 @@ public interface MonkeyKitDelegate {
     void onGetConversations(ArrayList<MOKConversation> conversations, Exception e);
 
     /**
+     * This function is executed when you delete a conversation.
+     * @param conversationId id of the conversation deleted
+     * @param e the exception of the result
+     */
+    void onDeleteConversation(String conversationId, Exception e);
+
+    /**
      * This function is executed when you receive all your conversation messages.
      * @param messages array of the messages required.
      * @param e the exception of the result

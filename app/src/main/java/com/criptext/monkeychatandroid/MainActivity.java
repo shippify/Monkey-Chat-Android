@@ -458,6 +458,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     @Override
+    public void onDeleteConversation(String conversationId, Exception e) {
+
+    }
+
+    @Override
     public void onGetConversationMessages(ArrayList<MOKMessage> messages, Exception e) {
 
     }
