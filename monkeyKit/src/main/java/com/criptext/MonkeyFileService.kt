@@ -182,6 +182,8 @@ abstract class MonkeyFileService: IntentService(TAG){
 
         try {
             val response = httpClient.newCall(request).execute().body().string();
+            if(response != null)
+                Log.d("FileService", response)
             return response
         }catch(ex: Exception){
             return null

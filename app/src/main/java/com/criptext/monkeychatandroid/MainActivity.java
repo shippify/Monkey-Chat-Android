@@ -7,16 +7,12 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
-import android.provider.ContactsContract;
 import android.support.v4.app.FragmentTransaction;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.widget.Toast;
 
 import com.criptext.ClientData;
-import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MOKUser;
@@ -24,6 +20,7 @@ import com.criptext.comunication.MessageTypes;
 import com.criptext.comunication.PushMessage;
 import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.lib.MKDelegateActivity;
+import com.criptext.monkeychatandroid.dialogs.NewGroupDialog;
 import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
@@ -32,10 +29,8 @@ import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
 import com.criptext.monkeykitui.conversation.ConversationsActivity;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
-import com.criptext.monkeykitui.input.MediaInputView;
 import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
-import com.criptext.monkeykitui.recycler.MonkeyAdapter;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 import com.criptext.monkeykitui.recycler.audio.DefaultVoiceNotePlayer;
 import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
@@ -196,7 +191,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public boolean onCreateOptionsMenu(android.view.Menu menu) {
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu_chat, menu);
+        inflater.inflate(R.menu.menu_conversations, menu);
 
         return true;
     }
@@ -204,6 +199,16 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.action_newgroup:
+            {
+                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+                ft.addToBackStack(null);
+
+                // Create and show the dialog.
+                NewGroupDialog newFragment = NewGroupDialog.newInstance();
+                newFragment.show(ft, "dialog");
+
+            } break;
             case R.id.action_deleteall:
                 DatabaseHandler.deleteAll(realm);
                 if(monkeyChatFragment != null) monkeyChatFragment.clearMessages();
@@ -399,7 +404,19 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onCreateGroup(String groupID, Exception e) {
+    public void onAcknowledgeRecieved(@NotNull String senderId, @NotNull String recipientId,
+                          @NotNull String newId, @NotNull String oldId, boolean read, int messageType) {
+        super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
+        markMessageAsDelivered(oldId);
+    }
+
+    @Override
+    public void onCreateGroup(String groupMembers, String groupName, String groupID, Exception e) {
+        if(e != null)
+            e.printStackTrace();
+        else{
+
+        }
     }
 
     @Override
@@ -486,11 +503,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         updateMessage(message.getMessage_id(), MonkeyItem.DeliveryStatus.error);
     }
 
-    @Override
-    public void onAcknowledgeRecieved(String senderId, String recipientId, String newId, String oldId, Boolean read, int messageType) {
-        super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
-        markMessageAsDelivered(oldId);
-    }
 
     @Override
     public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online) {
@@ -614,6 +626,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         ArrayList<MonkeyConversation> conversations = new ArrayList<>();
         final long datetime = System.currentTimeMillis();
         conversations.add(new MonkeyConversation() {
+
+            @NotNull
+            @Override
+            public String getGroupMembers() {
+                return "";
+            }
+
             @NotNull
             @Override
             public String getId() {

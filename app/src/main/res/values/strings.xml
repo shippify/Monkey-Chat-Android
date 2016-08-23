@@ -5,4 +5,5 @@
     <string name="label_fullname">Enter your fullname</string>
     <string name="button_continuar">Continue</string>
     <string name="menu_deleteall">Delete all</string>
+    <string name="new_group">New Group</string>
 </resources>

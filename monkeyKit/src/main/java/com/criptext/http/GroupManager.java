@@ -100,7 +100,7 @@ public class GroupManager extends AQueryHttp {
 
     }
 
-    public void createGroup(String members, String group_name, String group_id){
+    public void createGroup(final String members, final String group_name, String group_id){
 
         try {
             String urlConnect = MonkeyKitSocketService.Companion.getHttpsURL() +"/group/create";
@@ -110,7 +110,10 @@ public class GroupManager extends AQueryHttp {
             localJSONObjectInfo.put("name", group_name);
 
             JSONObject localJSONObject1 = new JSONObject();
-            localJSONObject1.put("members",members);
+            if(members.isEmpty())
+                localJSONObject1.put("members", monkeyID);
+            else
+                localJSONObject1.put("members", monkeyID + ',' + members);
             localJSONObject1.put("info",localJSONObjectInfo);
             localJSONObject1.put("session_id", monkeyID);
             if(group_id!=null)
@@ -129,16 +132,17 @@ public class GroupManager extends AQueryHttp {
                     if (response != null) {
                         try {
                             service.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
-                                    response.getJSONObject("data").getString("group_id"), null});
+                                    members, group_name, response.getJSONObject("data").getString("group_id"), null});
                         } catch (JSONException e) {
                             e.printStackTrace();
                             service.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
-                                    null, e});
+                                    null, null, null, e});
                         }
                     }
                     else{
                         service.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
-                                null, "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
+                                null, null, null, new Exception("Error code:"+status.getCode()+
+                                " -  Error msg:"+status.getMessage())});
                     }
                 }
             });

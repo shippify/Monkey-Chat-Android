@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         applicationId "com.criptext.monkeychatandroid"
-        minSdkVersion 19
+        minSdkVersion 15
         targetSdkVersion 22
         versionCode 1
         versionName "1.0"
@@ -38,11 +38,6 @@ dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
     compile project(':monkeyKit')
-    //compile 'com.github.GAumala:MonkeyChat-Android:dev-SNAPSHOT'
-    compile 'com.android.support:appcompat-v7:23.3.0'
-    compile 'com.github.Criptext:MonkeyUIAndroid:1.1.1'
-    /*compile ('com.criptext.monkeykitui:monkeykitui:1.5.7@aar') {
-        transitive = true;
-
-    }*/
+    //compile project(':monkeykitui')
+    compile 'com.github.Criptext:MonkeyUIAndroid:v1.2.1'
 }
