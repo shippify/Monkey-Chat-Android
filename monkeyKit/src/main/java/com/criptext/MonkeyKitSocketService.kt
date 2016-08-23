@@ -68,7 +68,7 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * Object that manages the socket connection and runs it in a background thread.
      */
-    protected lateinit var asyncConnSocket: AsyncConnSocket
+    private lateinit var asyncConnSocket: AsyncConnSocket
     /**
      * Object that manage user methods over http
      */
@@ -952,6 +952,9 @@ abstract class MonkeyKitSocketService : Service() {
         return null;
     }
 
+    fun setAsUnauthorized(){
+        status = ServiceStatus.unauthorized
+    }
     abstract val uploadServiceClass: Class<*>
 
     abstract fun openDatabase()
@@ -994,6 +997,7 @@ abstract class MonkeyKitSocketService : Service() {
 
         var status = ServiceStatus.dead
 
+
         fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>) {
             val intent = Intent(context, service)
             context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
@@ -1001,7 +1005,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     enum class ServiceStatus {
-        dead, initializing, running, bound
+        unauthorized, dead, initializing, running, bound
     }
 
 }

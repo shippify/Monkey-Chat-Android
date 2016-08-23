@@ -38,7 +38,8 @@ public class ConnectionChangeReceiver extends BroadcastReceiver {
 
         // Avoid handling multiple broadcasts for the same connection type
         if (sLastType != currentType && service!=null
-                && service.getAsyncConnSocket().getSocketStatus()!= AsyncConnSocket.Status.unauthorized) {
+                && MonkeyKitSocketService.Companion.getStatus().ordinal() >
+                MonkeyKitSocketService.ServiceStatus.running.ordinal()) {
             if (activeNetworkInfo != null) {
                 if (activeNetworkInfo.isConnectedOrConnecting() && service!=null) {
                     service.startSocketConnection();

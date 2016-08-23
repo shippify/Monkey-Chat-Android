@@ -569,6 +569,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 		else if(evid==ComMessageProtocol.FAILLOGGINMSG){
 			//REMOTE LOGOUT UNAUTHORIZED
 			socketStatus = Status.unauthorized;
+			service.setAsUnauthorized();
 			if(connThread != null) {
 				connThread.interrupt();
 				connThread = null;
