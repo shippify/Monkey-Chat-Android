@@ -302,19 +302,19 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onDeleteRecieved(info[0] as String, info[1] as String, info[2] as String, info[3] as String)
             }
             CBTypes.onUpdateUserData -> {
-                delegate?.onUpdateUserData(info[0] as Exception)
+                delegate?.onUpdateUserData(if(info[0] is Exception) info[0] as Exception else null)
             }
             CBTypes.onUpdateGroupData -> {
-                delegate?.onUpdateGroupData(info[0] as Exception)
+                delegate?.onUpdateGroupData(if(info[0] is Exception) info[0] as Exception else null)
             }
             CBTypes.onCreateGroup -> {
-                delegate?.onCreateGroup(info[0] as String, info[1] as Exception)
+                delegate?.onCreateGroup(if(info[0] is String) info[0] as String else null, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onRemoveGroupMember -> {
-                delegate?.onRemoveGroupMember(info[0] as String, info[1] as Exception)
+                delegate?.onRemoveGroupMember(if(info[0] is String) info[0] as String else null, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onAddGroupMember -> {
-                delegate?.onAddGroupMember(info[0] as String, info[1] as Exception)
+                delegate?.onAddGroupMember(if(info[0] is String) info[0] as String else null, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onFileDownloadFinished -> {
                 delegate?.onFileDownloadFinished(info[0] as String, info[1] as Boolean)
@@ -322,17 +322,23 @@ abstract class MonkeyKitSocketService : Service() {
             CBTypes.onContactOpenMyConversation -> {
                 delegate?.onContactOpenMyConversation(info[0] as String)
             }
-            CBTypes.onGetInfo -> {
-                delegate?.onGetInfo(info[0] as JsonObject, info[1] as Exception)
+            CBTypes.onGetUserInfo-> {
+                delegate?.onGetUserInfo( if(info[0] is MOKUser) info[0] as MOKUser else null, if(info[1] is Exception) info[1] as Exception else null)
+            }
+            CBTypes.onGetUsersInfo-> {
+                delegate?.onGetUsersInfo( info[0] as ArrayList<MOKUser>, if(info[1] is Exception) info[1] as Exception else null)
+            }
+            CBTypes.onGetGroupInfo-> {
+                delegate?.onGetGroupInfo( if(info[0] is MOKConversation) info[0] as MOKConversation else null, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onGetConversations -> {
-                delegate?.onGetConversations(info[0] as ArrayList<MOKConversation>, info[1] as Exception)
+                delegate?.onGetConversations(info[0] as ArrayList<MOKConversation>, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onDeleteConversation -> {
-                delegate?.onDeleteConversation(info[0] as String, info[1] as Exception)
+                delegate?.onDeleteConversation(if(info[0] is String) info[0] as String else null, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onGetConversationMessages -> {
-                delegate?.onGetConversationMessages(info[0] as ArrayList<MOKMessage>, info[1] as Exception)
+                delegate?.onGetConversationMessages(info[0] as ArrayList<MOKMessage>, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onNotificationReceived -> {
                 delegate?.onNotificationReceived(info[0] as String, info[1] as String, info[2] as String, info[3] as JsonObject, info[4] as String);
@@ -588,11 +594,27 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     /**
-     * Get info of a group or a user.
+     * Get info of a user.
      * @param monkeyid monkeyid ID of the user or group.
      */
-    fun getInfoById(monkeyId: String){
-        userManager.getInfoById(monkeyId)
+    fun getUserInfoById(monkeyId: String){
+        userManager.getUserInfoById(monkeyId)
+    }
+
+    /**
+     * Get users info
+     * @param monkeyIds string separate by coma with the monkey ids
+     */
+    fun getUsersInfo(monkeyIds: String){
+        userManager.getUsersInfo(monkeyIds)
+    }
+
+    /**
+     * Get info of a group.
+     * @param monkeyid monkeyid ID of the user or group.
+     */
+    fun getGroupInfoById(monkeyId: String){
+        groupManager.getGroupInfoById(monkeyId)
     }
 
     /**
@@ -616,8 +638,8 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * Get all conversation of a user using the monkey ID.
      */
-    fun getAllConversations(){
-        userManager.getConversations(clientData.monkeyId, asyncConnSocket)
+    fun getAllConversations(quantity: Int, fromTimestamp: Long){
+        userManager.getConversations(clientData.monkeyId, quantity, fromTimestamp, asyncConnSocket)
     }
 
     /**
@@ -966,7 +988,7 @@ abstract class MonkeyKitSocketService : Service() {
         val lastSyncPrefs = "MonkeyKit.lastSyncTime";
         val lastSyncKey = "MonkeyKit.lastSyncKey";
 
-        val baseURL = "stage.monkey.criptext.com"
+        val baseURL = "monkey.criptext.com"
         val httpsURL = "http://" + baseURL
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
 

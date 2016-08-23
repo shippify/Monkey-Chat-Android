@@ -49,8 +49,8 @@ public class MonkeyInit {
     private JSONArray ignore_params;
     final String urlUser, urlPass, myOldMonkeyId;
 
-    public MonkeyInit(Context context, String sessionId, String user, String pass, JSONObject userInfo, JSONArray ignore_params){
-        this.myOldMonkeyId = sessionId == null ? "" : sessionId;
+    public MonkeyInit(Context context, String monkeyId, String user, String pass, JSONObject userInfo, JSONArray ignore_params){
+        this.myOldMonkeyId = monkeyId == null ? "" : monkeyId;
         this.urlUser = user;
         this.urlPass = pass;
         this.userInfo = userInfo;

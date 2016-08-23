@@ -17,6 +17,7 @@ import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MOKUser;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.comunication.PushMessage;
 import com.criptext.gcm.MonkeyRegistrationService;
@@ -438,7 +439,17 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     @Override
-    public void onGetInfo(JsonObject json, Exception e) {
+    public void onGetGroupInfo(MOKConversation mokConversation, Exception e) {
+
+    }
+
+    @Override
+    public void onGetUserInfo(MOKUser mokUser, Exception e) {
+
+    }
+
+    @Override
+    public void onGetUsersInfo(ArrayList<MOKUser> mokUserArrayList, Exception e) {
 
     }
 

@@ -8,6 +8,7 @@ import com.criptext.comunication.AsyncConnSocket;
 import com.criptext.comunication.CBTypes;
 import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MOKUser;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.security.AESUtil;
 import com.google.gson.JsonArray;
@@ -68,17 +69,10 @@ public class UserManager extends AQueryHttp {
 
     }
 
-    public void getInfoById(String monkeyid){
+    public void getUserInfoById(final String monkeyid){
 
         final MonkeyKitSocketService service = serviceRef.get();
-        String endpoint = "/info/" + monkeyid;
-
-        //check if it's a group
-        if (monkeyid.contains("G:")) {
-            endpoint = "/group"+endpoint;
-        }else{
-            endpoint = "/user"+endpoint;
-        }
+        String endpoint = "/user/info/"+monkeyid;
 
         aq.auth(handle).ajax(MonkeyKitSocketService.Companion.getHttpsURL()+endpoint, JSONObject.class, new AjaxCallback<JSONObject>() {
             @Override
@@ -89,94 +83,156 @@ public class UserManager extends AQueryHttp {
 
                 if (response != null) {
                     try {
-                        service.processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
-                                response.getJSONObject("data"), null});
-                    } catch (JSONException e) {
+                        JsonParser jsonParser = new JsonParser();
+                        JsonObject gsonObject = (JsonObject)jsonParser.parse(response.getJSONObject("data").toString());
+                        service.processMessageFromHandler(CBTypes.onGetUserInfo, new Object[]{
+                                new MOKUser(monkeyid, gsonObject), null});
+                    } catch (Exception e) {
                         e.printStackTrace();
-                        service.processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
+                        service.processMessageFromHandler(CBTypes.onGetUserInfo, new Object[]{
                                 null, e});
                     }
                 }
                 else{
-                    service.processMessageFromHandler(CBTypes.onGetInfo, new Object[]{
+                    service.processMessageFromHandler(CBTypes.onGetUserInfo, new Object[]{
                             "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
                 }
             }
         });
     }
 
-    public void getConversations(String monkeyid, final AsyncConnSocket asyncConnSocket){
+    public void getUsersInfo(final String monkeyIds){
 
         final MonkeyKitSocketService service = serviceRef.get();
-        String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/"+monkeyid+"/conversations";
-        aq.auth(handle).ajax(urlconnect, JSONObject.class, new AjaxCallback<JSONObject>(){
-            @Override
-            public void callback(String url, JSONObject response, AjaxStatus status) {
+        String endpoint = "/users/info";
 
-                if(service==null)
-                    return;
+        try {
+            JSONObject localJSONObject1 = new JSONObject();
+            localJSONObject1.put("monkey_ids", monkeyIds);
 
-                if(response!=null)
-                    try {
-                        List<MOKConversation> conversationList = new ArrayList<MOKConversation>();
-                        JsonParser parser = new JsonParser();
-                        JsonObject props = new JsonObject(), params = new JsonObject();
-                        JSONArray jsonArrayConversations = response.getJSONObject("data").getJSONArray("conversations");
-                        JsonArray array = (JsonArray)parser.parse(jsonArrayConversations.toString());
-                        for (int i = 0; i < array.size(); i++) {
-                            JsonObject currentConv = null;
-                            JsonObject currentMessage = null;
-                            MOKMessage remote = null;
-                            try {
-                                JsonElement jsonMessage = array.get(i);
-                                currentConv = jsonMessage.getAsJsonObject();
-                                currentMessage = currentConv.getAsJsonObject("last_message");
-                                //init params props
-                                if (currentMessage.has("params") && !currentMessage.get("params").isJsonNull() && !parser.parse(currentMessage.get("params").getAsString()).isJsonNull())
-                                    if (parser.parse(currentMessage.get("params").getAsString()) instanceof JsonObject)
-                                        params = (JsonObject) parser.parse(currentMessage.get("params").getAsString());
-                                if (currentMessage.has("props") && !currentMessage.get("props").isJsonNull() && !parser.parse(currentMessage.get("props").getAsString()).isJsonNull())
-                                    props = (JsonObject) parser.parse(currentMessage.get("props").getAsString());
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("data", localJSONObject1.toString());
 
-                                if (currentMessage.has("type") && (currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKText) == 0
-                                        || currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0)) {
+            aq.auth(handle).ajax(MonkeyKitSocketService.Companion.getHttpsURL() + endpoint, params, JSONObject.class, new AjaxCallback<JSONObject>() {
+                @Override
+                public void callback(String url, JSONObject response, AjaxStatus status) {
 
-                                    remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props);
-                                    if (remote.getProps().get("encr").getAsString().compareTo("1") == 0)
-                                        remote = asyncConnSocket.getKeysAndDecryptMOKMessage(remote, false);
-                                    else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
-                                        if(remote.getProps().get("encoding").getAsString().equals("base64"))
-                                            remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
-                                    }
-                                }
+                    if (service == null)
+                        return;
 
-                                conversationList.add(new MOKConversation(currentConv.get("id").getAsString(),
-                                        currentConv.get("info").getAsJsonObject(),
-                                        currentConv.has("members") ? currentConv.get("members").getAsString().split(",") : new String[0],
-                                        remote, currentConv.get("last_seen").getAsLong(), currentConv.get("unread").getAsInt(),
-                                        currentConv.has("last_modified") ? currentConv.get("last_modified").getAsLong() : 0));
-
-                                System.out.println("size:"+conversationList.size());
+                    if (response != null) {
+                        try {
+                            ArrayList<MOKUser> mokUserArrayList = new ArrayList<MOKUser>();
+                            for(int i=0; i<response.getJSONArray("data").length(); i++){
+                                JSONObject jsonObject = response.getJSONArray("data").getJSONObject(i);
+                                JsonParser jsonParser = new JsonParser();
+                                JsonObject gsonObject = (JsonObject) jsonParser.parse(jsonObject.toString());
+                                mokUserArrayList.add(new MOKUser(gsonObject.get("monkey_id").getAsString(), gsonObject));
                             }
-                            catch( Exception ex){
-                                ex.printStackTrace();
-                            }
+
+                            service.processMessageFromHandler(CBTypes.onGetUsersInfo, new Object[]{
+                                    mokUserArrayList, null});
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            service.processMessageFromHandler(CBTypes.onGetUsersInfo, new Object[]{
+                                    null, e});
                         }
-
-                        service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
-                                conversationList, null});
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
-                                null, e});
+                    } else {
+                        service.processMessageFromHandler(CBTypes.onGetUsersInfo, new Object[]{
+                                "Error code:" + status.getCode() + " -  Error msg:" + status.getMessage()});
                     }
-                else
-                    service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
-                            "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
-            }
-        });
+                }
+            });
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 
+    public void getConversations(String monkeyid, int qty, long timestamp, final AsyncConnSocket asyncConnSocket){
+
+        final MonkeyKitSocketService service = serviceRef.get();
+        String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/conversations";
+
+        try {
+            JSONObject localJSONObject1 = new JSONObject();
+            localJSONObject1.put("monkeyId", monkeyid);
+            localJSONObject1.put("qty", qty);
+            localJSONObject1.put("timestamp", timestamp);
+
+            Map<String, Object> params = new HashMap<String, Object>();
+            params.put("data", localJSONObject1.toString());
+
+            aq.auth(handle).ajax(urlconnect, params, JSONObject.class, new AjaxCallback<JSONObject>() {
+                @Override
+                public void callback(String url, JSONObject response, AjaxStatus status) {
+
+                    if (service == null)
+                        return;
+
+                    if (response != null)
+                        try {
+                            List<MOKConversation> conversationList = new ArrayList<MOKConversation>();
+                            JsonParser parser = new JsonParser();
+                            JsonObject props = new JsonObject(), params = new JsonObject();
+                            JSONArray jsonArrayConversations = response.getJSONObject("data").getJSONArray("conversations");
+                            JsonArray array = (JsonArray) parser.parse(jsonArrayConversations.toString());
+                            for (int i = 0; i < array.size(); i++) {
+                                JsonObject currentConv = null;
+                                JsonObject currentMessage = null;
+                                MOKMessage remote = null;
+                                try {
+                                    JsonElement jsonMessage = array.get(i);
+                                    currentConv = jsonMessage.getAsJsonObject();
+                                    currentMessage = currentConv.getAsJsonObject("last_message");
+                                    //init params props
+                                    if (currentMessage.has("params") && !currentMessage.get("params").isJsonNull() && !parser.parse(currentMessage.get("params").getAsString()).isJsonNull())
+                                        if (parser.parse(currentMessage.get("params").getAsString()) instanceof JsonObject)
+                                            params = (JsonObject) parser.parse(currentMessage.get("params").getAsString());
+                                    if (currentMessage.has("props") && !currentMessage.get("props").isJsonNull() && !parser.parse(currentMessage.get("props").getAsString()).isJsonNull())
+                                        props = (JsonObject) parser.parse(currentMessage.get("props").getAsString());
+
+                                    if (currentMessage.has("type") && (currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKText) == 0
+                                            || currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0)) {
+
+                                        remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props);
+                                        if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0)
+                                            remote = asyncConnSocket.getKeysAndDecryptMOKMessage(remote, false);
+                                        else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
+                                            if (remote.getProps().get("encoding").getAsString().equals("base64"))
+                                                remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
+                                        }
+                                    }
+
+                                    conversationList.add(new MOKConversation(currentConv.get("id").getAsString(),
+                                            currentConv.get("info").getAsJsonObject(),
+                                            currentConv.has("members") ? currentConv.get("members").getAsString().split(",") : new String[0],
+                                            remote, currentConv.get("last_seen").getAsLong(), currentConv.get("unread").getAsInt(),
+                                            currentConv.has("last_modified") ? currentConv.get("last_modified").getAsLong() : 0));
+
+                                    System.out.println("size:" + conversationList.size());
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+
+                            service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                                    conversationList, null});
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                                    null, e});
+                        }
+                    else
+                        service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                                "Error code:" + status.getCode() + " -  Error msg:" + status.getMessage()});
+                }
+            });
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public void getConversationMessages(String monkeyid, String conversationId, int numberOfMessages

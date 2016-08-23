@@ -4,11 +4,16 @@ import com.androidquery.callback.AjaxCallback;
 import com.androidquery.callback.AjaxStatus;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.CBTypes;
+import com.criptext.comunication.MOKConversation;
 import com.criptext.security.AESUtil;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,6 +24,46 @@ public class GroupManager extends AQueryHttp {
 
     public GroupManager(MonkeyKitSocketService service, AESUtil aesUtil) {
         super(service, aesUtil);
+    }
+
+    public void getGroupInfoById(String monkeyid){
+
+        final MonkeyKitSocketService service = serviceRef.get();
+        String endpoint = "/group/info/"+monkeyid;
+
+        aq.auth(handle).ajax(MonkeyKitSocketService.Companion.getHttpsURL()+endpoint, JSONObject.class, new AjaxCallback<JSONObject>() {
+            @Override
+            public void callback(String url, JSONObject response, AjaxStatus status) {
+
+                if(service==null)
+                    return;
+
+                if (response != null) {
+                    try {
+                        JSONObject data = response.getJSONObject("data");
+                        JsonParser jsonParser = new JsonParser();
+                        JsonObject gsonObject = (JsonObject)jsonParser.parse(data.getString("group_info"));
+                        JSONArray jsonArray = data.getJSONArray("members");
+                        ArrayList<String> arrayList = new ArrayList<String>();
+                        for(int i = 0; i<jsonArray.length(); i++){
+                            arrayList.add(jsonArray.getString(i));
+                        }
+                        MOKConversation mokConversation = new MOKConversation(data.getString("group_id"),
+                                gsonObject, arrayList.toArray(new String[arrayList.size()]), null, 0, 0, 0 );
+                        service.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{
+                                mokConversation, null});
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        service.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{
+                                null, e});
+                    }
+                }
+                else{
+                    service.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{
+                            "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
+                }
+            }
+        });
     }
 
     public void updateGroupData(String monkeyId, JSONObject info){

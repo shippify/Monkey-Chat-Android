@@ -2,6 +2,7 @@ package com.criptext.lib;
 
 import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MOKUser;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 
@@ -57,13 +58,22 @@ public interface MonkeyKitDelegate {
     void onRemoveGroupMember(String members, Exception e);
 
     /**
-     * This method can use it for groups and users, this function will give you a JSON with the information required.
-     * @param json JsonObject con la informacion del grupo requerida. Contiene 3 atributos:
-     *             - "group_id" : un String con el ID del grupo
-     *             - "members" : un JsonArray con los session ID de cada miembro del grupo
-     *             - "group_info" : JSsonObject que contiene el nombre del grupo en el atributo "name"
+     * This function will give you a MOKConversation with the information required.
+     * @param mokConversation object with the required information.
      */
-    void onGetInfo(JsonObject json, Exception e);
+    void onGetGroupInfo(MOKConversation mokConversation, Exception e);
+
+    /**
+     * This function will give you a MOKUser with the information required.
+     * @param mokUser object with the required information.
+     */
+    void onGetUserInfo(MOKUser mokUser, Exception e);
+
+    /**
+     * This function will give you a MOKUser with the information required.
+     * @param mokUserArrayList list of MOKUser with the required information.
+     */
+    void onGetUsersInfo(ArrayList<MOKUser> mokUserArrayList, Exception e);
 
     /**
      * This function is executed after you update the metadata of a user.

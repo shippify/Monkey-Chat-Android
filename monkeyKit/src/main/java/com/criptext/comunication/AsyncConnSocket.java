@@ -231,7 +231,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 							|| currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0) {
 
                         remote = createMOKMessageFromJSON(currentMessage, params, props);
-                        if (remote.getProps().get("encr").getAsString().compareTo("1") == 0)
+                        if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0)
                             remote = getKeysAndDecryptMOKMessage(remote, false);
                         else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
                             if(remote.getProps().get("encoding").getAsString().equals("base64"))

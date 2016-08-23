@@ -2,12 +2,12 @@ package com.criptext.comunication
 
 import com.google.gson.JsonObject
 
-class MOKConversation(var conversationId: String, var info: JsonObject, var members: Array<String>, var lastMessage: MOKMessage,
+class MOKConversation(var conversationId: String, var info: JsonObject ?, var members: Array<String> ?, var lastMessage: MOKMessage ?,
                       var lastSeen: Long, var unread: Int, var lastModified: Long) {
 
     fun getAvatarURL(): String? {
-        if(info.has("avatar")){
-            return info.get("avatar").asString
+        if(info!!.has("avatar")){
+            return info!!.get("avatar").asString
         }
         else{
             return "https://monkey.criptext.com/user/icon/default/"+conversationId
