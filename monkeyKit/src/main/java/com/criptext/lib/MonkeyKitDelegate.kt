@@ -48,38 +48,46 @@ interface MonkeyKitDelegate {
      * if the group could not be created.
      * @param groupName Name of the new group. It is null if the group could not be created.
      * @param groupID ID of the new group. It is null if the group could not be created.
+     * @param e the exception of the result
      */
     fun onCreateGroup(groupMembers: String?, groupName: String?, groupID: String?, e: Exception?)
 
     /**
      * After add a group member with removeGroupMember method, the server will update the group from a remote DB.
      * We recommend to update your group from your local DB as well.
+     * @param groupID group id
      * @param members new members of the group.
+     * @param e the exception of the result
      */
-    fun onAddGroupMember(members: String, e: Exception?)
+    fun onAddGroupMember(groupID: String?, members: String?, e: Exception?)
 
     /**
      * After delete a group member with removeGroupMember method, the server will update the group from a remote DB.
      * We recommend to update your group from your local DB as well.
+     * @param groupID group id
      * @param members new members of the group.
+     * @param e the exception of the result
      */
-    fun onRemoveGroupMember(members: String, e: Exception?)
+    fun onRemoveGroupMember(groupID: String?, members: String?, e: Exception?)
 
     /**
      * This function will give you a MOKConversation with the information required.
      * @param mokConversation object with the required information.
+     * @param e the exception of the result
      */
     fun onGetGroupInfo(mokConversation: MOKConversation, e: Exception?);
 
     /**
      * This function will give you a MOKUser with the information required.
      * @param mokUser object with the required information.
+     * @param e the exception of the result
      */
     fun onGetUserInfo(mokUser: MOKUser, e: Exception?);
 
     /**
      * This function will give you a MOKUser with the information required.
      * @param mokUserArrayList list of MOKUser with the required information.
+     * @param e the exception of the result
      */
     fun onGetUsersInfo(mokUsers: ArrayList<MOKUser>, e: Exception?);
 
@@ -88,14 +96,14 @@ interface MonkeyKitDelegate {
      * If exception is null the user was updated successfully.
      * @param e the exception of the result
      */
-    fun onUpdateUserData(e: Exception?)
+    fun onUpdateUserData(monkeyId: String, e: Exception?)
 
     /**
      * This function is executed after you update the metadata of a group.
      * If exception is null the group was updated successfully.
      * @param e the exception of the result
      */
-    fun onUpdateGroupData(e: Exception?)
+    fun onUpdateGroupData(groupId: String, e: Exception?)
 
     /**
      * This function is executed when you receive all your conversations.
@@ -108,7 +116,6 @@ interface MonkeyKitDelegate {
     /**
      * This function is executed when you delete a conversation.
      * @param conversationId id of the conversation deleted
-     * *
      * @param e the exception of the result
      */
     fun onDeleteConversation(conversationId: String, e: Exception?)

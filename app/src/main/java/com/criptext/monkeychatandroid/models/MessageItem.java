@@ -61,6 +61,7 @@ public class MessageItem implements MonkeyItem {
     public MessageItem(MessageModel messageModel){
 
         this.senderSessionId = messageModel.getSenderSessionId();
+        this.recieverSessionId = messageModel.getRecieverSessionId();
         this.messageId = messageModel.getMessageId();
         this.messageContent = messageModel.getMessageContent();
         this.timestamp = messageModel.getTimestamp();
@@ -130,6 +131,10 @@ public class MessageItem implements MonkeyItem {
 
     public void setDownloading(boolean downloading) {
         isDownloading = downloading;
+    }
+
+    public String getSenderId(){
+        return senderSessionId.startsWith("G:")?recieverSessionId:senderSessionId;
     }
 
     @NotNull

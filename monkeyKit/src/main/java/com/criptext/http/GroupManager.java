@@ -26,15 +26,15 @@ public class GroupManager extends AQueryHttp {
         super(service, aesUtil);
     }
 
-    public void getGroupInfoById(String monkeyid){
+    public void getGroupInfoById(final String monkeyid){
 
-        final MonkeyKitSocketService service = serviceRef.get();
         String endpoint = "/group/info/"+monkeyid;
 
         aq.auth(handle).ajax(MonkeyKitSocketService.Companion.getHttpsURL()+endpoint, JSONObject.class, new AjaxCallback<JSONObject>() {
             @Override
             public void callback(String url, JSONObject response, AjaxStatus status) {
 
+                MonkeyKitSocketService service = serviceRef.get();
                 if(service==null)
                     return;
 
@@ -55,22 +55,21 @@ public class GroupManager extends AQueryHttp {
                     } catch (JSONException e) {
                         e.printStackTrace();
                         service.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{
-                                null, e});
+                                new MOKConversation(monkeyid), e});
                     }
                 }
                 else{
-                    service.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{
-                            "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
+                    service.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{new MOKConversation(monkeyid),
+                        new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                 }
             }
         });
     }
 
-    public void updateGroupData(String monkeyId, JSONObject info){
+    public void updateGroupData(final String monkeyId, JSONObject info){
 
         try {
             String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/group/update";
-            final MonkeyKitSocketService service = serviceRef.get();
 
             JSONObject localJSONObject1 = new JSONObject();
             localJSONObject1.put("monkeyId",monkeyId);
@@ -83,14 +82,15 @@ public class GroupManager extends AQueryHttp {
                 @Override
                 public void callback(String url, JSONObject response, AjaxStatus status) {
 
+                    MonkeyKitSocketService service = serviceRef.get();
                     if(service==null)
                         return;
 
                     if(response!=null)
-                        service.processMessageFromHandler(CBTypes.onUpdateGroupData, new Object[]{null});
+                        service.processMessageFromHandler(CBTypes.onUpdateGroupData, new Object[]{monkeyId, null});
                     else
-                        service.processMessageFromHandler(CBTypes.onUpdateGroupData, new Object[]{
-                                "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
+                        service.processMessageFromHandler(CBTypes.onUpdateGroupData, new Object[]{monkeyId,
+                                new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                 }
             });
 
@@ -100,11 +100,10 @@ public class GroupManager extends AQueryHttp {
 
     }
 
-    public void createGroup(final String members, final String group_name, String group_id){
+    public void createGroup(final String members, final String group_name, final String group_id){
 
         try {
             String urlConnect = MonkeyKitSocketService.Companion.getHttpsURL() +"/group/create";
-            final MonkeyKitSocketService service = serviceRef.get();
 
             JSONObject localJSONObjectInfo = new JSONObject();
             localJSONObjectInfo.put("name", group_name);
@@ -126,6 +125,7 @@ public class GroupManager extends AQueryHttp {
                 @Override
                 public void callback(String url, JSONObject response, AjaxStatus status) {
 
+                    MonkeyKitSocketService service = serviceRef.get();
                     if(service==null)
                         return;
 
@@ -136,12 +136,12 @@ public class GroupManager extends AQueryHttp {
                         } catch (JSONException e) {
                             e.printStackTrace();
                             service.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
-                                    null, null, null, e});
+                                    members, group_name, group_id!=null?group_id:null, e});
                         }
                     }
                     else{
                         service.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
-                                null, null, null, new Exception("Error code:"+status.getCode()+
+                                members, group_name, group_id!=null?group_id:null, new Exception("Error code:"+status.getCode()+
                                 " -  Error msg:"+status.getMessage())});
                     }
                 }
@@ -152,11 +152,10 @@ public class GroupManager extends AQueryHttp {
         }
     }
 
-    public void removeGroupMember(String group_id, String monkey_id){
+    public void removeGroupMember(final String group_id, String monkey_id){
 
         try {
             String urlConnect = MonkeyKitSocketService.Companion.getHttpsURL() +"/group/delete";
-            final MonkeyKitSocketService service = serviceRef.get();
 
             JSONObject localJSONObject1 = new JSONObject();
             localJSONObject1.put("group_id", group_id);
@@ -169,22 +168,23 @@ public class GroupManager extends AQueryHttp {
                 @Override
                 public void callback(String url, JSONObject response, AjaxStatus status) {
 
+                    MonkeyKitSocketService service = serviceRef.get();
                     if(service==null)
                         return;
 
                     if (response != null) {
                         try {
                             service.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
-                                    response.getJSONObject("data").getString("members"), null});
+                                    group_id, response.getJSONObject("data").getString("members"), null});
                         } catch (JSONException e) {
                             e.printStackTrace();
                             service.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
-                                    null, e});
+                                    group_id, null, e});
                         }
                     }
                     else{
                         service.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
-                                null, "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
+                                group_id, null, new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                     }
                 }
             });
@@ -194,11 +194,10 @@ public class GroupManager extends AQueryHttp {
         }
     }
 
-    public void addGroupMember(String new_member, String group_id){
+    public void addGroupMember(String new_member, final String group_id){
         try {
 
             String urlConnect = MonkeyKitSocketService.Companion.getHttpsURL() +"/group/addmember";
-            final MonkeyKitSocketService service = serviceRef.get();
 
             JSONObject localJSONObject1 = new JSONObject();
             localJSONObject1.put("session_id", monkeyID);
@@ -214,22 +213,23 @@ public class GroupManager extends AQueryHttp {
                 @Override
                 public void callback(String url, JSONObject response, AjaxStatus status) {
 
+                    MonkeyKitSocketService service = serviceRef.get();
                     if(service==null)
                         return;
 
                     if (response != null) {
                         try {
                             service.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
-                                    response.getJSONObject("data").getString("members"), null});
+                                    group_id, response.getJSONObject("data").getString("members"), null});
                         } catch (JSONException e) {
                             e.printStackTrace();
                             service.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
-                                    null, e});
+                                    group_id, null, e});
                         }
                     }
                     else{
                         service.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
-                                null, "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
+                                group_id, null, new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                     }
                 }
             });

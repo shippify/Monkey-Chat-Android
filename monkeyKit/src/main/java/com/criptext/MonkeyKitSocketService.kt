@@ -301,20 +301,20 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onDeleteRecieved(info[0] as String, info[1] as String, info[2] as String, info[3] as String)
             }
             CBTypes.onUpdateUserData -> {
-                delegate?.onUpdateUserData(if(info[0] is Exception) info[0] as Exception else null)
+                delegate?.onUpdateUserData(info[0] as String, info[1] as Exception?)
             }
             CBTypes.onUpdateGroupData -> {
-                delegate?.onUpdateGroupData(if(info[0] is Exception) info[0] as Exception else null)
+                delegate?.onUpdateGroupData(info[0] as String, info[1] as Exception?)
             }
             CBTypes.onCreateGroup -> {
                 delegate?.onCreateGroup(info[0] as String?, info[1] as String?,
                         info[2] as String?, info[3] as Exception?)
             }
             CBTypes.onRemoveGroupMember -> {
-                delegate?.onRemoveGroupMember(info[0] as String, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onRemoveGroupMember(info[0] as String, info[1] as String?, info[2] as Exception?)
             }
             CBTypes.onAddGroupMember -> {
-                delegate?.onAddGroupMember(info[0] as String, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onAddGroupMember(info[0] as String, info[1] as String?, info[2] as Exception?)
             }
             CBTypes.onFileDownloadFinished -> {
                 delegate?.onFileDownloadFinished(info[0] as String, info[1] as Boolean)

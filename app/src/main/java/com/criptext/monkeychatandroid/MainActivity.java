@@ -420,22 +420,22 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onAddGroupMember(String members, Exception e) {
+    public void onAddGroupMember(@Nullable String groupID, @Nullable String members, @Nullable Exception e) {
 
     }
 
     @Override
-    public void onRemoveGroupMember(String members, Exception e) {
+    public void onRemoveGroupMember(@Nullable String groupID, @Nullable String members, @Nullable Exception e) {
 
     }
 
     @Override
-    public void onUpdateUserData(Exception e) {
+    public void onUpdateUserData(@NotNull String monkeyId, @Nullable Exception e) {
 
     }
 
     @Override
-    public void onUpdateGroupData(Exception e) {
+    public void onUpdateGroupData(@NotNull String groupId, @Nullable Exception e) {
 
     }
 
@@ -602,7 +602,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         } else {
             final MessageItem messageItem = (MessageItem) item;
             downloadFile(messageItem.getMessageId(), messageItem.getFilePath(),
-                    messageItem.getProps(), messageItem.getContactSessionId());
+                    messageItem.getProps(), messageItem.getSenderId());
         }
 
     }
