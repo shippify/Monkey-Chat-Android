@@ -8,6 +8,7 @@ import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
 import android.support.v4.app.FragmentTransaction;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.widget.Toast;
@@ -22,6 +23,7 @@ import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.lib.MKDelegateActivity;
 import com.criptext.monkeychatandroid.dialogs.NewGroupDialog;
 import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
+import com.criptext.monkeychatandroid.models.ConversationItem;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.MessageLoader;
@@ -388,6 +390,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onSocketConnected() {
         super.onSocketConnected();
         setActionBarTitle(2);
+        if(getService()!=null)
+            getService().getAllConversations(10, 0);
     }
 
     @Override
@@ -505,7 +509,23 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onGetConversations(@NotNull ArrayList<MOKConversation> conversations, @Nullable Exception e) {
-
+        ArrayList<MonkeyConversation> conversationItems = new ArrayList<>();
+        for(MOKConversation mokConversation : conversations){
+            String convName = "Unknown";
+            String secondaryText = "Write to this conversation";
+            if(mokConversation.isGroup())
+                secondaryText = "Write to this group";
+            JsonObject convInfo = mokConversation.getInfo();
+            if(convInfo!=null && convInfo.has("name"))
+                convName = convInfo.get("name").getAsString();
+            ConversationItem conversationItem = new ConversationItem(mokConversation.getConversationId(),
+                    convName, mokConversation.getLastModified(),
+                    mokConversation.getLastMessage()!=null?mokConversation.getLastMessage().getMsg():secondaryText,
+                    mokConversation.getUnread(), mokConversation.isGroup(), mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
+                    mokConversation.getAvatarURL(), 0);
+            conversationItems.add(conversationItem);
+        }
+        monkeyConversationsFragment.insertConversations(conversationItems);
     }
 
     @Override
