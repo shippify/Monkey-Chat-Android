@@ -2,7 +2,9 @@
     <string name="app_name">MonkeyChatAndroid</string>
     <string name="chat_name">Monkey Chat Sample</string>
     <string name="register">Register to Monkey</string>
-    <string name="label_fullname">Enter your fullname</string>
+    <string name="label_fullname">Enter your data</string>
+    <string name="fullname">Full Name</string>
+    <string name="monkeyId">Monkey ID (Optional)</string>
     <string name="button_continuar">Continue</string>
     <string name="menu_deleteall">Delete all</string>
     <string name="new_group">New Group</string>

@@ -57,12 +57,18 @@ public class MonkeyHttpClient {
         HttpResponse response = httpclient.execute(httppost);
         BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), "UTF-8"));
         String json = reader.readLine();
-        Log.d("Response","json " + json);
-        if(json.equals("Unauthorized")){
-            throw new IllegalArgumentException("Server response: Unauthorized\n Please check your APP_ID and APP_KEY");
+        //Log.d("Response","json " + json + " status: " + response.getStatusLine().getStatusCode());
+        switch(response.getStatusLine().getStatusCode()){
+            case 200:
+                JSONTokener tokener = new JSONTokener(json);
+                return new JSONObject(tokener);
+            case 403:
+                throw new IllegalArgumentException(json);
+            case 401:
+                throw new IllegalArgumentException("Server response: Unauthorized\n Please check your APP_ID and APP_KEY");
+
         }
-        JSONTokener tokener = new JSONTokener(json);
-        return new JSONObject(tokener);
+        return null;
     }
 
     public static void subscribePushHttp(String token, String sessionId, String urlUser, String urlPass, boolean override) throws JSONException,
