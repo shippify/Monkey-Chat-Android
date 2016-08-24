@@ -3,9 +3,11 @@ package com.criptext.monkeychatandroid.models;
 import android.provider.ContactsContract;
 import android.util.Log;
 
+import com.criptext.monkeychatandroid.MainActivity;
 import com.criptext.monkeykitui.recycler.MonkeyAdapter;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 import io.realm.Realm;
@@ -19,32 +21,23 @@ import io.realm.RealmResults;
  */
 public class MessageLoader {
     private String senderId;
-    private String receiverId;
-
-    public static int DEFAULT_PAGE_SIZE = 30;
-    private int pageSize;
-    private int lastIndex;
+    private String conversationId;
+    private MainActivity activity;
+    private MessageCounter messageCounter;
 
 
-
-    private MonkeyAdapter adapter;
-
-    public MessageLoader(String senderId, String receiverId){
+    public MessageLoader(String conversationId, String senderId, MainActivity activity){
+        this.conversationId = conversationId;
         this.senderId = senderId;
-        this.receiverId = receiverId;
-        this.pageSize = DEFAULT_PAGE_SIZE;
-        this.lastIndex = Integer.MAX_VALUE;
+        this.activity = activity;
+        messageCounter = new MessageCounter();
     }
 
-    public MessageLoader(String senderId, String receiverId, int pageSize){
+    public MessageLoader(String conversationId, String senderId, MainActivity activity, int pageSize){
+        this.conversationId = conversationId;
         this.senderId = senderId;
-        this.receiverId = receiverId;
-        this.pageSize = pageSize;
-        this.lastIndex = Integer.MAX_VALUE;
-    }
-
-    public void setAdapter(MonkeyAdapter adapter) {
-        this.adapter = adapter;
+        this.activity = activity;
+        messageCounter = new MessageCounter(pageSize);
     }
 
     /**
@@ -52,36 +45,97 @@ public class MessageLoader {
      * @param realm
      */
     public void loadNewPage(Realm realm){
-        if(lastIndex == 0){ // 0 means there are no more messages to load, goodbye.
-            adapter.setHasReachedEnd(true);
+        if(messageCounter.lastIndex == 0){ // 0 means there are no more messages to load, goodbye.
+            activity.addOldMessages(null, true);
             return;
         }
 
 
         //Make the query
-        final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(realm, senderId, receiverId);
+        final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(realm, senderId, conversationId);
         //Add an async listener to the query
-        realmResults.addChangeListener(new RealmChangeListener<RealmResults<MessageModel>>() {
-            @Override
-            public void onChange(RealmResults<MessageModel> element) {
-                realmResults.removeChangeListener(this);
-                final int totalMessages = realmResults.size();
-                ArrayList<MonkeyItem> messageModels;
-                if(totalMessages < pageSize){//Make copies of the Realm instances
-                    messageModels = MessageItem.insertSortCopy(realmResults);
-                    adapter.addOldMessages(messageModels, true);
-                } else {
-                    //Calculate the index for the beginning and ending of the requested page
-                    int endIndex = Math.min(realmResults.size(), lastIndex);
-                    int startIndex = Math.max(0, endIndex - pageSize);
+        realmResults.addChangeListener(new NewMessagesListener(conversationId, activity, false, messageCounter));
+    }
 
-                    //Make a copy of the page and add it to the adapter.
-                    messageModels = MessageItem.insertSortCopy(realmResults.subList(startIndex, endIndex));
-                    adapter.addOldMessages(messageModels, messageModels.size() < pageSize);
-                    lastIndex = startIndex;
+    public void loadFirstPage(Realm realm){
+        //Make the query
+        final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(realm, senderId, conversationId);
+        //Add an async listener to the query
+        realmResults.addChangeListener(new NewMessagesListener(conversationId, activity, true, messageCounter));
+
+    }
+
+    public void countNewMessages(String conversationId, int newMessages){
+        if(this.conversationId.equals(conversationId))
+            messageCounter.lastIndex -= newMessages;
+    }
+
+    public void countNewMessage(String conversationId){
+        if(this.conversationId.equals(conversationId))
+            messageCounter.lastIndex -= 1;
+    }
+
+    private static class NewMessagesListener implements RealmChangeListener<RealmResults<MessageModel>> {
+        WeakReference<MainActivity> activityRef;
+        boolean firstPage;
+        MessageCounter messageCounter;
+        String conversationId;
+
+        private NewMessagesListener(String conversationId, MainActivity activity, boolean firstPage, MessageCounter mCounter){
+            activityRef = new WeakReference<MainActivity>(activity);
+            this.conversationId = conversationId;
+            this.firstPage = firstPage;
+            messageCounter = mCounter;
+        }
+
+        @Override
+        public void onChange(RealmResults element) {
+            element.removeChangeListeners();
+            final int totalMessages = element.size();
+            ArrayList<MonkeyItem> messageModels;
+            if(totalMessages < messageCounter.pageSize){//Make copies of the Realm instances
+                messageModels = MessageItem.insertSortCopy(element);
+                updateActivity(messageModels, true);
+            } else {
+                //Calculate the index for the beginning and ending of the requested page
+                int endIndex = Math.min(element.size(), messageCounter.lastIndex);
+                int startIndex = Math.max(0, endIndex - messageCounter.pageSize);
+
+                //Make a copy of the page and add it to the adapter.
+                messageModels = MessageItem.insertSortCopy(element.subList(startIndex, endIndex));
+                updateActivity(messageModels, messageModels.size() <messageCounter.pageSize);
+                messageCounter.lastIndex = startIndex;
+            }
+        }
+
+        private void updateActivity(ArrayList<MonkeyItem> messages, boolean hasReachedEnd){
+            final MainActivity act = activityRef.get();
+            if(act != null){
+                if(firstPage){
+                    act.startChatWithMessages(conversationId, messages, hasReachedEnd);
+                } else {
+                    act.addOldMessages(messages, hasReachedEnd);
                 }
             }
-        });
+        }
+
     }
+
+    private static class MessageCounter {
+        private int pageSize;
+        private int lastIndex;
+
+        private static int DEFAULT_PAGE_SIZE = 30;
+
+        private MessageCounter() {
+            lastIndex = Integer.MAX_VALUE;
+            this.pageSize = DEFAULT_PAGE_SIZE;
+        }
+        private MessageCounter(int pageSize){
+            lastIndex = Integer.MAX_VALUE;
+            this.pageSize = pageSize;
+        }
+    }
+
 
 }

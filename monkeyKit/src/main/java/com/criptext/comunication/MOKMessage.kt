@@ -82,13 +82,13 @@ class MOKMessage(var message_id: String,var sid: String,var rid: String,var msg:
         }
 
     val conversationID: String?
-        get() = if (rid?.startsWith("G:") ?: false) rid else sid
+        get() = if (rid.startsWith("G:"))  rid else sid
 
     val senderId: String?
-        get() = if (rid?.startsWith("G:") ?: false) sid else rid
+        get() = if (rid.startsWith("G:")) sid else rid
 
     val isGroupConversation: Boolean
-        get() = rid?.startsWith("G:") ?: false
+        get() = rid.startsWith("G:")
 
     companion object {
         val ID_KEY = "MOKMessage.id"

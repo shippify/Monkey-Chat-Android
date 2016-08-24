@@ -68,7 +68,7 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * Object that manages the socket connection and runs it in a background thread.
      */
-    protected lateinit var asyncConnSocket: AsyncConnSocket
+    private lateinit var asyncConnSocket: AsyncConnSocket
     /**
      * Object that manage user methods over http
      */
@@ -251,7 +251,6 @@ abstract class MonkeyKitSocketService : Service() {
 
         when (method) {
             CBTypes.onAcknowledgeReceived -> {
-                Log.d("MonkeyKitSocketService", "ack rec.")
                 delegate?.onAcknowledgeRecieved(info[0] as String, info[1] as String, info[2] as String
                         , info[3] as String, info[4] as Boolean, info[5] as Int)
             }
@@ -308,13 +307,14 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onUpdateGroupData(if(info[0] is Exception) info[0] as Exception else null)
             }
             CBTypes.onCreateGroup -> {
-                delegate?.onCreateGroup(if(info[0] is String) info[0] as String else null, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onCreateGroup(info[0] as String?, info[1] as String?,
+                        info[2] as String?, info[3] as Exception?)
             }
             CBTypes.onRemoveGroupMember -> {
-                delegate?.onRemoveGroupMember(if(info[0] is String) info[0] as String else null, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onRemoveGroupMember(info[0] as String, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onAddGroupMember -> {
-                delegate?.onAddGroupMember(if(info[0] is String) info[0] as String else null, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onAddGroupMember(info[0] as String, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onFileDownloadFinished -> {
                 delegate?.onFileDownloadFinished(info[0] as String, info[1] as Boolean)
@@ -323,19 +323,19 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onContactOpenMyConversation(info[0] as String)
             }
             CBTypes.onGetUserInfo-> {
-                delegate?.onGetUserInfo( if(info[0] is MOKUser) info[0] as MOKUser else null, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onGetUserInfo( info[0] as MOKUser, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onGetUsersInfo-> {
                 delegate?.onGetUsersInfo( info[0] as ArrayList<MOKUser>, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onGetGroupInfo-> {
-                delegate?.onGetGroupInfo( if(info[0] is MOKConversation) info[0] as MOKConversation else null, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onGetGroupInfo( info[0] as MOKConversation, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onGetConversations -> {
                 delegate?.onGetConversations(info[0] as ArrayList<MOKConversation>, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onDeleteConversation -> {
-                delegate?.onDeleteConversation(if(info[0] is String) info[0] as String else null, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onDeleteConversation(info[0] as String, if(info[1] is Exception) info[1] as Exception else null)
             }
             CBTypes.onGetConversationMessages -> {
                 delegate?.onGetConversationMessages(info[0] as ArrayList<MOKMessage>, if(info[1] is Exception) info[1] as Exception else null)
@@ -664,7 +664,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param group_name String with the group name
      * @param group_id String with the group id (optional)
      */
-    fun createGroup(members: String, group_name: String, group_id: String){
+    fun createGroup(members: String, group_name: String, group_id: String?){
         groupManager.createGroup(members, group_name, group_id)
     }
 
@@ -952,6 +952,9 @@ abstract class MonkeyKitSocketService : Service() {
         return null;
     }
 
+    fun setAsUnauthorized(){
+        status = ServiceStatus.unauthorized
+    }
     abstract val uploadServiceClass: Class<*>
 
     abstract fun openDatabase()
@@ -989,10 +992,11 @@ abstract class MonkeyKitSocketService : Service() {
         val lastSyncKey = "MonkeyKit.lastSyncKey";
 
         val baseURL = "monkey.criptext.com"
-        val httpsURL = "http://" + baseURL
+        val httpsURL = "https://" + baseURL
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
 
         var status = ServiceStatus.dead
+
 
         fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>) {
             val intent = Intent(context, service)
@@ -1001,7 +1005,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     enum class ServiceStatus {
-        dead, initializing, running, bound
+        unauthorized, dead, initializing, running, bound
     }
 
 }

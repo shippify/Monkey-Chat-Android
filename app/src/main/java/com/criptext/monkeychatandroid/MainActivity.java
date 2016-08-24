@@ -7,14 +7,12 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.widget.Toast;
 
 import com.criptext.ClientData;
-import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MOKUser;
@@ -22,37 +20,47 @@ import com.criptext.comunication.MessageTypes;
 import com.criptext.comunication.PushMessage;
 import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.lib.MKDelegateActivity;
+import com.criptext.monkeychatandroid.dialogs.NewGroupDialog;
 import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.MessageLoader;
-import com.criptext.monkeykitui.input.MediaInputView;
+import com.criptext.monkeykitui.MonkeyChatFragment;
+import com.criptext.monkeykitui.MonkeyConversationsFragment;
+import com.criptext.monkeykitui.conversation.ConversationsActivity;
+import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
-import com.criptext.monkeykitui.recycler.MonkeyAdapter;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 import com.criptext.monkeykitui.recycler.audio.DefaultVoiceNotePlayer;
 import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
+import com.criptext.monkeykitui.util.MonkeyFragmentManager;
 import com.google.gson.JsonObject;
 
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
-
+import org.jetbrains.annotations.Nullable;
+import org.json.JSONArray;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import io.realm.Realm;
 
-public class MainActivity extends MKDelegateActivity implements ChatActivity{
+public class MainActivity extends MKDelegateActivity implements ChatActivity, ConversationsActivity{
 
+    private static String DATA_FRAGMENT = "MainActivity.chatDataFragment";
     //Since this is the Chat activity, we need a RecyclerView and an adapter. Additionally we
     //will store the messages in our own list so that they can be accessed easily.
-    MonkeyAdapter adapter;
-    RecyclerView recycler;
-    ArrayList<MonkeyItem> monkeyMessages;
-
-    MediaInputView inputView;
     MessageLoader messageLoader;
+    MonkeyFragmentManager monkeyFragmentManager;
+
+    MonkeyChatFragment monkeyChatFragment;
+    MonkeyConversationsFragment monkeyConversationsFragment;
+    HashMap<String, Collection<MonkeyItem>> messagesMap = new HashMap<>();
+    ChatDataFragment dataFragment;
     /**
      * This class is basically a media player for our voice notes. we pass this to MonkeyAdapter
      * so that it can handle all the media playback for us. However, we must initialize it in "onStart".
@@ -85,9 +93,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.monkey_chat_layout);
 
-
+        getRetainedData();
         //First, initialize the database and the constants from SharedPreferences.
         initRealm();
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
@@ -99,31 +106,18 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         if(MonkeyRegistrationService.Companion.checkPlayServices(this))
                 registerWithGCM();
 
-        //Initialize the recycler view with a MonkeyAdapter.
-        recycler = (RecyclerView) findViewById(R.id.recycler);
-        monkeyMessages = new ArrayList<MonkeyItem>();
-        adapter = new MonkeyAdapter(this, monkeyMessages);
-        messageLoader = new MessageLoader(myMonkeyID, myMonkeyID);
-        messageLoader.setAdapter(adapter);
-
-        //Since our recyclerView is a list, use a LinearLayoutManager.
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
-        linearLayoutManager.setStackFromEnd(true);
-        recycler.setLayoutManager(linearLayoutManager);
-
-        //Initialize the inputview so that the user can send messages,
-        initInputView();
 
         //Create a voice note player so that it can play voice note messages in the recycler view
         //when the user clicks on them
-        voiceNotePlayer = new DefaultVoiceNotePlayer(adapter, recycler);
+        voiceNotePlayer = new DefaultVoiceNotePlayer(this);
         //Add a sensor handler so the activity can turn off the screen when the sensors detect that
         //the user is too close to the phone and change the audio output device.
         sensorHandler = new SensorHandler(voiceNotePlayer, this);
         //finally load one page of messages.
-        messageLoader.loadNewPage(realm);
-    }
 
+        monkeyFragmentManager = new MonkeyFragmentManager(this);
+        monkeyFragmentManager.setContentLayout(savedInstanceState);
+    }
 
     private void initRealm(){
         if(realm == null)
@@ -155,10 +149,32 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         sensorHandler.onStop();
     }
 
+    private void getRetainedData(){
+        final ChatDataFragment retainedFragment =(ChatDataFragment) getSupportFragmentManager().findFragmentByTag(DATA_FRAGMENT);
+        if(retainedFragment != null) {
+            messageLoader = retainedFragment.messageLoader;
+            messagesMap = retainedFragment.chatMap;
+            if (monkeyChatFragment != null) {
+                monkeyChatFragment.setInputListener(initInputListener());
+            }
+            dataFragment = retainedFragment;
+        } else {
+            dataFragment = new ChatDataFragment();
+            messagesMap = new HashMap<>();
+            getSupportFragmentManager().beginTransaction().add(dataFragment, DATA_FRAGMENT).commit();
+        }
+
+    }
+
+    private void retainDataInFragment(){
+        dataFragment.chatMap = this.messagesMap;
+        dataFragment.messageLoader = this.messageLoader;
+    }
     @Override
     protected void onDestroy() {
         super.onDestroy();
         sensorHandler.onDestroy();
+        retainDataInFragment();
     }
 
     @Override
@@ -174,9 +190,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     @Override
     public boolean onCreateOptionsMenu(android.view.Menu menu) {
-
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu_chat, menu);
+        inflater.inflate(R.menu.menu_conversations, menu);
 
         return true;
     }
@@ -184,10 +199,19 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.action_newgroup:
+            {
+                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+                ft.addToBackStack(null);
+
+                // Create and show the dialog.
+                NewGroupDialog newFragment = NewGroupDialog.newInstance();
+                newFragment.show(ft, "dialog");
+
+            } break;
             case R.id.action_deleteall:
                 DatabaseHandler.deleteAll(realm);
-                monkeyMessages.clear();
-                adapter.notifyDataSetChanged();
+                if(monkeyChatFragment != null) monkeyChatFragment.clearMessages();
                 break;
             default:
                 break;
@@ -204,55 +228,61 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
      * wants to send, regardless of the type. They can be text, audio or photo messages. The listener
      * checks the type to figure out how to send it with MonkeyKit.
      */
-    public void initInputView(){
-        inputView = (MediaInputView) findViewById(R.id.inputView);
-        if(inputView!=null) {
-            inputView.setInputListener(new InputListener() {
-                @Override
-                public void onNewItem(@NotNull MonkeyItem item) {
+    public InputListener initInputListener(){
+        return new InputListener() {
+            @Override
+            public void onNewItem(@NotNull MonkeyItem item) {
 
-                    JsonObject params = new JsonObject();
-                    MOKMessage mokMessage;
+                JsonObject params = new JsonObject();
+                MOKMessage mokMessage;
 
-                    //Store the message in the DB and send it via MonkeyKit
-                    switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
-                        case audio:
-                            params = new JsonObject();
-                            params.addProperty("length",""+item.getAudioDuration());
+                //Store the message in the DB and send it via MonkeyKit
+                switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
+                    case audio:
+                        getRetainedData();
+                        params = new JsonObject();
+                        params.addProperty("length",""+item.getAudioDuration());
 
-                            mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
-                                    MessageTypes.FileTypes.Audio, params, new PushMessage("Test Push Message"), true);
-                            break;
-                        case photo:
-                            mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
-                                    MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage("Test Push Message"), true);
-                            break;
-                        default:
-                            mokMessage = persistMessageAndSend(item.getMessageText(), myMonkeyID,
-                                    myFriendID, params, new PushMessage("Test Push Message"), true);
-                            break;
-                    }
-
-                    //Now that the message was sent, create a MessageItem using the MOKMessage that MonkeyKit
-                    //created. This MessageItem will be added to MonkeyAdapter so that it can be shown in
-                    //the screen.
-                    MessageItem newItem = new MessageItem(myMonkeyID, myFriendID, mokMessage.getMessage_id(),
-                            item.getMessageText(), item.getMessageTimestamp(), item.isIncomingMessage(),
-                            MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
-
-                    switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
-                        case audio:
-                            newItem.setDuration(item.getAudioDuration());
-                            newItem.setMessageContent(item.getFilePath());
-                            break;
-                        case photo:
-                            newItem.setMessageContent(item.getFilePath());
-                            break;
-                    }
-                    adapter.smoothlyAddNewItem(newItem, recycler); // Add to recyclerView
+                        mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
+                                MessageTypes.FileTypes.Audio, params, new PushMessage("Test Push Message"), true);
+                        break;
+                    case photo:
+                        mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
+                                MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage("Test Push Message"), true);
+                        break;
+                    default:
+                        mokMessage = persistMessageAndSend(item.getMessageText(), myMonkeyID,
+                                myFriendID, params, new PushMessage("Test Push Message"), true);
+                        break;
                 }
-            });
-        }
+
+                //Now that the message was sent, create a MessageItem using the MOKMessage that MonkeyKit
+                //created. This MessageItem will be added to MonkeyAdapter so that it can be shown in
+                //the screen.
+                MessageItem newItem = new MessageItem(myMonkeyID, myFriendID, mokMessage.getMessage_id(),
+                        item.getMessageText(), item.getMessageTimestamp(), item.isIncomingMessage(),
+                        MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
+
+                switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
+                    case audio:
+                        newItem.setDuration(item.getAudioDuration());
+                        newItem.setMessageContent(item.getFilePath());
+                        break;
+                    case photo:
+                        newItem.setMessageContent(item.getFilePath());
+                        break;
+                }
+                if(monkeyChatFragment != null)
+                    monkeyChatFragment.smoothlyAddNewItem(newItem); // Add to recyclerView
+            }
+        };
+    }
+
+    public void addOldMessages(ArrayList<MonkeyItem> oldMessages, boolean hasReachedEnd){
+        if(oldMessages != null && monkeyChatFragment != null)
+            monkeyChatFragment.addOldMessages(oldMessages, hasReachedEnd);
+        if(monkeyChatFragment != null)
+            monkeyChatFragment.addOldMessages(new ArrayList<MonkeyItem>(), hasReachedEnd);
     }
 
     public void setActionBarTitle(int state){
@@ -269,28 +299,29 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         }
     }
 
-    /**
-     * Searches a message with a particular Id. The search is lineal.
-     * @return the requested message. if it does not exist, returns null.
-     */
-    private MonkeyItem searchMessage(String messageId){
-        Iterator<MonkeyItem> iterator = monkeyMessages.iterator();
-        while(iterator.hasNext()) {
-            MonkeyItem monkeyItem = iterator.next();
-            if(monkeyItem.getMessageId().equals(messageId)) {
-                return monkeyItem;
+
+    private void updateMessage(String id, MonkeyItem.DeliveryStatus newStatus) {
+        DatabaseHandler.updateMessageOutgoingStatus(realm, id, newStatus);
+        if (monkeyChatFragment != null) {
+            MessageItem monkeyItem = (MessageItem) monkeyChatFragment.findMonkeyItemById(id);
+            if (monkeyItem != null) {
+                monkeyItem.setStatus(newStatus);
+                monkeyChatFragment.rebindMonkeyItem(monkeyItem);
             }
         }
-        return null;
     }
 
-    private void updateMessage(String id, MonkeyItem.DeliveryStatus newStatus){
-        MessageItem monkeyItem = (MessageItem) searchMessage(id);
-        if(monkeyItem != null && realm != null) {
-            monkeyItem.setStatus(newStatus);
-            DatabaseHandler.updateMessageOutgoingStatus(realm, monkeyItem.model, newStatus);
-            adapter.notifyDataSetChanged();
-        }
+    /**
+     * Creates a new MonkeyChatFragment and adds it to the activity.
+     * @param conversationId unique identifier of the conversation of the fragment
+     * @param initialMessages a list of the first messages to draw in the chat
+     * @param hasReachedEnd true of the initial messages are the only existing messages of the chat
+     */
+    public void startChatWithMessages(String conversationId, ArrayList<MonkeyItem> initialMessages,
+                                      boolean hasReachedEnd){
+        messagesMap.put(conversationId, initialMessages);
+        MonkeyChatFragment fragment = MonkeyChatFragment.Companion.newInstance(conversationId, hasReachedEnd);
+        monkeyFragmentManager.setChatFragment(fragment, initInputListener(), voiceNotePlayer);
     }
     /**
      * Updates a sent message and updates de UI so that the user can see that it has been
@@ -307,7 +338,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
      */
     private void processIncomingMessage(MOKMessage message){
         MessageItem newItem = DatabaseHandler.createMessage(message, this, myMonkeyID, true);
-        adapter.smoothlyAddNewItem(newItem, recycler);
+        if(monkeyChatFragment != null) {
+            messageLoader.countNewMessage(message.getConversationID());
+            monkeyChatFragment.smoothlyAddNewItem(newItem);
+        }
     }
 
     @Override
@@ -319,17 +353,19 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         }
 
         initRealm();
-        //Since our InputView uses different activities to take and edit photos, we must forward
+        //Since our chat fragment uses different activities to take and edit photos, we must forward
         // the onActivityResult event to it so that it can react to the results of take photo, choose
         //photo and edit photo.
-        if(inputView!=null)
-            inputView.getCameraHandler().onActivityResult(requestCode,resultCode, data);
-
+        if(monkeyChatFragment != null)
+            monkeyChatFragment.onActivityResult(requestCode, resultCode, data);
     }
+
+    /******
+     * These are the methods that MonkeyKit calls to inform us about new events.
+     */
 
     @Override
     public void storeSentMessage(final MOKMessage message) {
-
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         DatabaseHandler.storeSendingMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), true),
             new Realm.Transaction.OnSuccess() {
@@ -342,58 +378,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
                     error.printStackTrace();
                 }
             });
-    }
-
-    /***
-     * Chat activity methods. this are the methods that MonkeyAdapter calls depending on user
-     * interaction with the recyclerView that displays the messages.
-     ****/
-
-    @Override
-    public boolean isOnline() {
-        //Use connectivity service to check if there's an active internet connection.
-        ConnectivityManager connectivityManager = (ConnectivityManager) getApplicationContext().
-                getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager
-                .getActiveNetworkInfo();
-        return activeNetworkInfo != null;
-    }
-
-    @Override
-    public void onFileUploadRequested(@NotNull MonkeyItem item) {
-        if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
-            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
-            adapter.rebindMonkeyItem(item, recycler);
-        }
-        boolean msgIsResending = resendFile(item.getMessageId());
-        if(!msgIsResending){
-            MessageItem message = (MessageItem) item;
-            MOKMessage resendMessage = new MOKMessage(message.getMessageId(), myMonkeyID, myFriendID,
-                    message.getMessageText(), "" + message.getMessageTimestamp(), "" + message.getMessageType(),
-                    message.getParams(), message.getProps());
-            resendFile(resendMessage, new PushMessage("Test Push Message"), true);
-        }
-
-    }
-
-    @Override
-    public void onFileDownloadRequested(@NotNull MonkeyItem item) {
-
-        if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
-            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
-            adapter.rebindMonkeyItem(item, recycler);
-        } else {
-            final MessageItem messageItem = (MessageItem) item;
-            downloadFile(messageItem.getMessageId(), messageItem.getFilePath(),
-                    messageItem.getProps(), messageItem.getContactSessionId());
-        }
-
-    }
-
-    @Override
-    public void onLoadMoreData(int i) {
-        //If the adapter requires to load older messages, delegate this task to our messageLoader object
-        messageLoader.loadNewPage(realm);
     }
 
     /******
@@ -415,17 +399,24 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     public void onFileDownloadFinished(String fileMessageId, boolean success) {
         //TODO use better search algorithm
         super.onFileDownloadFinished(fileMessageId, success);
-        MessageItem message =(MessageItem) searchMessage(fileMessageId);
-        if(message != null) {
-            message.setStatus(success ? MonkeyItem.DeliveryStatus.delivered :
-                    MonkeyItem.DeliveryStatus.error);
-            adapter.notifyDataSetChanged();
-        }
+        updateMessage(fileMessageId,
+                success ? MonkeyItem.DeliveryStatus.delivered : MonkeyItem.DeliveryStatus.error);
     }
 
     @Override
-    public void onCreateGroup(String groupID, Exception e) {
+    public void onAcknowledgeRecieved(@NotNull String senderId, @NotNull String recipientId,
+                          @NotNull String newId, @NotNull String oldId, boolean read, int messageType) {
+        super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
+        markMessageAsDelivered(oldId);
+    }
 
+    @Override
+    public void onCreateGroup(String groupMembers, String groupName, String groupID, Exception e) {
+        if(e != null)
+            e.printStackTrace();
+        else{
+
+        }
     }
 
     @Override
@@ -439,42 +430,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     }
 
     @Override
-    public void onGetGroupInfo(MOKConversation mokConversation, Exception e) {
-
-    }
-
-    @Override
-    public void onGetUserInfo(MOKUser mokUser, Exception e) {
-
-    }
-
-    @Override
-    public void onGetUsersInfo(ArrayList<MOKUser> mokUserArrayList, Exception e) {
-
-    }
-
-    @Override
     public void onUpdateUserData(Exception e) {
 
     }
 
     @Override
     public void onUpdateGroupData(Exception e) {
-
-    }
-
-    @Override
-    public void onGetConversations(ArrayList<MOKConversation> conversations, Exception e) {
-
-    }
-
-    @Override
-    public void onDeleteConversation(String conversationId, Exception e) {
-
-    }
-
-    @Override
-    public void onGetConversationMessages(ArrayList<MOKMessage> messages, Exception e) {
 
     }
 
@@ -521,18 +482,43 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
 
     }
 
+
+    @Override
+    public void onDeleteConversation(@NotNull String conversationId, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetGroupInfo(@NotNull MOKConversation mokConversation, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetUserInfo(@NotNull MOKUser mokUser, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetUsersInfo(@NotNull ArrayList<MOKUser> mokUsers, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetConversations(@NotNull ArrayList<MOKConversation> conversations, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetConversationMessages(@NotNull ArrayList<MOKMessage> messages, @Nullable Exception e) {
+
+    }
+
     @Override
     public void onFileFailsUpload(MOKMessage message) {
         super.onFileFailsUpload(message);
         updateMessage(message.getMessage_id(), MonkeyItem.DeliveryStatus.error);
     }
 
-    @Override
-    public void onAcknowledgeRecieved(String senderId, String recipientId, String newId, String oldId, Boolean read, int messageType) {
-        super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
-        markMessageAsDelivered(oldId);
-
-    }
 
     @Override
     public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online) {
@@ -561,7 +547,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
     @Override
     public void onBoundToService() {
 
-        recycler.setAdapter(adapter);
         if(getService().isSocketConnected()) {
             setActionBarTitle(2);
         }
@@ -577,10 +562,151 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity{
         Toast.makeText(this, "Login failed. Please check your Monkey Kit credentials", Toast.LENGTH_LONG).show();
     }
 
+    /** CHAT ACTIVITY METHODS **/
+
+    @Override
+    public boolean isOnline() {
+        //Use connectivity service to check if there's an active internet connection.
+        ConnectivityManager connectivityManager = (ConnectivityManager) getApplicationContext().
+                getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager
+                .getActiveNetworkInfo();
+        return activeNetworkInfo != null;
+    }
+
+    @Override
+    public void onFileUploadRequested(@NotNull MonkeyItem item) {
+        if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
+            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
+            if(monkeyChatFragment != null)
+                monkeyChatFragment.rebindMonkeyItem(item);
+        }
+        boolean msgIsResending = resendFile(item.getMessageId());
+        if(!msgIsResending){
+            MessageItem message = (MessageItem) item;
+            MOKMessage resendMessage = new MOKMessage(message.getMessageId(), myMonkeyID, myFriendID,
+                    message.getMessageText(), "" + message.getMessageTimestamp(), "" + message.getMessageType(),
+                    message.getParams(), message.getProps());
+            resendFile(resendMessage, new PushMessage("Test Push Message"), true);
+        }
+
+    }
+
+    @Override
+    public void onFileDownloadRequested(@NotNull MonkeyItem item) {
+
+        if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
+            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
+            if(monkeyChatFragment != null)
+                monkeyChatFragment.rebindMonkeyItem(item);
+        } else {
+            final MessageItem messageItem = (MessageItem) item;
+            downloadFile(messageItem.getMessageId(), messageItem.getFilePath(),
+                    messageItem.getProps(), messageItem.getContactSessionId());
+        }
+
+    }
+
+    @Override
+    public void onLoadMoreData(int i) {
+        //If the adapter requires to load older messages, delegate this task to our messageLoader object
+        messageLoader.loadNewPage(realm);
+    }
+
     @Override
     public void onDestroyWithPendingMessages(@NotNull ArrayList<MOKMessage> errorMessages) {
         Realm newRealm = MonkeyChat.getInstance().getNewMonkeyRealm();
         DatabaseHandler.markMessagesAsError(newRealm, errorMessages);
         newRealm.close();
     }
+
+    @Override
+    public void setChatFragment(@Nullable MonkeyChatFragment chatFragment) {
+        monkeyChatFragment = chatFragment;
+    }
+
+    @NotNull
+    @Override
+    public Collection<MonkeyItem> getInitialMessages(String conversationId) {
+        return messagesMap.get(conversationId);
+    }
+
+    @Override
+    public void retainMessages(@NotNull String conversationId, @NotNull Collection<? extends MonkeyItem> messages) {
+        messagesMap.put(conversationId, (Collection<MonkeyItem>) messages);
+    }
+
+    /** CONVERSATION ACTIVITY METHODS **/
+    @Override
+    public void requestConversations() {
+        ArrayList<MonkeyConversation> conversations = new ArrayList<>();
+        final long datetime = System.currentTimeMillis();
+        conversations.add(new MonkeyConversation() {
+
+            @NotNull
+            @Override
+            public String getGroupMembers() {
+                return "";
+            }
+
+            @NotNull
+            @Override
+            public String getId() {
+                return myMonkeyID;
+            }
+
+            @NotNull
+            @Override
+            public String getName() {
+                return "Mirror Chat";
+            }
+
+            @Override
+            public long getDatetime() {
+                return datetime;
+            }
+
+            @NotNull
+            @Override
+            public String getSecondaryText() {
+                return "Tap to talk to yourself";
+            }
+
+            @Override
+            public int getTotalNewMessages() {
+                return 0;
+            }
+
+            @Override
+            public boolean isGroup() {
+                return false;
+            }
+
+            @Nullable
+            @Override
+            public String getAvatarFilePath() {
+                return null;
+            }
+
+            @Override
+            public int getStatus() {
+                return ConversationStatus.empty.ordinal();
+            }
+        });
+        monkeyConversationsFragment.insertConversations(conversations);
+    }
+
+    @Override
+    public void onConversationClicked(@NotNull MonkeyConversation conversation) {
+        //Initialize the messageLoader
+        messageLoader = new MessageLoader(conversation.getId(), myMonkeyID, this);
+        messageLoader.loadFirstPage(realm);
+    }
+
+    @Override
+    public void setConversationsFragment(@Nullable MonkeyConversationsFragment conversationsFragment) {
+        monkeyConversationsFragment = conversationsFragment;
+
+    }
+
 }

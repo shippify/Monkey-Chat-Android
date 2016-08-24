@@ -162,8 +162,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
     }
 
-    override fun onAcknowledgeRecieved(senderId: String?, recipientId: String?, newId: String?,
-                                       oldId: String?, read: Boolean?, messageType: Int) {
+    override fun onAcknowledgeRecieved(senderId: String, recipientId: String, newId: String,
+                                       oldId: String, read: Boolean, messageType: Int) {
         pendingFiles.remove(oldId)
     }
 
@@ -172,7 +172,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         sentFile?.failed = true
     }
 
-    override fun onFileDownloadFinished(fileMessageId: String?, success: Boolean) {
+    override fun onFileDownloadFinished(fileMessageId: String, success: Boolean) {
         pendingDownloads.remove(fileMessageId)
     }
 
@@ -234,6 +234,20 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         if(errorMessages.isNotEmpty())
             onDestroyWithPendingMessages(errorMessages)
 
+    }
+
+    /**
+     * Create a new chat group.
+     * @param members A string with the Monkey ID of the participants, separated by commas.
+     * @param groupName A string with the name of the group.
+     */
+    fun createGroup(members: String, groupName: String, groupId: String?){
+        val socketService = service
+        if(socketService != null)
+            socketService.createGroup(members, groupName, groupId)
+        else
+            throw IllegalStateException("Socket Service is null.\nMaybe it is not bound yet." +
+            "You can wait for the onBoundToService() callback to call this method.")
     }
 
     /**
