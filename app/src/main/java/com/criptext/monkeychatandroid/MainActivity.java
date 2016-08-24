@@ -430,27 +430,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onGetInfo(JsonObject json, Exception e) {
-
-    }
-
-    @Override
     public void onUpdateUserData(Exception e) {
 
     }
 
     @Override
     public void onUpdateGroupData(Exception e) {
-
-    }
-
-    @Override
-    public void onGetConversations(JSONArray conversations, Exception e) {
-
-    }
-
-    @Override
-    public void onGetConversationMessages(JSONArray messages, Exception e) {
 
     }
 
@@ -494,6 +479,37 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onGroupsRecover(String groupids) {
+
+    }
+
+
+    @Override
+    public void onDeleteConversation(@NotNull String conversationId, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetGroupInfo(@NotNull MOKConversation mokConversation, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetUserInfo(@NotNull MOKUser mokUser, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetUsersInfo(@NotNull ArrayList<MOKUser> mokUsers, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetConversations(@NotNull ArrayList<MOKConversation> conversations, @Nullable Exception e) {
+
+    }
+
+    @Override
+    public void onGetConversationMessages(@NotNull ArrayList<MOKMessage> messages, @Nullable Exception e) {
 
     }
 
