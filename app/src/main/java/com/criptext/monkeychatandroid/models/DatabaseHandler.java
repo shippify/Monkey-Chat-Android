@@ -99,6 +99,9 @@ public class DatabaseHandler {
         if(!item.getMessageId().contains("-"))
             item.setStatus(MonkeyItem.DeliveryStatus.delivered);
 
+        if(isIncoming && (type==MonkeyItem.MonkeyItemType.audio || type== MonkeyItem.MonkeyItemType.photo))
+            item.setStatus(MonkeyItem.DeliveryStatus.sending);
+
         switch (type){
             case audio:
                 if(item.getParams().has("length"))

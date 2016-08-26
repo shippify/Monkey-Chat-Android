@@ -294,8 +294,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     public void addOldMessagesFromServer(String conversationId){
         if(getService()!=null && monkeyChatFragment!=null) {
-            getService().getConversationMessages(conversationId, 30,
-                    monkeyChatFragment.getFirstMessage()!=null?""+monkeyChatFragment.getFirstMessage().getMessageTimestamp():"0");
+            String firstTimestamp = "0";
+            if(monkeyChatFragment.getFirstMessage()!=null)
+                firstTimestamp = ""+monkeyChatFragment.getFirstMessage().getMessageTimestamp();
+            else if(messagesMap.get(conversationId)!=null && messagesMap.get(conversationId).size()>0)
+                firstTimestamp = ""+new ArrayList<MonkeyItem>(messagesMap.get(conversationId)).get(0).getMessageTimestamp();
+            getService().getConversationMessages(conversationId, 30, firstTimestamp);
         }
     }
 
@@ -352,7 +356,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     private void processNewMessage(MOKMessage message){
         MessageItem newItem = DatabaseHandler.createMessage(message, this, myMonkeyID, !message.isMyOwnMessage(myMonkeyID));
-        if(monkeyChatFragment != null && messageLoader!=null) {
+        if(monkeyChatFragment != null && messageLoader!=null
+                && monkeyChatFragment.getConversationId().equals(message.getConversationID())) {
             messageLoader.countNewMessage(message.getConversationID());
             monkeyChatFragment.smoothlyAddNewItem(newItem);
         }
@@ -716,7 +721,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @NotNull
     @Override
     public Collection<MonkeyItem> getInitialMessages(String conversationId) {
-        if(messagesMap.get(conversationId).size() == 0)
+        if(messagesMap.get(conversationId).size() < messageLoader.getPageSize())
             addOldMessagesFromServer(conversationId);
         return messagesMap.get(conversationId);
     }

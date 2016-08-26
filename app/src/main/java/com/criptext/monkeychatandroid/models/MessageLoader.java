@@ -116,6 +116,10 @@ public class MessageLoader {
 
     }
 
+    public int getPageSize(){
+        return messageCounter.getPageSize();
+    }
+
     private static class MessageCounter {
         private int pageSize;
         private int lastIndex;
@@ -129,6 +133,10 @@ public class MessageLoader {
         private MessageCounter(int pageSize){
             lastIndex = Integer.MAX_VALUE;
             this.pageSize = pageSize;
+        }
+
+        public int getPageSize() {
+            return pageSize;
         }
     }
 

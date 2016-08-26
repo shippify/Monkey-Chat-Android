@@ -232,9 +232,9 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
     public int compareTo(@NonNull MessageItem another) {
         long stamp1 = getMessageTimestampOrder(), stamp2 = another.getMessageTimestampOrder();
         if(stamp1 < stamp2)
-            return 1;
-        else if(stamp1 > stamp2)
             return -1;
+        else if(stamp1 > stamp2)
+            return 1;
         else
             return 0;
     }

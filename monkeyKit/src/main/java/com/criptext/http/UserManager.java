@@ -295,6 +295,8 @@ public class UserManager extends AQueryHttp {
                                                 || currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0)) {
 
                                             remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props);
+                                            //TEMPORAL SOLUTION
+                                            remote.setDatetimeorder(Long.parseLong(remote.getDatetime()));
                                             if (remote.getProps().get("encr").getAsString().compareTo("1") == 0)
                                                 remote = asyncConnSocket.getKeysAndDecryptMOKMessage(remote, false);
                                             else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {

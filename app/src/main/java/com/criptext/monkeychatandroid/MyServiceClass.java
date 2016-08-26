@@ -24,7 +24,8 @@ public class MyServiceClass extends MonkeyKitSocketService{
 
     @Override
     public void storeReceivedMessage(final MOKMessage message, final Runnable runnable) {
-
+        runnable.run();
+        /*
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         openDatabase();
         DatabaseHandler.saveIncomingMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), true),
@@ -43,11 +44,13 @@ public class MyServiceClass extends MonkeyKitSocketService{
                         error.printStackTrace();
                 }
             });
+            */
     }
 
     @Override
     public void storeMessageBatch(ArrayList<MOKMessage> messages, final Runnable runnable) {
-
+        runnable.run();
+        /*
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         openDatabase();
         DatabaseHandler.saveMessageBatch(realm, messages, this, prefs.getString("sessionid", ""),
@@ -62,6 +65,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
                         error.printStackTrace();
                     }
         });
+        */
 
     }
 
