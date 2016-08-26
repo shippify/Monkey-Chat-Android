@@ -90,6 +90,10 @@ class MOKMessage(var message_id: String,var sid: String,var rid: String,var msg:
     val isGroupConversation: Boolean
         get() = rid.startsWith("G:")
 
+    fun isMyOwnMessage(mySessionID: String) : Boolean{
+        return sid == mySessionID
+    }
+
     companion object {
         val ID_KEY = "MOKMessage.id"
         val DATE_KEY = "MOKMessage.datetime"

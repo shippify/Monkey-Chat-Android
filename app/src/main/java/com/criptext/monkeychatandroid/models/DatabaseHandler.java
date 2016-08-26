@@ -9,6 +9,7 @@ import com.criptext.monkeykitui.recycler.MonkeyItem;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
+import io.realm.Case;
 import io.realm.Realm;
 import io.realm.RealmQuery;
 import io.realm.RealmResults;
@@ -56,7 +57,7 @@ public class DatabaseHandler {
                 for(int i = messages.size() - 1; i > -1; i--){
                     MOKMessage message = messages.get(i);
                     if(!existMessage(realm, message.getMessage_id())){
-                        MessageItem messageItem = createMessage(message, context, userSession, true);
+                        MessageItem messageItem = createMessage(message, context, userSession, !message.isMyOwnMessage(userSession));
                         realm.copyToRealm(messageItem.getModel());
                     } else
                         messages.remove(i);
@@ -92,9 +93,11 @@ public class DatabaseHandler {
         }
 
         MessageItem item = new MessageItem(sid, rid, message.getMessage_id(), message.getMsg(),
-                message.getDatetimeorder(), isIncoming, type);
+                Long.parseLong(message.getDatetime()), message.getDatetimeorder(), isIncoming, type);
         item.setParams(message.getParams());
         item.setProps(message.getProps());
+        if(!item.getMessageId().contains("-"))
+            item.setStatus(MonkeyItem.DeliveryStatus.delivered);
 
         switch (type){
             case audio:
@@ -112,17 +115,25 @@ public class DatabaseHandler {
         return item;
     }
 
-    public static RealmResults<MessageModel> getMessages(Realm realm, String id, String userSession){
+    public static RealmResults<MessageModel> getMessages(Realm realm, String mySessionId, String conversationId){
 
         final RealmResults<MessageModel> myMessages;
-        if (id.startsWith("G:")) {
+        if (conversationId.startsWith("G:")) {
             //In a group, all messages are either sent from or sent to an ID that starts with ':G'
             //Let's get all those messages.
-            myMessages = realm.where(MessageModel.class).equalTo("recieverSessionId", id).or().equalTo("senderSessionId", id).findAllAsync();
+            myMessages = realm.where(MessageModel.class).equalTo("recieverSessionId", conversationId).or().equalTo("senderSessionId", conversationId).findAllAsync();
         } else {
             //If this is not a group, then it's probably the mirror chat,
             //Let's just get all messages from DB.
             myMessages = realm.where(MessageModel.class)
+                    .beginGroup()
+                    .contains("recieverSessionId", conversationId).not().beginsWith("senderSessionId", "G:", Case.SENSITIVE)
+                    .equalTo("senderSessionId", mySessionId)
+                    .endGroup()
+                    .or()
+                    .beginGroup()
+                    .equalTo("senderSessionId", conversationId).not().beginsWith("recieverSessionId", "G:", Case.SENSITIVE)
+                    .endGroup()
                     .findAllAsync();
         }
 

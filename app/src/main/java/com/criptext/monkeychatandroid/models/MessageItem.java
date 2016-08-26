@@ -1,6 +1,7 @@
 package com.criptext.monkeychatandroid.models;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
 
 import com.criptext.monkeychatandroid.MonkeyChat;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
@@ -23,12 +24,12 @@ import io.realm.RealmResults;
 /**
  * Created by gesuwall on 4/7/16.
  */
-public class MessageItem implements MonkeyItem {
+public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
 
     public MessageModel model;
 
     private String senderSessionId, recieverSessionId, messageId, messageContent;
-    private long timestamp;
+    private long timestamp, timestampOrder;
     private boolean isIncoming;
     private DeliveryStatus status;
     private MonkeyItemType itemType;
@@ -42,12 +43,13 @@ public class MessageItem implements MonkeyItem {
     private boolean isDownloading;
 
     public MessageItem(String senderId, String recieverId, String messageId, String messageContent, long timestamp,
-                       boolean isIncoming, MonkeyItemType itemType){
+                       long timestampOrder, boolean isIncoming, MonkeyItemType itemType){
         this.senderSessionId = senderId;
         this.recieverSessionId = recieverId;
         this.messageId = messageId;
         this.messageContent = messageContent;
         this.timestamp = timestamp;
+        this.timestampOrder = timestampOrder;
         this.isIncoming = isIncoming;
         this.itemType = itemType;
         this.placeHolderFilePath = "";
@@ -217,12 +219,23 @@ public class MessageItem implements MonkeyItem {
 
     @Override
     public long getMessageTimestampOrder() {
-        return 0;
+        return timestampOrder;
     }
 
     @NotNull
     @Override
     public String getOldMessageId() {
         return null;
+    }
+
+    @Override
+    public int compareTo(@NonNull MessageItem another) {
+        long stamp1 = getMessageTimestampOrder(), stamp2 = another.getMessageTimestampOrder();
+        if(stamp1 < stamp2)
+            return 1;
+        else if(stamp1 > stamp2)
+            return -1;
+        else
+            return 0;
     }
 }

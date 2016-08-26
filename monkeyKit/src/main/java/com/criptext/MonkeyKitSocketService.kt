@@ -323,46 +323,46 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onContactOpenMyConversation(info[0] as String)
             }
             CBTypes.onGetUserInfo-> {
-                delegate?.onGetUserInfo( info[0] as MOKUser, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onGetUserInfo( info[0] as MOKUser, info[1] as Exception?)
             }
             CBTypes.onGetUsersInfo-> {
-                delegate?.onGetUsersInfo( info[0] as ArrayList<MOKUser>, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onGetUsersInfo( info[0] as ArrayList<MOKUser>, info[1] as Exception?)
             }
             CBTypes.onGetGroupInfo-> {
-                delegate?.onGetGroupInfo( info[0] as MOKConversation, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onGetGroupInfo( info[0] as MOKConversation, info[1] as Exception?)
             }
             CBTypes.onGetConversations -> {
-                delegate?.onGetConversations(info[0] as ArrayList<MOKConversation>, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onGetConversations(info[0] as ArrayList<MOKConversation>, info[1] as Exception?)
             }
             CBTypes.onDeleteConversation -> {
-                delegate?.onDeleteConversation(info[0] as String, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onDeleteConversation(info[0] as String, info[1] as Exception?)
             }
             CBTypes.onGetConversationMessages -> {
-                delegate?.onGetConversationMessages(info[0] as ArrayList<MOKMessage>, if(info[1] is Exception) info[1] as Exception else null)
+                delegate?.onGetConversationMessages(info[0] as ArrayList<MOKMessage>, info[1] as Exception?)
             }
             CBTypes.onNotificationReceived -> {
-                delegate?.onNotificationReceived(info[0] as String, info[1] as String, info[2] as String, info[3] as JsonObject, info[4] as String);
+                delegate?.onNotificationReceived(info[0] as String, info[1] as String, info[2] as String, info[3] as JsonObject, info[4] as String)
             }
             CBTypes.onMessageFailDecrypt -> {
                 delegate?.onMessageFailDecrypt(info[0] as MOKMessage);
             }
             CBTypes.onGroupAdded -> {
-                delegate?.onGroupAdded(info[0] as String, info[1] as String, info[2] as JsonObject);
+                delegate?.onGroupAdded(info[0] as String, info[1] as String, info[2] as JsonObject)
             }
             CBTypes.onGroupNewMember -> {
-                delegate?.onGroupNewMember(info[0] as String, info[1] as String);
+                delegate?.onGroupNewMember(info[0] as String, info[1] as String)
             }
             CBTypes.onGroupRemovedMember -> {
-                delegate?.onGroupRemovedMember(info[0] as String, info[1] as String);
+                delegate?.onGroupRemovedMember(info[0] as String, info[1] as String)
             }
             CBTypes.onGroupsRecover -> {
-                delegate?.onGroupsRecover(info[0] as String);
+                delegate?.onGroupsRecover(info[0] as String)
             }
             CBTypes.onFileFailsUpload -> {
-                delegate?.onFileFailsUpload(info[0] as MOKMessage);
+                delegate?.onFileFailsUpload(info[0] as MOKMessage)
             }
             CBTypes.onConnectionRefused -> {
-                delegate?.onConnectionRefused();
+                delegate?.onConnectionRefused()
             }
         }
     }
@@ -645,6 +645,8 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * Get all messages of a conversation.
      * @param monkeyid monkeyid ID of the user.
+     * @param numberOfMessages number of messages to load.
+     * @param lastTimeStamp last timestamp of the message loaded.
      */
     fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String){
         userManager.getConversationMessages(clientData.monkeyId, conversationId, numberOfMessages, lastTimeStamp, asyncConnSocket)

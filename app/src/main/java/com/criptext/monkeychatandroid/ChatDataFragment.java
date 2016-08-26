@@ -5,6 +5,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 
 import com.criptext.monkeychatandroid.models.MessageLoader;
+import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.Collection;
@@ -15,6 +16,7 @@ import java.util.HashMap;
  */
 public class ChatDataFragment extends Fragment{
     HashMap<String, Collection<MonkeyItem>> chatMap;
+    Collection<MonkeyConversation> conversationsList;
     MessageLoader messageLoader;
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
