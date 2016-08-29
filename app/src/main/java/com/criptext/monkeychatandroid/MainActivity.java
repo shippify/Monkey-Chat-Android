@@ -7,6 +7,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentTransaction;
 import android.text.TextUtils;
 import android.util.Log;
@@ -33,6 +34,7 @@ import com.criptext.monkeykitui.conversation.ConversationsActivity;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
+import com.criptext.monkeykitui.recycler.GroupChat;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 import com.criptext.monkeykitui.recycler.audio.DefaultVoiceNotePlayer;
 import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
@@ -91,6 +93,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * and released on the "onStop".
      */
     private Realm realm;
+
+    /**
+     * This class is used to handle group methods.
+     */
+    private GroupData groupData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -332,13 +339,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     /**
      * Creates a new MonkeyChatFragment and adds it to the activity.
      * @param conversationId unique identifier of the conversation of the fragment
+     * @param membersIds String separate by coma of the member ids
      * @param initialMessages a list of the first messages to draw in the chat
      * @param hasReachedEnd true of the initial messages are the only existing messages of the chat
      */
-    public void startChatWithMessages(String conversationId, ArrayList<MonkeyItem> initialMessages,
+    public void startChatWithMessages(String conversationId, String membersIds, ArrayList<MonkeyItem> initialMessages,
                                       boolean hasReachedEnd){
         messagesMap.put(conversationId, initialMessages);
-        MonkeyChatFragment fragment = MonkeyChatFragment.Companion.newInstance(conversationId, hasReachedEnd);
+        MonkeyChatFragment fragment = MonkeyChatFragment.Companion.newInstance(conversationId, membersIds, hasReachedEnd);
         conversationsList = monkeyFragmentManager.setChatFragment(fragment, initInputListener(), voiceNotePlayer);
     }
     /**
@@ -442,6 +450,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onSocketConnected() {
         super.onSocketConnected();
+        sendSync();
         setActionBarTitle(2);
     }
 
@@ -548,7 +557,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onGetUsersInfo(@NotNull ArrayList<MOKUser> mokUsers, @Nullable Exception e) {
-
+        if(groupData!=null && monkeyChatFragment!=null) {
+            groupData.setMembers(monkeyChatFragment.getConversationId(), mokUsers);
+            monkeyChatFragment.reloadAllMessages();
+        }
     }
 
     @Override
@@ -727,6 +739,17 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
+    public GroupChat getGroupChat(@NotNull String conversationId, @NonNull String membersIds) {
+        if(conversationId.contains("G:") && (groupData == null || !groupData.getConversationId().equals(conversationId))) {
+            groupData = new GroupData(conversationId, membersIds, getService());
+        }
+        else if(!groupData.getConversationId().equals(conversationId)){
+            groupData = null;
+        }
+        return groupData;
+    }
+
+    @Override
     public void retainMessages(@NotNull String conversationId, @NotNull Collection<? extends MonkeyItem> messages) {
         messagesMap.put(conversationId, (Collection<MonkeyItem>) messages);
     }
@@ -808,11 +831,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         myFriendID = conversation.getId();
 
         //Initialize the messageLoader
-        messageLoader = new MessageLoader(conversation.getId(), myMonkeyID, this);
+        messageLoader = new MessageLoader(conversation.getId(), conversation.getGroupMembers(), myMonkeyID, this);
         if(messagesMap.get(conversation.getId())==null || messagesMap.get(conversation.getId()).size()==0)
             messageLoader.loadFirstPage(realm);
         else
-            startChatWithMessages(conversation.getId(), new ArrayList<MonkeyItem>(messagesMap.get(conversation.getId())), false);
+            startChatWithMessages(conversation.getId(), conversation.getGroupMembers(), new ArrayList<MonkeyItem>(messagesMap.get(conversation.getId())), false);
 
         if(getSupportActionBar()!=null)
             getSupportActionBar().setTitle(conversation.getName());

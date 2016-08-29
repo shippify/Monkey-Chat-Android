@@ -142,7 +142,7 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
     @NotNull
     @Override
     public String getContactSessionId() {
-        return senderSessionId;
+        return senderSessionId.startsWith("G:")?recieverSessionId:senderSessionId;
     }
 
     @Override

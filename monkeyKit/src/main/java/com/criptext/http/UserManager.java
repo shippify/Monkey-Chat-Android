@@ -212,9 +212,14 @@ public class UserManager extends AQueryHttp {
                                                     }
                                                 }
 
+                                                JsonArray jsonArray = currentConv.has("members") ? currentConv.get("members").getAsJsonArray() : new JsonArray();
+                                                ArrayList<String> arrayList = new ArrayList<String>();
+                                                for(int j = 0; j<jsonArray.size(); j++){
+                                                    arrayList.add(jsonArray.get(j).getAsString());
+                                                }
                                                 conversationList.add(new MOKConversation(currentConv.get("id").getAsString(),
                                                         currentConv.get("info").getAsJsonObject(),
-                                                        currentConv.has("members") ? currentConv.get("members").getAsJsonArray().toString().split(",") : new String[0],
+                                                        arrayList.toArray(new String[arrayList.size()]),
                                                         remote, currentConv.get("last_seen").getAsLong(), currentConv.get("unread").getAsInt(),
                                                         currentConv.has("last_modified") ? (long)currentConv.get("last_modified").getAsDouble() : 0));
 

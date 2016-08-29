@@ -18,19 +18,22 @@ import io.realm.RealmResults;
 public class MessageLoader {
     private String mySessionId;
     private String conversationId;
+    private String membersIds;
     private MainActivity activity;
     private MessageCounter messageCounter;
 
 
-    public MessageLoader(String conversationId, String mySessionId, MainActivity activity){
+    public MessageLoader(String conversationId, String membersIds, String mySessionId, MainActivity activity){
         this.conversationId = conversationId;
+        this.membersIds = membersIds;
         this.mySessionId = mySessionId;
         this.activity = activity;
         messageCounter = new MessageCounter();
     }
 
-    public MessageLoader(String conversationId, String mySessionId, MainActivity activity, int pageSize){
+    public MessageLoader(String conversationId, String membersIds, String mySessionId, MainActivity activity, int pageSize){
         this.conversationId = conversationId;
+        this.membersIds = membersIds;
         this.mySessionId = mySessionId;
         this.activity = activity;
         messageCounter = new MessageCounter(pageSize);
@@ -47,14 +50,14 @@ public class MessageLoader {
         //Make the query
         final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(realm, mySessionId, conversationId);
         //Add an async listener to the query
-        realmResults.addChangeListener(new NewMessagesListener(conversationId, activity, false, messageCounter));
+        realmResults.addChangeListener(new NewMessagesListener(conversationId, membersIds, activity, false, messageCounter));
     }
 
     public void loadFirstPage(Realm realm){
         //Make the query
         final RealmResults<MessageModel> realmResults = DatabaseHandler.getMessages(realm, mySessionId, conversationId);
         //Add an async listener to the query
-        realmResults.addChangeListener(new NewMessagesListener(conversationId, activity, true, messageCounter));
+        realmResults.addChangeListener(new NewMessagesListener(conversationId, membersIds, activity, true, messageCounter));
 
     }
 
@@ -73,10 +76,12 @@ public class MessageLoader {
         boolean firstPage;
         MessageCounter messageCounter;
         String conversationId;
+        String membersIds;
 
-        private NewMessagesListener(String conversationId, MainActivity activity, boolean firstPage, MessageCounter mCounter){
+        private NewMessagesListener(String conversationId, String membersIds, MainActivity activity, boolean firstPage, MessageCounter mCounter){
             activityRef = new WeakReference<MainActivity>(activity);
             this.conversationId = conversationId;
+            this.membersIds = membersIds;
             this.firstPage = firstPage;
             messageCounter = mCounter;
         }
@@ -105,7 +110,7 @@ public class MessageLoader {
             final MainActivity act = activityRef.get();
             if(act != null){
                 if(firstPage){
-                    act.startChatWithMessages(conversationId, messages, hasReachedEnd);
+                    act.startChatWithMessages(conversationId, membersIds, messages, hasReachedEnd);
                 } else {
                     act.addOldMessages(messages, hasReachedEnd);
                     if(messages.size() < messageCounter.pageSize)
