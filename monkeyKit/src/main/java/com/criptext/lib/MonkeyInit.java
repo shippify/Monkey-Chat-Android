@@ -1,7 +1,9 @@
 package com.criptext.lib;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.util.Base64;
 import android.util.Log;
 
@@ -42,19 +44,23 @@ import java.lang.ref.WeakReference;
  * Created by gesuwall on 2/10/16.
  */
 public class MonkeyInit {
+
     private AsyncTask<Object, String, ServerResponse> async;
     private WeakReference<Context> ctxRef;
     private AESUtil aesUtil;
     private JSONObject userInfo;
     private JSONArray ignore_params;
     final String urlUser, urlPass, myOldMonkeyId;
+    private SharedPreferences prefs;
 
     public MonkeyInit(Context context, String monkeyId, String user, String pass, JSONObject userInfo, JSONArray ignore_params){
+
         this.myOldMonkeyId = monkeyId == null ? "" : monkeyId;
         this.urlUser = user;
         this.urlPass = pass;
         this.userInfo = userInfo;
         this.ignore_params = ignore_params;
+        this.prefs = PreferenceManager.getDefaultSharedPreferences(context);
         ctxRef = new WeakReference<>(context);
         async = new AsyncTask<Object, String, ServerResponse>(){
 
@@ -64,7 +70,6 @@ public class MonkeyInit {
                     onSessionOK(res.getContent());
                 else
                     onSessionError(res.getContent());
-
             }
 
             @Override
@@ -110,12 +115,12 @@ public class MonkeyInit {
             async.cancel(true);
     }
 
-    private String storeKeysIV(String sessionId, String pubKey){
+    private String storeKeysIV(String monkeyId, String pubKey){
         //Encrypt workers
         RSAUtil rsa = new RSAUtil(Base64.decode(pubKey.getBytes(),0));
         String usk=rsa.encrypt(aesUtil.strKey+":"+aesUtil.strIV);
         //Guardo mis key & Iv
-        KeyStoreCriptext.putString(ctxRef.get(), sessionId, aesUtil.strKey+":"+aesUtil.strIV);
+        KeyStoreCriptext.putString(ctxRef.get(), monkeyId, aesUtil.strKey+":"+aesUtil.strIV);
         return usk;
 
     }
@@ -131,7 +136,7 @@ public class MonkeyInit {
 
         localJSONObject1.put("username",urlUser);
         localJSONObject1.put("password",urlPass);
-        localJSONObject1.put("session_id", myOldMonkeyId);
+        localJSONObject1.put("monkey_id", myOldMonkeyId);
         localJSONObject1.put("expiring","0");
         localJSONObject1.put("user_info",userInfo);
 
@@ -144,19 +149,20 @@ public class MonkeyInit {
         Log.d("getSesssionHTTP", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
 
-        String sessionId = finalResult.getString("sessionId");
+        String monkeyId = finalResult.getString("monkeyId");
         String pubKey = finalResult.getString("publicKey");
         pubKey = pubKey.replace("-----BEGIN PUBLIC KEY-----\n", "").replace("\n-----END PUBLIC KEY-----", "");
 
-        String encriptedKeys = storeKeysIV(sessionId, pubKey);
+        String encriptedKeys = storeKeysIV(monkeyId, pubKey);
 
         //retornar el session solo despues del connect exitoso
-        return  connectHTTP(finalResult.getString("sessionId"), encriptedKeys, ignore_params);
+        return connectHTTP(finalResult.getString("monkeyId"), encriptedKeys, ignore_params);
 
     }
 
-    private String userSync(String sessionId) throws Exception{
- // Create a new HttpClient and Post Header
+    private String userSync(String monkeyId) throws Exception{
+
+        // Create a new HttpClient and Post Header
         RSAUtil rsaUtil = new RSAUtil();
         rsaUtil.generateKeys();
 
@@ -166,7 +172,7 @@ public class MonkeyInit {
 
         JSONObject localJSONObject1 = new JSONObject();
 
-        localJSONObject1.put("session_id", sessionId);
+        localJSONObject1.put("monkey_id", monkeyId);
         localJSONObject1.put("public_key", "-----BEGIN PUBLIC KEY-----\n" + rsaUtil.getPublicKey() + "\n-----END PUBLIC KEY-----");
         //System.out.println("-----BEGIN PUBLIC KEY-----\n" + rsaUtil.pubKeyStr + "\n-----END PUBLIC KEY-----");
         JSONObject params = new JSONObject();
@@ -177,27 +183,30 @@ public class MonkeyInit {
          Log.d("userSyncMS", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
 
+        prefs.edit().putString("sdmain", finalResult.getString("sdomain")).apply();
+        prefs.edit().putString("sport", finalResult.getString("sport")).apply();
+
         final String keys = finalResult.getString("keys");
         String decriptedKey = rsaUtil.desencrypt(keys);
-        KeyStoreCriptext.putString(ctxRef.get() ,sessionId, decriptedKey);
+        KeyStoreCriptext.putString(ctxRef.get() ,monkeyId, decriptedKey);
 
         try {
-            aesUtil = new AESUtil(ctxRef.get(), sessionId);
+            aesUtil = new AESUtil(ctxRef.get(), monkeyId);
         } catch (Exception ex){
             ex.printStackTrace();
             //Como fallo algo con esas keys las encero y creo unas nuevas
-            KeyStoreCriptext.putString(ctxRef.get(), sessionId, "");
-            aesUtil = new AESUtil(ctxRef.get(), sessionId);
+            KeyStoreCriptext.putString(ctxRef.get(), monkeyId, "");
+            aesUtil = new AESUtil(ctxRef.get(), monkeyId);
             return getSessionHTTP(this.urlUser, this.urlPass, this.userInfo, this.ignore_params);
         }
 
-        return sessionId;
-
-
+        return monkeyId;
     }
-    private String connectHTTP(String sessionId, String encriptedKeys, JSONArray ignore_params) throws JSONException,
-            UnsupportedEncodingException, ClientProtocolException, IOException{
- // Create a new HttpClient and Post Header
+
+    private String connectHTTP(String monkeyId, String encriptedKeys, JSONArray ignore_params) throws JSONException,
+            IOException{
+
+        // Create a new HttpClient and Post Header
         HttpClient httpclient = MonkeyHttpClient.newClient();
         HttpPost httppost = MonkeyHttpClient.newPost(MonkeyKitSocketService.Companion.getHttpsURL() +
                 "/user/connect", urlUser, urlPass);
@@ -205,7 +214,7 @@ public class MonkeyInit {
         JSONObject localJSONObject1 = new JSONObject();
 
         localJSONObject1.put("usk", encriptedKeys);
-        localJSONObject1.put("session_id", sessionId);
+        localJSONObject1.put("monkey_id", monkeyId);
         localJSONObject1.put("ignore_params", ignore_params);
 
         JSONObject params = new JSONObject();
@@ -216,9 +225,10 @@ public class MonkeyInit {
          Log.d("connectHTTP", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
 
-        return finalResult.getString("sessionId");
+        prefs.edit().putString("sdmain", finalResult.getString("sdomain")).apply();
+        prefs.edit().putString("sport", finalResult.getString("sport")).apply();
 
-
+        return finalResult.getString("monkeyId");
     }
 
     public class ServerResponse {

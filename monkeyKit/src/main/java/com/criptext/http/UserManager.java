@@ -220,8 +220,8 @@ public class UserManager extends AQueryHttp {
                                                 conversationList.add(new MOKConversation(currentConv.get("id").getAsString(),
                                                         currentConv.get("info").getAsJsonObject(),
                                                         arrayList.toArray(new String[arrayList.size()]),
-                                                        remote, currentConv.get("last_seen").getAsLong(), currentConv.get("unread").getAsInt(),
-                                                        currentConv.has("last_modified") ? (long)currentConv.get("last_modified").getAsDouble() : 0));
+                                                        remote, currentConv.get("last_seen").getAsLong()*1000, currentConv.get("unread").getAsInt(),
+                                                        currentConv.has("last_modified") ? (long)currentConv.get("last_modified").getAsDouble()*1000 : 0));
 
                                             } catch (Exception ex) {
                                                 ex.printStackTrace();

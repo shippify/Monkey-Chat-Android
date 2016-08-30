@@ -32,6 +32,7 @@ import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
 import com.criptext.monkeykitui.conversation.ConversationsActivity;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
+import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.GroupChat;
@@ -303,9 +304,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(getService()!=null && monkeyChatFragment!=null) {
             String firstTimestamp = "0";
             if(monkeyChatFragment.getFirstMessage()!=null)
-                firstTimestamp = ""+monkeyChatFragment.getFirstMessage().getMessageTimestamp();
+                firstTimestamp = ""+monkeyChatFragment.getFirstMessage().getMessageTimestamp()/1000;
             else if(messagesMap.get(conversationId)!=null && messagesMap.get(conversationId).size()>0)
-                firstTimestamp = ""+new ArrayList<MonkeyItem>(messagesMap.get(conversationId)).get(0).getMessageTimestamp();
+                firstTimestamp = ""+new ArrayList<MonkeyItem>(messagesMap.get(conversationId)).get(0).getMessageTimestamp()/1000;
             getService().getConversationMessages(conversationId, 30, firstTimestamp);
         }
     }
@@ -335,14 +336,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
     }
 
-    private void updateConversation(String conversationId, String secondaryText, MonkeyConversation.ConversationStatus status, int unread){
+    private void updateConversation(String conversationId, final String secondaryText, final MonkeyConversation.ConversationStatus status,
+                                    final int unread, final long dateTime){
         if(monkeyConversationsFragment!=null) {
-            ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
+            final ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
             if(conversationItem!=null) {
-                conversationItem.setSecondaryText(secondaryText);
-                conversationItem.setStatus(status.ordinal());
-                conversationItem.setTotalNewMessage(unread);
-                monkeyConversationsFragment.updateConversation(conversationItem);
+                monkeyConversationsFragment.updateConversation(conversationItem, new ConversationTransaction() {
+                    @Override
+                    public void updateConversation(@NotNull MonkeyConversation conversation) {
+                        ConversationItem newConversationItem = (ConversationItem)conversation;
+                        newConversationItem.setSecondaryText(secondaryText);
+                        newConversationItem.setStatus(status.ordinal());
+                        newConversationItem.setTotalNewMessage(unread == 0 ? 0 : conversationItem.getTotalNewMessages()+unread);
+                        newConversationItem.setDatetime(dateTime);
+                    }
+                });
             }
         }
     }
@@ -519,21 +527,20 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onMessageRecieved(@NonNull MOKMessage message) {
         processNewMessage(message);
         boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
-        ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(
-                isMyOwnMsg?message.getRid():message.getConversationID());
-        if(conversationItem!=null){
-            conversationItem.setTotalNewMessage(conversationItem.getTotalNewMessages()+1);
-            conversationItem.setStatus(MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
-            conversationItem.setSecondaryText(message.getMsg());
-            conversationItem.setDatetime(message.getDatetimeorder());
-            monkeyConversationsFragment.updateConversation(conversationItem);
-        }
+        updateConversation(isMyOwnMsg?message.getRid():message.getConversationID(), message.getMsg(),
+                MonkeyConversation.ConversationStatus.receivedMessage, 1, message.getDatetimeorder());
     }
 
     @Override
     public void onMessageBatchReady(ArrayList<MOKMessage> messages) {
         setActionBarTitle(2);
         processNewMessages(messages);
+        if(messages.size()>0){
+            MOKMessage message = messages.get(messages.size()-1);
+            boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
+            updateConversation(isMyOwnMsg?message.getRid():message.getConversationID(), message.getMsg(),
+                    MonkeyConversation.ConversationStatus.receivedMessage, 1, message.getDatetimeorder());
+        }
     }
 
     @Override
@@ -803,7 +810,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             conversations = new ArrayList<>(conversationsList);
         else {
             conversations = new ArrayList<>();
-            final long datetime = System.currentTimeMillis()/1000;
+            final long datetime = System.currentTimeMillis();
             conversations.add(new ConversationItem(myMonkeyID, "Mirror Chat", datetime, "Tap to talk to yourself",
                     0, false, "", null, MonkeyConversation.ConversationStatus.empty.ordinal()));
         }
@@ -822,7 +829,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         else
             startChatWithMessages(conversation.getId(), conversation.getGroupMembers(), new ArrayList<MonkeyItem>(messagesMap.get(conversation.getId())), false);
 
-        updateConversation(conversation.getId(), conversation.getSecondaryText(), MonkeyConversation.ConversationStatus.receivedMessage, 0);
+        updateConversation(conversation.getId(), conversation.getSecondaryText(), MonkeyConversation.ConversationStatus.receivedMessage, 0, conversation.getDatetime());
 
         if(getSupportActionBar()!=null)
             getSupportActionBar().setTitle(conversation.getName());
@@ -839,8 +846,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(getService()!=null) {
             if(monkeyConversationsFragment.getLastConversation()==null)
                 getService().getAllConversations(10, 0);
-            else
-                getService().getAllConversations(10, monkeyConversationsFragment.getLastConversation().getDatetime());
+            else {
+                MonkeyConversation conversation = monkeyConversationsFragment.getLastConversation();
+                getService().getAllConversations(10, conversation.getDatetime()/1000);
+            }
         }
     }
 

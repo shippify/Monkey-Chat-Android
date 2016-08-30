@@ -328,7 +328,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 						args.get("sid").getAsString(),
 						args.get("rid").getAsString(),
 						args.get("msg").getAsString(),
-						args.get("datetime").getAsString(),
+						args.get("datetime").getAsString()+"000",
 						args.get("type").getAsString(),params,props);
 		remote.setDatetimeorder(System.currentTimeMillis());
 		return remote;
