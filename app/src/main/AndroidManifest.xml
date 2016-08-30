@@ -17,6 +17,7 @@
         android:theme="@style/AppTheme">
         <activity
             android:name=".MainActivity"
+            android:windowSoftInputMode="adjustResize"
             android:label="@string/chat_name">
         </activity>
 
