@@ -1,10 +1,12 @@
 package com.criptext.comunication;
 
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
 import com.criptext.MonkeyKitSocketService;
+import com.criptext.http.OpenConversationTask;
 import com.criptext.lib.KeyStoreCriptext;
 
 import java.lang.ref.WeakReference;
@@ -114,8 +116,10 @@ public class MOKMessageHandler extends Handler {
                         break;
                     case MessageTypes.MOKProtocolOpen:{
                         if(message!=null && !message.isGroupConversation()) {
-                            if (KeyStoreCriptext.getString(service, message.getRid()).compareTo("") == 0)
-                                service.sendOpenConversation(message.getRid());
+                            if (KeyStoreCriptext.getString(service, message.getRid()).compareTo("") == 0) {
+                                OpenConversationTask task = new OpenConversationTask(serviceRef.get(), null);
+                                task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message.getRid());
+                            }
                             else
                                 System.out.println("MONKEY - llego open pero ya tengo las claves");
                             //MANDAR AL APP QUE PONGA LEIDO TODOS LOS MENSAJES

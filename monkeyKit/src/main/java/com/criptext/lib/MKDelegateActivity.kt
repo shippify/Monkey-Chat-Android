@@ -65,6 +65,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onStop() {
         super.onStop()
+        setOnline(false)
         service = null
         unbindService(monkeyKitConnection)
     }
@@ -160,6 +161,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         for(file in pendingFiles.values){
             service!!.sendFileMessage(file.message, file.push, file.isEncrypted)
         }
+        sendSync()
+        setOnline(true)
     }
 
     override fun onAcknowledgeRecieved(senderId: String, recipientId: String, newId: String,
@@ -274,6 +277,11 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     fun sendSync(){
         val socketService = service
         socketService?.sendSync(socketService.lastTimeSynced)
+    }
+
+    fun setOnline(online: Boolean){
+        val socketService = service
+        socketService?.setOnline(online)
     }
 
     private data class DownloadMessage(val fileMessageId: String, val filepath: String, val props: JsonObject)

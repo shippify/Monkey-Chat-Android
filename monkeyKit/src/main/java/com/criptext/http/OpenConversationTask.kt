@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * Created by gesuwall on 6/6/16.
  */
 
-class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOKMessage) : AsyncTask<String, Void, OpenConvData>(){
+class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOKMessage?) : AsyncTask<String, Void, OpenConvData>(){
    val serviceRef: WeakReference<MonkeyKitSocketService>
     val clientData: ClientData
     lateinit var newConvKey: String
@@ -58,6 +58,9 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
         val data = response.getAsJsonObject("data")
         newConvKey = data.get("convKey").asString
 
+        if(undecrypted==null)
+            return null
+
         return attemptToDecryptPendingMessage(
                 openConversationResponse = response,
                 aesutil = aesutil,
@@ -67,8 +70,10 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
     override fun onPostExecute(openconvData: OpenConvData?) {
         val service = serviceRef.get()
-        if(service != null && openconvData!= null){
+        if(service != null) {
             KeyStoreCriptext.putString(service, conversationId, KeyStoreCriptext.encryptString(newConvKey))
+        }
+        if(service != null && openconvData!= null){
             if(openconvData.messageOkDecrypted!=null)
                 service.processMessageFromHandler(CBTypes.onMessageReceived, Array<Any>(1, { i -> openconvData.messageOkDecrypted}))
             else if(openconvData.messageFailDecrypted!=null)

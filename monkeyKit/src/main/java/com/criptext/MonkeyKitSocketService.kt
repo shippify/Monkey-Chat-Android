@@ -543,11 +543,9 @@ abstract class MonkeyKitSocketService : Service() {
             json.addProperty("cmd", MessageTypes.MOKProtocolMessage)
 
             if(isSocketConnected()){
-                System.out.println("MONKEY - Enviando notificacion:" + json.toString())
                 sendJsonThroughSocket(json)
             }
             else {
-                System.out.println("MONKEY - no pudo enviar notificacion - socket desconectado " + asyncConnSocket.socketStatus);
                 Thread.dumpStack()
             }
 
@@ -579,11 +577,9 @@ abstract class MonkeyKitSocketService : Service() {
             json.addProperty("cmd", MessageTypes.MOKProtocolMessage)
 
             if(isSocketConnected()){
-                System.out.println("MONKEY - Enviando temp notificacion:" + json.toString())
                 sendJsonThroughSocket(json)
             }
             else {
-                System.out.println("MONKEY - no pudo enviar temp notificacion - socket desconectado " + asyncConnSocket.socketStatus);
                 Thread.dumpStack()
             }
 
@@ -772,12 +768,110 @@ abstract class MonkeyKitSocketService : Service() {
 
     /**
      * Notifies the MonkeyKit server that the current user has opened an UI with conversation with
-     * another user or a group. The server will notify the other party and will return any necessary
-     * keys for decrypting messages sent by the other party.
-     *
-     * This method can also be used to retrieve any missing AES keys.
+     * another user or a group.
      */
-    fun sendOpenConversation(conversationID: String){
+    fun openConversation(conversationID: String){
+
+        try {
+            val args = JsonObject()
+            val json = JsonObject()
+
+            args.addProperty("rid", conversationID)
+
+            json.add("args", args)
+            json.addProperty("cmd", MessageTypes.MOKProtocolOpen)
+
+            if(isSocketConnected()){
+                sendJsonThroughSocket(json)
+            }
+            else {
+                Thread.dumpStack()
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Notify to the server that you have closed the conversation. This method should be called
+     * each time user close the conversation or stop been visible.
+     * @param conversationId conversation ID.
+     */
+    fun closeConversation(conversationId: String) {
+
+        try {
+            val args = JsonObject()
+            val json = JsonObject()
+
+            args.addProperty("rid", conversationId)
+            json.add("args", args)
+            json.addProperty("cmd", MessageTypes.MOKProtocolClose)
+
+            if (isSocketConnected()) {
+                sendJsonThroughSocket(json)
+            } else {
+                Thread.dumpStack()
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+    }
+
+    /**
+     * Notify to the server that you are online or offline. This method should be called
+     * at onstart or onDestroy of application.
+     * @param online .
+     */
+    fun setOnline(online: Boolean) {
+
+        try {
+            val args = JsonObject()
+            val json = JsonObject()
+
+            args.addProperty("online", if (online) "1" else "0")
+            json.add("args", args)
+            json.addProperty("cmd", MessageTypes.MOKProtocolSet)
+
+            if (isSocketConnected()) {
+                sendJsonThroughSocket(json)
+            } else{
+                Thread.dumpStack()
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+    }
+
+    /**
+     * Unsend a message from server.
+     * @param monkeyId ID of the user or group
+     * @param messageid ID of the message that you want to unsend
+     */
+    fun unsendMessage(monkeyId: String, messageId: String) {
+
+        try {
+            val args = JsonObject()
+            val json = JsonObject()
+
+            args.addProperty("id", messageId)
+            args.addProperty("rid", monkeyId)
+            json.add("args", args)
+            json.addProperty("cmd", MessageTypes.MOKProtocolDelete)
+
+            if (isSocketConnected()) {
+                sendJsonThroughSocket(json)
+            } else{
+                Thread.dumpStack()
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
     }
 

@@ -302,7 +302,7 @@ public class UserManager extends AQueryHttp {
                                             remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props);
                                             //TEMPORAL SOLUTION
                                             remote.setDatetimeorder(Long.parseLong(remote.getDatetime()));
-                                            if (remote.getProps().get("encr").getAsString().compareTo("1") == 0)
+                                            if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0)
                                                 remote = asyncConnSocket.getKeysAndDecryptMOKMessage(remote, false);
                                             else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
                                                 if(remote.getProps().get("encoding").getAsString().equals("base64"))
@@ -310,6 +310,16 @@ public class UserManager extends AQueryHttp {
                                             }
                                             if (remote != null)
                                                 messageList.add(remote);
+                                        }
+                                        else{
+                                            remote = new MOKMessage(currentMessage.get("id").getAsString(),
+                                                    currentMessage.get("sid").getAsString(),
+                                                    currentMessage.get("rid").getAsString(),
+                                                    currentMessage.get("msg").getAsString(),
+                                                    currentMessage.get("datetime").getAsString(),
+                                                    currentMessage.get("type").getAsString(),params,props);
+                                            remote.setDatetimeorder(Long.parseLong(remote.getDatetime()));
+                                            messageList.add(remote);
                                         }
                                     }
                                     catch( Exception ex){

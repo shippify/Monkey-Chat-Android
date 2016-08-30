@@ -32,6 +32,42 @@ public class ConversationItem implements MonkeyConversation{
         this.status = status;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDatetime(long datetime) {
+        this.datetime = datetime;
+    }
+
+    public void setSecondaryText(String secondaryText) {
+        this.secondaryText = secondaryText;
+    }
+
+    public void setTotalNewMessage(int totalNewMessage) {
+        this.totalNewMessage = totalNewMessage;
+    }
+
+    public void setGroup(boolean group) {
+        isGroup = group;
+    }
+
+    public void setGroupMembers(String groupMembers) {
+        this.groupMembers = groupMembers;
+    }
+
+    public void setAvatarFilePath(String avatarFilePath) {
+        this.avatarFilePath = avatarFilePath;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
+
     @NotNull
     @Override
     public String getId() {
