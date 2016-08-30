@@ -791,14 +791,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onStartChatFragment(@NonNull String conversationId) {
-        if(getService()!=null)
-            getService().openConversation(conversationId);
+        setActiveConversation(conversationId);
     }
 
     @Override
     public void onStopChatFragment(@NonNull String conversationId) {
-        if(getService()!=null)
-            getService().closeConversation(conversationId);
+        setActiveConversation(null);
     }
 
     /** CONVERSATION ACTIVITY METHODS **/

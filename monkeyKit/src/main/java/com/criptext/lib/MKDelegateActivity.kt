@@ -28,6 +28,24 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     val pendingFiles = HashMap<String, DelegateMOKMessage>();
     private val pendingDownloads = HashMap<String, DownloadMessage>();
 
+    /**
+     * sets the currently active conversation id. When a non null value is set. it sends an "openConversation"
+     * to the server. When a null value is set, a "closeConversation" message is sent to the server
+     * with the previous conversation Id. You should call this method when your chat activity/fragment
+     * starts and when it stops.
+     */
+    var activeConversation: String? = null
+        set(value) {
+            if(isSocketConnected) {
+                if (value != null)
+                    service!!.openConversation(value)
+                else if(field != null)
+                    service!!.closeConversation(field!!)
+            }
+            field = value
+        }
+
+
     private val monkeyKitConnection = object : ServiceConnection {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
             val binder = p1 as MonkeyKitSocketService.MonkeyBinder
@@ -161,6 +179,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         for(file in pendingFiles.values){
             service!!.sendFileMessage(file.message, file.push, file.isEncrypted)
         }
+        activeConversation = activeConversation //send open conversation
         sendSync()
         setOnline(true)
     }
@@ -236,6 +255,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
         if(errorMessages.isNotEmpty())
             onDestroyWithPendingMessages(errorMessages)
+
+        activeConversation = null //send close conversation
 
     }
 
