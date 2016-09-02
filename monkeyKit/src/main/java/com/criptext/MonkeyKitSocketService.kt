@@ -6,6 +6,7 @@ import android.os.AsyncTask
 import android.os.Binder
 import android.os.IBinder
 import android.os.PowerManager
+import android.preference.PreferenceManager
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Base64
 import android.util.Log
@@ -255,7 +256,7 @@ abstract class MonkeyKitSocketService : Service() {
                         , info[3] as String, info[4] as Boolean, info[5] as Int)
             }
             CBTypes.onConversationOpenResponse -> {
-                delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean, info[2] as String, info[3] as String, info[4] as String)
+                delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean?, info[2] as String?, info[3] as String?, info[4] as String?)
             }
             CBTypes.onSocketConnected -> {
                 resendPendingMessages()
@@ -1083,20 +1084,30 @@ abstract class MonkeyKitSocketService : Service() {
     abstract fun loadClientData(): ClientData
 
     companion object {
+
         val transitionMessagesPrefs = "MonkeyKit.transitionMessages";
         val lastSyncPrefs = "MonkeyKit.lastSyncTime";
         val lastSyncKey = "MonkeyKit.lastSyncKey";
+        var prefs: SharedPreferences? = null
 
-        val baseURL = "monkey.criptext.com"
-        val httpsURL = "https://" + baseURL
+        val baseURL: String
+            get() {
+                return prefs!!.getString("sdomain","monkey.criptext.com")
+            }
+
+        val port: Int
+            get(){
+                return Integer.parseInt(prefs!!.getString("sport","1139"))
+            }
+
+        val httpsURL = "https://monkey.criptext.com"
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
-
         var status = ServiceStatus.dead
-
 
         fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>) {
             val intent = Intent(context, service)
             context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            prefs = PreferenceManager.getDefaultSharedPreferences(context);
         }
     }
 

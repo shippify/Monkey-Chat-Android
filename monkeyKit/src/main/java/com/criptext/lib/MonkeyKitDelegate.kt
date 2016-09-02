@@ -161,7 +161,7 @@ interface MonkeyKitDelegate {
      * *
      * @param lastOpenMe timestamp of the last time the conversation open my conversation
      */
-    fun onConversationOpenResponse(senderId: String, isOnline: Boolean?, lastSeen: String, lastOpenMe: String, members_online: String)
+    fun onConversationOpenResponse(senderId: String, isOnline: Boolean?, lastSeen: String?, lastOpenMe: String?, members_online: String?)
 
     /**
      * When a message is deleted from the server, MonkeyKit receive a notification.
@@ -178,9 +178,9 @@ interface MonkeyKitDelegate {
     /**
      * Cuando un contacto abre una conversacion con el usuario se ejecuta este callback. La implementacion
      * de este callback debe de marcar como leido los mensajes que se le enviaron a ese contacto.
-     * @param sessionID session id of the contact
+     * @param monkeyId monkey id of the contact
      */
-    fun onContactOpenMyConversation(sessionID: String)
+    fun onContactOpenMyConversation(monkeyId: String)
 
     /**
      * When you receive a notification, MonkeyKit execute this callback.

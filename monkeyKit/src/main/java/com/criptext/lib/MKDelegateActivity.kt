@@ -180,7 +180,6 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             service!!.sendFileMessage(file.message, file.push, file.isEncrypted)
         }
         activeConversation = activeConversation //send open conversation
-        sendSync()
         setOnline(true)
     }
 
@@ -300,9 +299,25 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         socketService?.sendSync(socketService.lastTimeSynced)
     }
 
+    /**
+     * Set your status to online or offline depending of the boolean received.
+     * @param online boolean if you are online or not
+     */
     fun setOnline(online: Boolean){
         val socketService = service
         socketService?.setOnline(online)
+    }
+
+    /**
+     * Get info of a conversation. The result will arrive via this two delegates: onGetGroupInfo or onGetUserInfo.
+     * @param conversationId conversation id.
+     */
+    fun getConversationInfo(conversationId: String){
+        val socketService = service
+        if(conversationId.contains("G:"))
+            socketService?.getGroupInfoById(conversationId)
+        else
+            socketService?.getUserInfoById(conversationId)
     }
 
     private data class DownloadMessage(val fileMessageId: String, val filepath: String, val props: JsonObject)

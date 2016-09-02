@@ -151,7 +151,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 
 		socketStatus = Status.reconectando; userServerListener=new ComServerListener((ComServerDelegate) this);
 		socketClient = new DarkStarSocketClient(MonkeyKitSocketService.Companion.getBaseURL(),
-				1139,(DarkStarListener)userServerListener);
+                MonkeyKitSocketService.Companion.getPort(),(DarkStarListener)userServerListener);
 		connThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -328,7 +328,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 						args.get("sid").getAsString(),
 						args.get("rid").getAsString(),
 						args.get("msg").getAsString(),
-						args.get("datetime").getAsString()+"000",
+						args.get("datetime").getAsString(),
 						args.get("type").getAsString(),params,props);
 		remote.setDatetimeorder(System.currentTimeMillis());
 		return remote;

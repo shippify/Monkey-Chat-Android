@@ -135,8 +135,16 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
         isDownloading = downloading;
     }
 
-    public String getSenderId(){
-        return senderSessionId.startsWith("G:")?recieverSessionId:senderSessionId;
+    public String getConversationId(){
+        return recieverSessionId.startsWith("G:")?recieverSessionId:senderSessionId;
+    }
+
+    public String getRecieverSessionId(){
+        return recieverSessionId;
+    }
+
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
     }
 
     @NotNull
@@ -147,7 +155,7 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
 
     @Override
     public long getMessageTimestamp() {
-        return timestamp;
+        return timestamp*1000;
     }
 
     @NotNull
@@ -197,7 +205,7 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
 
     @Override
     public long getAudioDuration() {
-        return duration;
+        return duration*1000;
     }
 
     /**CUSTOM FUNCTIONS**/

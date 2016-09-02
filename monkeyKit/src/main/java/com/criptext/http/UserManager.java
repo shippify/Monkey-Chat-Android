@@ -301,7 +301,7 @@ public class UserManager extends AQueryHttp {
 
                                             remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props);
                                             //TEMPORAL SOLUTION
-                                            remote.setDatetimeorder(Long.parseLong(remote.getDatetime()));
+                                            remote.setDatetimeorder(Long.parseLong(remote.getDatetime())*1000);
                                             if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0)
                                                 remote = asyncConnSocket.getKeysAndDecryptMOKMessage(remote, false);
                                             else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
@@ -318,7 +318,7 @@ public class UserManager extends AQueryHttp {
                                                     currentMessage.get("msg").getAsString(),
                                                     currentMessage.get("datetime").getAsString(),
                                                     currentMessage.get("type").getAsString(),params,props);
-                                            remote.setDatetimeorder(Long.parseLong(remote.getDatetime()));
+                                            remote.setDatetimeorder(Long.parseLong(remote.getDatetime())*1000);
                                             messageList.add(remote);
                                         }
                                     }

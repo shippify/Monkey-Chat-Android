@@ -183,14 +183,14 @@ public class DarkStarSocketClient implements DarkStarClient {
                 }
                 catch (EOFException ex) {
                     Log.d("InputReader - run", "EOFException mandando a disconnect()");
-                    try {
-                        main.disconnect();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+//                    try {
+//                        main.disconnect();
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
                     //post a dummy empty message to wake up the writer - it will realize that we;return disconnected
-                    MessageBuffer dummy = new MessageBuffer(new byte[0]);
-                    postRequest(dummy);
+//                    MessageBuffer dummy = new MessageBuffer(new byte[0]);
+//                    postRequest(dummy);
                     break;
                 }
                 catch (Exception ex) {
