@@ -1006,11 +1006,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onGroupLeft(@NotNull MonkeyConversation group) {
-
-    }
-
-    @Override
     public void onStartChatFragment(@NonNull String conversationId) {
         setActiveConversation(conversationId);
     }
@@ -1069,5 +1064,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 getService().getAllConversations(10, conversation.getDatetime()/1000);
             }
         }
+    }
+
+    @Override
+    public void onConversationDeleted(@NotNull MonkeyConversation group) {
+
     }
 }

@@ -104,6 +104,9 @@ abstract class MonkeyKitSocketService : Service() {
 
     internal var receiver : ConnectionChangeReceiver? = null
 
+
+    var waitingForSync = false
+
     /**
      * Starts MonkeyFileService to download a file. once the download is finished. the
      * onFileDownloadFinished callback is executed.
@@ -143,7 +146,6 @@ abstract class MonkeyKitSocketService : Service() {
                 IntentFilter(MonkeyFileService.DOWNLOAD_ACTION))
         val asyncAES = AsyncAESInitializer(this)
         asyncAES.execute()
-        startConnectivityBoradcastReceiver()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -177,6 +179,7 @@ abstract class MonkeyKitSocketService : Service() {
         groupManager = GroupManager(this, aesUtil)
         this.aesutil = aesUtil
         startSocketConnection()
+        startConnectivityBoradcastReceiver() //start connectivity service after client data is initialized
     }
 
     fun startSocketConnection() {
@@ -404,14 +407,15 @@ abstract class MonkeyKitSocketService : Service() {
      }
 
     fun notifySyncSuccess() {
-        if(pendingMessages.isEmpty()){
-            watchdog?.cancel()
-            watchdog = null
-        }
+        waitingForSync = false
+        clearWatchdog()
+
     }
 
 
-
+    /**
+     * Creates a new watchdog only if watchdog variable is null.
+     */
      fun startWatchdog(){
         if(watchdog == null) {
             watchdog = Watchdog(this);
@@ -449,10 +453,15 @@ abstract class MonkeyKitSocketService : Service() {
 
         if(index > -1) {
             pendingMessages.removeAt(index)
-            if(pendingMessages.isEmpty()) {
-                watchdog?.cancel()
-                watchdog = null
-            }
+            clearWatchdog()
+        }
+    }
+
+
+    fun clearWatchdog(){
+        if(pendingMessages.isEmpty() && !waitingForSync) {
+            watchdog?.cancel()
+            watchdog = null
         }
     }
 
@@ -931,6 +940,8 @@ abstract class MonkeyKitSocketService : Service() {
 
             if(isSocketConnected()){
                 System.out.println("MONKEY - Enviando Sync:"+json.toString());
+                waitingForSync = true
+                startWatchdog()
                 sendJsonThroughSocket(json)
             }
             else {
