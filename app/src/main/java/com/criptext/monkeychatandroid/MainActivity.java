@@ -281,10 +281,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 MessageItem newItem = new MessageItem(myMonkeyID, myFriendID, mokMessage.getMessage_id(),
                         item.getMessageText(), item.getMessageTimestamp(), item.getMessageTimestampOrder(), item.isIncomingMessage(),
                         MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
+                newItem.setParams(params);
 
                 switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
                     case audio:
-                        newItem.setDuration(item.getAudioDuration());
+                        newItem.setDuration(item.getAudioDuration()/1000);
                         newItem.setMessageContent(item.getFilePath());
                         break;
                     case photo:
@@ -317,9 +318,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(getService()!=null && monkeyChatFragment!=null) {
             String firstTimestamp = "0";
             if(monkeyChatFragment.getFirstMessage()!=null)
-                firstTimestamp = ""+monkeyChatFragment.getFirstMessage().getMessageTimestamp()/1000;
+                firstTimestamp = ""+monkeyChatFragment.getFirstMessage().getMessageTimestamp();
             else if(messagesMap.get(conversationId)!=null && messagesMap.get(conversationId).size()>0)
-                firstTimestamp = ""+new ArrayList<MonkeyItem>(messagesMap.get(conversationId)).get(0).getMessageTimestamp()/1000;
+                firstTimestamp = ""+new ArrayList<MonkeyItem>(messagesMap.get(conversationId)).get(0).getMessageTimestamp();
             getService().getConversationMessages(conversationId, 30, firstTimestamp);
         }
     }
@@ -901,7 +902,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     message.getParams(), message.getProps());
             resendFile(resendMessage, new PushMessage("You have a new message from the sample app"), true);
         }
-
     }
 
     @Override

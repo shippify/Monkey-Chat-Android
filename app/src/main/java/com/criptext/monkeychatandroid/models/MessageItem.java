@@ -155,7 +155,7 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
 
     @Override
     public long getMessageTimestamp() {
-        return timestamp*1000;
+        return timestamp;
     }
 
     @NotNull

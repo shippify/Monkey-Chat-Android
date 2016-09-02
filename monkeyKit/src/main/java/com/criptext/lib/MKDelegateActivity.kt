@@ -200,7 +200,17 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     fun resendFile(fileMessage: MOKMessage, pushMessage: PushMessage, isEncrypted: Boolean) {
         if(!pendingFiles.containsKey(fileMessage.message_id)){
            pendingFiles[fileMessage.message_id] = DelegateMOKMessage(fileMessage, pushMessage, isEncrypted)
-           if(isSocketConnected){
+            if(fileMessage.props==null) {
+                val propsMessage = createSendProps(fileMessage.message_id, isEncrypted)
+                propsMessage.addProperty("cmpr", "gzip")
+                propsMessage.addProperty("file_type", fileMessage.fileType);
+                propsMessage.addProperty("ext", FilenameUtils.getExtension(fileMessage.msg))
+                propsMessage.addProperty("filename", FilenameUtils.getName(fileMessage.msg))
+                propsMessage.addProperty("mime_type",
+                        MimeTypeMap.getSingleton().getMimeTypeFromExtension(FilenameUtils.getExtension(fileMessage.msg)))
+                fileMessage.props = propsMessage
+            }
+            if(isSocketConnected){
                 service!!.sendFileMessage(fileMessage, pushMessage, isEncrypted)
            }
         }

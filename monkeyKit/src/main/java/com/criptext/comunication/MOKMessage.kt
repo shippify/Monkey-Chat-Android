@@ -22,7 +22,7 @@ class MOKMessage(var message_id: String,var sid: String,var rid: String,var msg:
 
 
     constructor(message_id: String, sid: String, rid: String, msg: String,
-                datatime: String, type: String, params: JsonObject, props: JsonObject)
+                datatime: String, type: String, params: JsonObject?, props: JsonObject?)
         : this(message_id, sid, rid, msg, datatime, type) {
         this.params = params
         this.props = props
