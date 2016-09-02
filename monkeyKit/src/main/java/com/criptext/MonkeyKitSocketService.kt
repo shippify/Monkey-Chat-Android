@@ -104,12 +104,27 @@ abstract class MonkeyKitSocketService : Service() {
 
     internal var receiver : ConnectionChangeReceiver? = null
 
-    fun downloadFile(fileMessageId: String, fileName: String, props: String, monkeyId: String){
+    /**
+     * Starts MonkeyFileService to download a file. once the download is finished. the
+     * onFileDownloadFinished callback is executed.
+     * @param fileMessageId the ID of the message to download
+     * @param fileName The file to download's name
+     * @param props A JSON encoded string with the messages props
+     * @param monkeyId the monkey ID of the user that originally sent this file
+     * @param sortdate the timestamp used for sorting the messages.
+     * @param conversationId a unique identifier of the conversation to while the downloaded message
+     * belongs to.
+     *
+     */
+    fun downloadFile(fileMessageId: String, fileName: String, props: String, monkeyId: String,
+                     sortdate: Long, conversationId: String){
         val intent = Intent(this, uploadServiceClass)
         intent.putExtra(MOKMessage.MSG_KEY, fileName)
         intent.putExtra(MOKMessage.PROPS_KEY, props)
         intent.putExtra(MOKMessage.SID_KEY, monkeyId)
         intent.putExtra(MOKMessage.ID_KEY, fileMessageId)
+        intent.putExtra(MOKMessage.DATESORT_KEY, sortdate)
+        intent.putExtra(MOKMessage.CONVERSATION_KEY, conversationId)
         intent.putExtra(MonkeyFileService.ISUPLOAD_KEY, false)
         intent.putExtra(MonkeyFileService.APPID_KEY, clientData.appId)
         intent.putExtra(MonkeyFileService.APPKEY_KEY, clientData.appKey)
@@ -318,7 +333,8 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onAddGroupMember(info[0] as String, info[1] as String?, info[2] as Exception?)
             }
             CBTypes.onFileDownloadFinished -> {
-                delegate?.onFileDownloadFinished(info[0] as String, info[1] as Boolean)
+                delegate?.onFileDownloadFinished(info[0] as String, info[1] as Long, info[2] as String,
+                        info[3] as Boolean)
             }
             CBTypes.onContactOpenMyConversation -> {
                 delegate?.onContactOpenMyConversation(info[0] as String)

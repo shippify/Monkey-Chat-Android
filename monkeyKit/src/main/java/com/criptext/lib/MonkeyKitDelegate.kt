@@ -36,10 +36,15 @@ interface MonkeyKitDelegate {
      * With this callback you should update your UI to show an error message or a download
      * complete message, depending on the result.
      * @param fileMessageId The downloaded file's message id
+     * @param fileMessageTimestamp Unique identiffier of the downloaded file's conversation, this
+     * might make it easier to search for the message.
+     * @param fileMessageTimestamp The downloaded file's timestamp, this might make it easier to
+     * search for the message.
      * *
      * @param success true if the file was successfully downloaded, otherwise false
      */
-    fun onFileDownloadFinished(fileMessageId: String, success: Boolean)
+    fun onFileDownloadFinished(fileMessageId: String, fileMessageTimestamp: Long,
+                               conversationId: String, success: Boolean)
 
     /**
      * After create a group with createGroup method, the server responds with the group ID

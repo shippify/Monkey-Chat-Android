@@ -71,8 +71,9 @@ abstract class MonkeyFileService: IntentService(TAG){
             val downloadBytes = downloadFile(http, credential, MonkeyKitSocketService.httpsURL
                     + "/file/open/"+ FilenameUtils.getBaseName(mokDownload.msg))
             val filepath = processReceivedBytes(downloadBytes, mokDownload)
-            onFileDownloadFinished(mokDownload.id, filepath == null)
-            broadcastResponse(DOWNLOAD_ACTION, mokDownload.id, filepath != null)
+            onFileDownloadFinished(mokDownload.id, mokDownload.convID, filepath == null)
+            broadcastResponse(DOWNLOAD_ACTION, mokDownload.id, mokDownload.timesort,
+                    mokDownload.convID, filepath != null)
         }
 
     }
@@ -222,9 +223,12 @@ abstract class MonkeyFileService: IntentService(TAG){
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
-    private fun broadcastResponse(action: String, msgId: String, downloadComplete: Boolean){
+    private fun broadcastResponse(action: String, msgId: String, dateorder: Long, conversationId: String,
+                                  downloadComplete: Boolean){
         val intent = Intent(action)
         intent.putExtra(MOKMessage.ID_KEY, msgId)
+        intent.putExtra(MOKMessage.DATESORT_KEY, dateorder)
+        intent.putExtra(MOKMessage.CONVERSATION_KEY, conversationId)
         intent.putExtra(RESPONSE_KEY, if(downloadComplete) "ok" else null)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
@@ -268,15 +272,20 @@ abstract class MonkeyFileService: IntentService(TAG){
      * finished in background and the app is no longer active, so this service must update the
      * database with the result of the download action.
      * @param messageId Id of the message downloaded.
+     * @param conversationId unique identifier of the conversation to which the downloaded message
+     * belongs to
      * @param error true if the message could not be downloaded successfully.
      */
-    abstract fun onFileDownloadFinished(messageId: String, error: Boolean)
+    abstract fun onFileDownloadFinished(messageId: String, conversationId: String, error: Boolean)
 
-    private data class MOKDownload(val id: String, val msg: String,val props: JsonObject, val sid: String){
+    private data class MOKDownload(val id: String, val msg: String, val props: JsonObject,
+                                   val sid: String, val timesort: Long, val convID: String){
         constructor(intent: Intent): this(id = intent.getStringExtra(MOKMessage.ID_KEY),
                 msg = intent.getStringExtra(MOKMessage.MSG_KEY),
                 props = JsonParser().parse(intent.getStringExtra(MOKMessage.PROPS_KEY)).asJsonObject,
-                sid = intent.getStringExtra(MOKMessage.SID_KEY))
+                sid = intent.getStringExtra(MOKMessage.SID_KEY),
+                timesort = intent.getLongExtra(MOKMessage.DATESORT_KEY, 0L),
+                convID = intent.getStringExtra(MOKMessage.CONVERSATION_KEY))
     }
     companion object {
         val PUSH_KEY = "MonkeyFileService.push"

@@ -10,12 +10,13 @@ import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by gesuwall on 8/17/16.
  */
 public class ChatDataFragment extends Fragment{
-    HashMap<String, Collection<MonkeyItem>> chatMap;
+    HashMap<String, List<MonkeyItem>> chatMap;
     Collection<MonkeyConversation> conversationsList;
     MessageLoader messageLoader;
     GroupData groupData;
