@@ -13,6 +13,7 @@ import com.criptext.comunication.PushMessage
 import com.criptext.security.RandomStringBuilder
 import com.google.gson.JsonObject
 import org.apache.commons.io.FilenameUtils
+import java.security.Timestamp
 import java.util.*
 
 abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
@@ -193,7 +194,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         sentFile?.failed = true
     }
 
-    override fun onFileDownloadFinished(fileMessageId: String, success: Boolean) {
+    override fun onFileDownloadFinished(fileMessageId: String, fileMessageTimestamp: Long,
+                                        conversationId: String, success: Boolean) {
         pendingDownloads.remove(fileMessageId)
     }
 
@@ -233,10 +235,15 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * @param filepath the absolute path where the downloaded file should be stored.
      * @param props the props JsonObject of the file message to download
      * @param senderId the monkey ID of the user who sent this file message
+     * @param conversationId an identifier of the conversation to which the download message belongs to
+     * This will be used in the onDownloadFinished callback so that you can easily search for your
+     * message and update it
      */
-    fun downloadFile(fileMessageId: String, filepath: String, props: JsonObject, senderId: String){
+    fun downloadFile(fileMessageId: String, filepath: String, props: JsonObject, senderId: String,
+                     sortdate: Long, conversationId: String){
         if(!pendingDownloads.containsKey(filepath)){
-            service?.downloadFile(fileMessageId, filepath, props.toString(), senderId)
+            service?.downloadFile(fileMessageId, filepath, props.toString(), senderId,
+                    sortdate, conversationId)
 
             pendingDownloads.put(filepath, DownloadMessage(fileMessageId, filepath, props))
         }
@@ -320,7 +327,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             socketService?.getUserInfoById(conversationId)
     }
 
-    private data class DownloadMessage(val fileMessageId: String, val filepath: String, val props: JsonObject)
+    private data class DownloadMessage(val fileMessageId: String, val filepath: String,
+                                       val props: JsonObject)
     companion object{
         val  CONNECTION_NOT_READY_ERROR = "MonkeyKitSocketService is not ready yet."
     }
