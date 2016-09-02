@@ -37,6 +37,7 @@ import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.GroupChat;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
+import com.criptext.monkeykitui.recycler.MonkeyItemTransaction;
 import com.criptext.monkeykitui.recycler.audio.DefaultVoiceNotePlayer;
 import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
 import com.criptext.monkeykitui.util.MonkeyFragmentManager;
@@ -52,6 +53,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import io.realm.Realm;
@@ -65,8 +67,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     MonkeyFragmentManager monkeyFragmentManager;
 
     MonkeyChatFragment monkeyChatFragment;
+
     MonkeyConversationsFragment monkeyConversationsFragment;
-    HashMap<String, Collection<MonkeyItem>> messagesMap = new HashMap<>();
+    HashMap<String, List<MonkeyItem>> messagesMap = new HashMap<>();
     Collection<MonkeyConversation> conversationsList = null;
     ChatDataFragment dataFragment;
     /**
@@ -166,7 +169,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         final ChatDataFragment retainedFragment =(ChatDataFragment) getSupportFragmentManager().findFragmentByTag(DATA_FRAGMENT);
         if(retainedFragment != null) {
             messageLoader = retainedFragment.messageLoader;
-            messagesMap = retainedFragment.chatMap!=null?retainedFragment.chatMap:new HashMap<String, Collection<MonkeyItem>>();
+            messagesMap = retainedFragment.chatMap!=null?retainedFragment.chatMap:new HashMap<String, List<MonkeyItem>>();
             conversationsList = retainedFragment.conversationsList;
             groupData = retainedFragment.groupData;
             if (monkeyChatFragment != null) {
@@ -349,7 +352,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param newStatus new status to change
      */
     private void updateMessage(String id, MonkeyItem.DeliveryStatus newStatus) {
-        DatabaseHandler.updateMessageOutgoingStatus(realm, id, newStatus);
+        //DatabaseHandler.updateMessageOutgoingStatus(realm, id, newStatus);
         if (monkeyChatFragment != null) {
             MessageItem monkeyItem = (MessageItem) monkeyChatFragment.findMonkeyItemById(id);
             if (monkeyItem != null) {
@@ -359,6 +362,31 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
     }
 
+    private void updateMessage(String id, long dateorder, String conversationId, final MonkeyItem.DeliveryStatus newStatus) {
+        MonkeyItemTransaction transaction = new MonkeyItemTransaction() {
+                @Override
+                public MonkeyItem invoke(MonkeyItem monkeyItem) {
+                    MessageItem message = (MessageItem) monkeyItem;
+                    message.setStatus(newStatus);
+                    return message;
+                }
+            };
+
+        if (monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationId)) {
+            //If conversation is currently open
+            monkeyChatFragment.updateMessage(id, dateorder, transaction);
+        } else {
+            //Look for the conversation
+            List<MonkeyItem> conversationMessages = messagesMap.get(conversationId);
+            if(conversationMessages != null){
+                int position = MonkeyItem.Companion.findItemPositionInList(id, dateorder, conversationMessages);
+                if(position > -1){
+                    MonkeyItem updateItem = conversationMessages.remove(position);
+                    conversationMessages.add(position, transaction.invoke(updateItem));
+                }
+            }
+        }
+    }
     /**
      * Update a conversation according to the params received.
      * @param conversationId conversation id to change
@@ -596,9 +624,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onFileDownloadFinished(String fileMessageId, boolean success) {
+    public void onFileDownloadFinished(String fileMessageId, long fileMessageTimestamp,
+                                       String conversationId, boolean success) {
         //TODO use better search algorithm
-        super.onFileDownloadFinished(fileMessageId, success);
+        super.onFileDownloadFinished(fileMessageId, fileMessageTimestamp, conversationId, success);
         updateMessage(fileMessageId,
                 success ? MonkeyItem.DeliveryStatus.delivered : MonkeyItem.DeliveryStatus.error);
     }
@@ -908,13 +937,17 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onFileDownloadRequested(@NotNull MonkeyItem item) {
 
         if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
+            //If the message failed to download previously, mark it as sending and rebind.
+            //Rebinding will update the UI to a loading view and call this method again to start
+            //the download
             updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
             if(monkeyChatFragment != null)
                 monkeyChatFragment.rebindMonkeyItem(item);
-        } else {
+        } else { //Not error status, download the file.
             final MessageItem messageItem = (MessageItem) item;
             downloadFile(messageItem.getMessageId(), messageItem.getFilePath(),
-                    messageItem.getProps(), messageItem.getContactSessionId());
+                    messageItem.getProps(), messageItem.getContactSessionId(),
+                    messageItem.getMessageTimestampOrder(), getActiveConversation());
         }
 
     }
@@ -939,7 +972,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @NotNull
     @Override
-    public Collection<MonkeyItem> getInitialMessages(String conversationId) {
+    public List<MonkeyItem> getInitialMessages(String conversationId) {
         myFriendID = conversationId;
         if(messagesMap.get(conversationId).size() < messageLoader.getPageSize())
             addOldMessagesFromServer(conversationId);
@@ -958,14 +991,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void retainMessages(@NotNull String conversationId, @NotNull Collection<? extends MonkeyItem> messages) {
+    public void retainMessages(@NotNull String conversationId, @NotNull List<? extends MonkeyItem> messages) {
         if(messagesMap!=null)
-            messagesMap.put(conversationId, (Collection<MonkeyItem>) messages);
+            messagesMap.put(conversationId, (List<MonkeyItem>) messages);
     }
 
     @Override
-    public void retainConversations(@NotNull Collection<? extends MonkeyConversation> conversations) {
-        conversationsList = (Collection<MonkeyConversation>)conversations;
+    public void retainConversations(@NotNull List<? extends MonkeyConversation> conversations) {
+        conversationsList = (List<MonkeyConversation>)conversations;
     }
 
     @Override

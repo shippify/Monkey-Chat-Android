@@ -31,8 +31,10 @@ class FileBroadcastReceiver(val service: MonkeyKitSocketService) : BroadcastRece
              }
              MonkeyFileService.DOWNLOAD_ACTION -> {
                  val msgId = intent.getStringExtra(MOKMessage.ID_KEY)
+                 val timeorder = intent.getLongExtra(MOKMessage.DATESORT_KEY, 0L)
+                 val convId = intent.getStringExtra(MOKMessage.CONVERSATION_KEY)
                  service.processMessageFromHandler(CBTypes.onFileDownloadFinished,
-                         arrayOf(msgId, response != null))
+                         arrayOf(msgId, timeorder, convId, response != null))
 
              }
          }

@@ -103,5 +103,7 @@ class MOKMessage(var message_id: String,var sid: String,var rid: String,var msg:
         val TYPE_KEY = "MOKMessage.type"
         val PARAMS_KEY = "MOKMessage.params"
         val PROPS_KEY = "MOKMessage.props"
+        val DATESORT_KEY = "MOKMessage.datetimeorder"
+        val CONVERSATION_KEY = "MOKMessage.conversationID"
     }
 }

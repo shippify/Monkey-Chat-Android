@@ -29,7 +29,7 @@ public class MyFileUploadService extends MonkeyFileService{
     }
 
     @Override
-    public void onFileDownloadFinished(@NotNull String messageId, boolean error) {
+    public void onFileDownloadFinished(@NotNull String messageId, @NotNull String conversationId, boolean error) {
         Realm realm = MonkeyChat.getInstance().getNewMonkeyRealm();
         realm.beginTransaction();
         DatabaseHandler.updateMessageOutgoingStatusBlocking(realm, messageId,
