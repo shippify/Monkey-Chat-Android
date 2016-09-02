@@ -168,6 +168,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             messageLoader = retainedFragment.messageLoader;
             messagesMap = retainedFragment.chatMap!=null?retainedFragment.chatMap:new HashMap<String, Collection<MonkeyItem>>();
             conversationsList = retainedFragment.conversationsList;
+            groupData = retainedFragment.groupData;
             if (monkeyChatFragment != null) {
                 monkeyChatFragment.setInputListener(initInputListener());
             }
@@ -184,6 +185,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         dataFragment.chatMap = this.messagesMap;
         dataFragment.conversationsList = this.conversationsList;
         dataFragment.messageLoader = this.messageLoader;
+        dataFragment.groupData = this.groupData;
     }
     @Override
     protected void onDestroy() {
@@ -938,6 +940,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @NotNull
     @Override
     public Collection<MonkeyItem> getInitialMessages(String conversationId) {
+        myFriendID = conversationId;
         if(messagesMap.get(conversationId).size() < messageLoader.getPageSize())
             addOldMessagesFromServer(conversationId);
         return messagesMap.get(conversationId);
@@ -963,6 +966,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void retainConversations(@NotNull Collection<? extends MonkeyConversation> conversations) {
         conversationsList = (Collection<MonkeyConversation>)conversations;
+    }
+
+    @Override
+    public void onGroupLeft(@NotNull MonkeyConversation group) {
+
     }
 
     @Override
@@ -995,8 +1003,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onConversationClicked(@NotNull MonkeyConversation conversation) {
 
-        myFriendID = conversation.getId();
-
         //Initialize the messageLoader
         messageLoader = new MessageLoader(conversation.getId(), conversation.getGroupMembers(), myMonkeyID, this);
         if(messagesMap.get(conversation.getId())==null || messagesMap.get(conversation.getId()).size()==0)
@@ -1027,5 +1033,4 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
         }
     }
-
 }

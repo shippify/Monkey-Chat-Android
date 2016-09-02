@@ -18,6 +18,7 @@ public class ChatDataFragment extends Fragment{
     HashMap<String, Collection<MonkeyItem>> chatMap;
     Collection<MonkeyConversation> conversationsList;
     MessageLoader messageLoader;
+    GroupData groupData;
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
