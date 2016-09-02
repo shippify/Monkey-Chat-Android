@@ -124,7 +124,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         //Create a voice note player so that it can play voice note messages in the recycler view
         //when the user clicks on them
-        voiceNotePlayer = new DefaultVoiceNotePlayer(this);
+        if(voiceNotePlayer==null)
+            voiceNotePlayer = new DefaultVoiceNotePlayer(this);
         //Add a sensor handler so the activity can turn off the screen when the sensors detect that
         //the user is too close to the phone and change the audio output device.
         sensorHandler = new SensorHandler(voiceNotePlayer, this);
@@ -174,6 +175,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             groupData = retainedFragment.groupData;
             if (monkeyChatFragment != null) {
                 monkeyChatFragment.setInputListener(initInputListener());
+                if(voiceNotePlayer == null)
+                    voiceNotePlayer = new DefaultVoiceNotePlayer(this);
+                monkeyChatFragment.setVoiceNotePlayer(voiceNotePlayer);
             }
             dataFragment = retainedFragment;
         } else {
