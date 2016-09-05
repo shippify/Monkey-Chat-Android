@@ -156,11 +156,11 @@ public class AsyncConnSocket implements ComServerDelegate{
 			@Override
 			public void run() {
 				try {
-					final int STRIKES = 5;
+					final int STRIKES = 10;
 
 					for(int i = 1; i <= STRIKES; i++)
                         if (AsyncConnSocket.this.getSocketStatus() != Status.conectado) {
-                            System.out.println("RECONNECTING - "+sessionId + " " + (System.currentTimeMillis()/1000));
+                            System.out.println("RECONNECTING - "+sessionId + " #" + i + " " + (System.currentTimeMillis()/1000));
                             socketClient.connect();
                             AsyncConnSocket.this.socketClient.login(AsyncConnSocket.this.sessionId, urlPassword);
 
@@ -230,7 +230,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 					if (currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKText) == 0
 							|| currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0) {
 
-                        remote = createMOKMessageFromJSON(currentMessage, params, props);
+                        remote = createMOKMessageFromJSON(currentMessage, params, props, true);
                         if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0)
                             remote = getKeysAndDecryptMOKMessage(remote, false);
                         else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
@@ -241,7 +241,7 @@ public class AsyncConnSocket implements ComServerDelegate{
                             batch.add(remote);
 					}
                     else if(currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKNotif)==0){
-                        remote = createMOKMessageFromJSON(currentMessage, params, props);
+                        remote = createMOKMessageFromJSON(currentMessage, params, props, true);
                         Message msg = mainMessageHandler.obtainMessage();
                         msg.what=MessageTypes.MOKProtocolMessage;
                         msg.obj =remote;
@@ -323,14 +323,17 @@ public class AsyncConnSocket implements ComServerDelegate{
 	 * @param props
 	 * @return
 	 */
-	public MOKMessage createMOKMessageFromJSON(JsonObject args, JsonObject params, JsonObject props){
+	public MOKMessage createMOKMessageFromJSON(JsonObject args, JsonObject params, JsonObject props, boolean sameDateTime){
 		MOKMessage remote = new MOKMessage(args.get("id").getAsString(),
 						args.get("sid").getAsString(),
 						args.get("rid").getAsString(),
 						args.get("msg").getAsString(),
 						args.get("datetime").getAsString(),
 						args.get("type").getAsString(),params,props);
-		remote.setDatetimeorder(System.currentTimeMillis());
+        if(sameDateTime)
+		    remote.setDatetimeorder(Long.parseLong(remote.getDatetime())*1000);
+        else
+            remote.setDatetimeorder(System.currentTimeMillis());
 		return remote;
 	}
 
@@ -438,7 +441,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 			if(args.get("type").getAsString().compareTo(MessageTypes.MOKText)==0
 				|| args.get("type").getAsString().compareTo(MessageTypes.MOKFile)==0){
 				Message msg = mainMessageHandler.obtainMessage();
-				remote = createMOKMessageFromJSON(args, params, props);
+				remote = createMOKMessageFromJSON(args, params, props, false);
 				msg.what = decryptMOKMessage(remote);
 				msg.obj = remote;
 				mainMessageHandler.sendMessage(msg);

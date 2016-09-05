@@ -203,7 +203,7 @@ public class UserManager extends AQueryHttp {
                                                 if (currentMessage.has("type") && (currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKText) == 0
                                                         || currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0)) {
 
-                                                    remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props);
+                                                    remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
                                                     if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0)
                                                         remote = asyncConnSocket.getKeysAndDecryptMOKMessage(remote, false);
                                                     else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
@@ -299,9 +299,7 @@ public class UserManager extends AQueryHttp {
                                         if (currentMessage.has("type") && (currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKText) == 0
                                                 || currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0)) {
 
-                                            remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props);
-                                            //TEMPORAL SOLUTION
-                                            remote.setDatetimeorder(Long.parseLong(remote.getDatetime())*1000);
+                                            remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
                                             if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0)
                                                 remote = asyncConnSocket.getKeysAndDecryptMOKMessage(remote, false);
                                             else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {

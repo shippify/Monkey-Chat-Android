@@ -334,20 +334,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     /**
      * Change the status bar depending on the state
-     * @param state status of the connection
+     * @param status status of the connection
      */
-    public void setStatusBarState(int state){
+    public void setStatusBarState(Utils.ConnectionStatus status){
 
         if(monkeyFragmentManager==null)
             return;
+        monkeyFragmentManager.showStatusNotification(status);
 
-        if(state==1){//Connecting
-            monkeyFragmentManager.showStatusNotification(Utils.ConnectionStatus.connecting);
-        }else if(state==2){//Connected
-            monkeyFragmentManager.showStatusNotification(Utils.ConnectionStatus.connected);
-        }else if(state==3){//Without internet
-            monkeyFragmentManager.showStatusNotification(Utils.ConnectionStatus.waiting_for_network);
-        }
     }
 
     /**
@@ -619,12 +613,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onSocketConnected() {
         super.onSocketConnected();
-        setStatusBarState(2);
+        setStatusBarState(Utils.ConnectionStatus.connected);
     }
 
     @Override
     public void onSocketDisconnected() {
-        setStatusBarState(1);
+        setStatusBarState(Utils.ConnectionStatus.connecting);
     }
 
     @Override
@@ -646,10 +640,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onCreateGroup(String groupMembers, String groupName, String groupID, Exception e) {
-        if(e != null)
-            e.printStackTrace();
-        else{
-
+        if(e==null){
+            ConversationItem conversationItem = new ConversationItem(groupID,
+                    groupName, System.currentTimeMillis(), "Write to this group",
+                    0, true, groupMembers, "", MonkeyConversation.ConversationStatus.empty.ordinal());
+            if(monkeyConversationsFragment!=null) {
+                monkeyConversationsFragment.addNewConversation(conversationItem, true);
+            }
         }
     }
 
@@ -678,18 +675,20 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         processNewMessage(message);
         boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
         updateConversation(isMyOwnMsg?message.getRid():message.getConversationID(), getSecondaryTextByMOkMessage(message),
-                MonkeyConversation.ConversationStatus.receivedMessage, 1, message.getDatetimeorder());
+                isMyOwnMsg? MonkeyConversation.ConversationStatus.deliveredMessage:
+                        MonkeyConversation.ConversationStatus.receivedMessage, isMyOwnMsg? 0 : 1, message.getDatetimeorder());
     }
 
     @Override
     public void onMessageBatchReady(ArrayList<MOKMessage> messages) {
-        setStatusBarState(2);
+        setStatusBarState(Utils.ConnectionStatus.connected);
         if(messages.size()>0){
             processNewMessages(messages);
             MOKMessage message = messages.get(messages.size()-1);
             boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
             updateConversation(isMyOwnMsg?message.getRid():message.getConversationID(), getSecondaryTextByMOkMessage(message),
-                    MonkeyConversation.ConversationStatus.receivedMessage, 1, message.getDatetimeorder());
+                    isMyOwnMsg? MonkeyConversation.ConversationStatus.deliveredMessage:
+                            MonkeyConversation.ConversationStatus.receivedMessage, isMyOwnMsg? 0 : 1, message.getDatetimeorder());
         }
     }
 
@@ -733,14 +732,16 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 convName = userInfo.get("name").getAsString();
             ConversationItem conversationItem = new ConversationItem(mokConversation.getConversationId(),
                     convName, System.currentTimeMillis(), "Write to this group",
-                    1, true, mokConversation.getAvatarURL(), mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
-                    MonkeyConversation.ConversationStatus.empty.ordinal());
+                    1, true, mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
+                    mokConversation.getAvatarURL(), MonkeyConversation.ConversationStatus.empty.ordinal());
             if(messagesMap!=null && messagesMap.get(mokConversation.getConversationId())!=null){
                 MonkeyItem monkeyItem = new LinkedList<>(messagesMap.get(mokConversation.getConversationId())).getLast();
+                boolean isMyOwnMessage = monkeyItem.getContactSessionId().equals(myMonkeyID);
                 conversationItem.setSecondaryText(getSecondaryTextByMessageType(monkeyItem));
                 conversationItem.setDatetime(monkeyItem.getMessageTimestampOrder());
-                conversationItem.setTotalNewMessage(1);
-                conversationItem.setStatus(MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
+                conversationItem.setTotalNewMessage(isMyOwnMessage? 0 : 1);
+                conversationItem.setStatus(isMyOwnMessage? MonkeyConversation.ConversationStatus.receivedMessage.ordinal():
+                        MonkeyConversation.ConversationStatus.deliveredMessage.ordinal());
                 messagesMap.get(mokConversation.getConversationId()).clear();
             }
             if(monkeyConversationsFragment!=null) {
@@ -764,8 +765,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 MonkeyItem monkeyItem = new LinkedList<>(messagesMap.get(mokUser.getMonkeyId())).getLast();
                 conversationItem.setSecondaryText(getSecondaryTextByMessageType(monkeyItem));
                 conversationItem.setDatetime(monkeyItem.getMessageTimestampOrder());
-                conversationItem.setTotalNewMessage(1);
-                conversationItem.setStatus(MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
+                conversationItem.setTotalNewMessage(mokUser.getMonkeyId().equals(myMonkeyID)? 0 : 1);
+                conversationItem.setStatus(mokUser.getMonkeyId().equals(myMonkeyID)?
+                        MonkeyConversation.ConversationStatus.deliveredMessage.ordinal():
+                        MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
                 messagesMap.get(mokUser.getMonkeyId()).clear();
             }
             if(monkeyConversationsFragment!=null) {
@@ -777,7 +780,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onGetUsersInfo(@NotNull ArrayList<MOKUser> mokUsers, @Nullable Exception e) {
-        if(groupData!=null && monkeyChatFragment!=null) {
+        if(e==null && groupData!=null && monkeyChatFragment!=null) {
             groupData.setMembers(monkeyChatFragment.getConversationId(), mokUsers);
             monkeyChatFragment.reloadAllMessages();
         }
@@ -893,17 +896,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onBoundToService() {
 
-        if(getService().isSocketConnected()) {
-            setStatusBarState(2);
-        }
-        else{
-            setStatusBarState(1);
-        }
     }
 
     @Override
     public  void onConnectionRefused(){
-        setStatusBarState(2);
+        setStatusBarState(Utils.ConnectionStatus.connected);
         Log.d("MainActivity", "Connection Refused");
         Toast.makeText(this, "Login failed. Please check your Monkey Kit credentials", Toast.LENGTH_LONG).show();
     }
@@ -1067,7 +1064,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onConversationDeleted(@NotNull MonkeyConversation group) {
-
+    public void onConversationDeleted(@NotNull MonkeyConversation conversation) {
+        if(getService()!=null) {
+            if (conversation.isGroup()) {
+                getService().removeGroupMember(conversation.getId(), myMonkeyID);
+            } else {
+                getService().deleteConversation(conversation.getId());
+            }
+        }
     }
 }
