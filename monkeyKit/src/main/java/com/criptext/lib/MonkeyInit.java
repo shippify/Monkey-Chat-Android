@@ -183,7 +183,7 @@ public class MonkeyInit {
          Log.d("userSyncMS", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
 
-        prefs.edit().putString("sdmain", finalResult.getString("sdomain")).apply();
+        prefs.edit().putString("sdomain", finalResult.getString("sdomain")).apply();
         prefs.edit().putString("sport", finalResult.getString("sport")).apply();
 
         final String keys = finalResult.getString("keys");
@@ -225,7 +225,7 @@ public class MonkeyInit {
          Log.d("connectHTTP", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
 
-        prefs.edit().putString("sdmain", finalResult.getString("sdomain")).apply();
+        prefs.edit().putString("sdomain", finalResult.getString("sdomain")).apply();
         prefs.edit().putString("sport", finalResult.getString("sport")).apply();
 
         return finalResult.getString("monkeyId");

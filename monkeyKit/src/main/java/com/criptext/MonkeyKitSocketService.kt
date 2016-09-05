@@ -540,11 +540,10 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     /**
-     * Envia una notificación a traves de MonkeyKit. Las notificaciones no se persisten. Si el
-     * destinatario no la pudo recibir a tiempo, no la recibira nunca
-     * @param sessionIDTo session ID del usuario que recibira la notificacion
-     * @param paramsObject JsonObject con parametros adicionales que necesita la aplicacion
-     * @param pushMessage Mensaje a mostrar en el push notification
+     * Send a notification.
+     * @param sessionIDTo session ID of the receiver
+     * @param paramsObject JsonObject with the parameters
+     * @param pushMessage message for push notification
      */
     fun sendNotification(sessionIDTo: String, paramsObject: JSONObject, pushMessage: String) {
 
@@ -582,10 +581,9 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     /**
-     * Envia una notificación temporal. Si la notificacion no llega al destinatario con el primer intento
-     * no se vuelve a enviar.
-     * @param sessionIDTo session ID del destinatario de la notificacion
-     * @param paramsObject JsonObject con parametros a enviar en la notificacion
+     * Send a temporal notification.
+     * @param sessionIDTo session ID of the receiver
+     * @param paramsObject JsonObject with the parameters
      */
     fun sendTemporalNotification(sessionIDTo: String, paramsObject: JSONObject) {
 

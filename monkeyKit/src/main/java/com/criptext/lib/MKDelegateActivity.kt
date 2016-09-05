@@ -13,6 +13,7 @@ import com.criptext.comunication.PushMessage
 import com.criptext.security.RandomStringBuilder
 import com.google.gson.JsonObject
 import org.apache.commons.io.FilenameUtils
+import org.json.JSONObject
 import java.security.Timestamp
 import java.util.*
 
@@ -138,14 +139,23 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      */
     fun persistFileMessageAndSend(filePath: String, monkeyIDFrom: String, monkeyIDTo: String, fileType: Int,
                                   params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
+
+        val newMessage = sendFileMessage(filePath, monkeyIDFrom, monkeyIDTo, fileType, params, pushMessage, isEncrypted)
+        storeSentMessage(newMessage)
+        return newMessage
+
+    }
+
+    fun sendFileMessage(filePath: String, monkeyIDFrom: String, monkeyIDTo: String, fileType: Int,
+                                  params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
         val newMessage = createMOKMessage(filePath, monkeyIDFrom, monkeyIDTo, fileType, params)
         val propsMessage = createSendProps(newMessage.message_id, isEncrypted);
-                propsMessage.addProperty("cmpr", "gzip");
-                propsMessage.addProperty("file_type", fileType);
-                propsMessage.addProperty("ext", FilenameUtils.getExtension(filePath));
-                propsMessage.addProperty("filename", FilenameUtils.getName(filePath));
-                propsMessage.addProperty("mime_type",
-                        MimeTypeMap.getSingleton().getMimeTypeFromExtension(FilenameUtils.getExtension(filePath)));
+        propsMessage.addProperty("cmpr", "gzip");
+        propsMessage.addProperty("file_type", fileType);
+        propsMessage.addProperty("ext", FilenameUtils.getExtension(filePath));
+        propsMessage.addProperty("filename", FilenameUtils.getName(filePath));
+        propsMessage.addProperty("mime_type",
+                MimeTypeMap.getSingleton().getMimeTypeFromExtension(FilenameUtils.getExtension(filePath)));
 
         newMessage.props = propsMessage;
 
@@ -155,12 +165,19 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             service!!.sendFileMessage(newMessage, pushMessage, isEncrypted)
         }
 
-        storeSentMessage(newMessage)
         return newMessage
 
     }
 
     fun persistMessageAndSend(text: String, monkeyIDFrom: String, monkeyIDTo: String, params: JsonObject,
+                              pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
+
+        val newMessage = sendMessage(text, monkeyIDFrom, monkeyIDTo, params, pushMessage, isEncrypted)
+        storeSentMessage(newMessage)
+        return newMessage
+    }
+
+    fun sendMessage(text: String, monkeyIDFrom: String, monkeyIDTo: String, params: JsonObject,
                               pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
         val newMessage = createMOKMessage(text, monkeyIDFrom, monkeyIDTo,
                 MessageTypes.blMessageDefault, params)
@@ -170,7 +187,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         } else {
             messagesToForwardToService.add(DelegateMOKMessage(newMessage, pushMessage, isEncrypted))
         }
-        storeSentMessage(newMessage)
+
         return newMessage
     }
 
@@ -335,6 +352,76 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             socketService?.getGroupInfoById(conversationId)
         else
             socketService?.getUserInfoById(conversationId)
+    }
+
+    /**
+     * Send a notification.
+     * @param sessionIDTo session ID of the receiver
+     * @param paramsObject JsonObject with the parameters
+     * @param pushMessage message for push notification
+     */
+    fun sendNotification(monkeyIDTo: String, paramsObject: JSONObject, pushMessage: String){
+        val socketService = service
+        socketService?.sendNotification(monkeyIDTo, paramsObject, pushMessage)
+    }
+
+    /**
+     * Send a temporal notification.
+     * @param monkeyIDTo session ID of the receiver
+     * @param paramsObject JsonObject with the parameters
+     */
+    fun sendTemporalNotification(monkeyIDTo: String, paramsObject: JSONObject) {
+        val socketService = service
+        socketService?.sendTemporalNotification(monkeyIDTo, paramsObject)
+    }
+
+    /**
+     * Get all conversation of a user using the monkey ID.
+     */
+    fun getAllConversations(quantity: Int, fromTimestamp: Long){
+        val socketService = service
+        socketService?.getAllConversations(quantity, fromTimestamp)
+    }
+
+    /**
+     * Get all messages of a conversation.
+     * @param monkeyid monkeyid ID of the user.
+     * @param numberOfMessages number of messages to load.
+     * @param lastTimeStamp last timestamp of the message loaded.
+     */
+    fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String){
+        val socketService = service
+        socketService?.getConversationMessages(conversationId, numberOfMessages, lastTimeStamp)
+    }
+
+    /**
+     * Remove a group member asynchronously int the Monkey server. This method help you to delete yourself
+     * of the group. Response is delivered via monkeyJsonResponse.
+     * @param group_id ID of the group
+     * @param monkey_id ID of member to delete
+     */
+    fun removeGroupMember(group_id: String, monkey_id: String){
+        val socketService = service
+        socketService?.removeGroupMember(group_id, monkey_id)
+    }
+
+    /**
+     * Add a member to a group asynchronously.
+     * @param new_member Session ID of the new member
+     * @param group_id ID of the group
+     */
+    fun addGroupMember(new_member: String, group_id: String){
+        val socketService = service
+        socketService?.addGroupMember(new_member, group_id)
+    }
+
+    /**
+     * Delete a conversation.
+     * @param monkeyid monkeyid ID of the user.
+     */
+    fun deleteConversation(conversationId: String){
+        val socketService = service
+        socketService?.deleteConversation(conversationId)
     }
 
     private data class DownloadMessage(val fileMessageId: String, val filepath: String,

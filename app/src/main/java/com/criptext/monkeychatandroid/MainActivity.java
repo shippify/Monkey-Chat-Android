@@ -322,13 +322,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param conversationId id of the conversation messages required
      */
     public void addOldMessagesFromServer(String conversationId){
-        if(getService()!=null && monkeyChatFragment!=null) {
+        if(monkeyChatFragment!=null) {
             String firstTimestamp = "0";
             if(monkeyChatFragment.getFirstMessage()!=null)
                 firstTimestamp = ""+monkeyChatFragment.getFirstMessage().getMessageTimestamp();
             else if(messagesMap.get(conversationId)!=null && messagesMap.get(conversationId).size()>0)
                 firstTimestamp = ""+new ArrayList<MonkeyItem>(messagesMap.get(conversationId)).get(0).getMessageTimestamp();
-            getService().getConversationMessages(conversationId, 30, firstTimestamp);
+            getConversationMessages(conversationId, 30, firstTimestamp);
         }
     }
 
@@ -415,6 +415,16 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         newConversationItem.setDatetime(dateTime>-1?dateTime:conversationItem.getDatetime());
                     }
                 });
+            }
+        }
+    }
+
+    private void updateConversationBadge(String conversationId, int unread){
+        if(monkeyConversationsFragment!=null) {
+            final ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
+            if(conversationItem!=null) {
+                conversationItem.setTotalNewMessage(unread);
+                monkeyConversationsFragment.updateConversation(conversationItem);
             }
         }
     }
@@ -954,9 +964,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onLoadMoreData(int i) {
-        //If the adapter requires to load older messages, delegate this task to our messageLoader object
-        messageLoader.loadNewPage(realm);
+    public void onLoadMoreData(String conversationId) {
+        addOldMessagesFromServer(conversationId);
     }
 
     @Override
@@ -975,8 +984,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public List<MonkeyItem> getInitialMessages(String conversationId) {
         myFriendID = conversationId;
-        if(messagesMap.get(conversationId).size() < messageLoader.getPageSize())
-            addOldMessagesFromServer(conversationId);
         return messagesMap.get(conversationId);
     }
 
@@ -1034,12 +1041,18 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         //Initialize the messageLoader
         messageLoader = new MessageLoader(conversation.getId(), conversation.getGroupMembers(), myMonkeyID, this);
-        if(messagesMap.get(conversation.getId())==null || messagesMap.get(conversation.getId()).size()==0)
-            messageLoader.loadFirstPage(realm);
-        else
-            startChatWithMessages(conversation.getId(), conversation.getGroupMembers(), new ArrayList<MonkeyItem>(messagesMap.get(conversation.getId())), false);
+        List<MonkeyItem> messages = messagesMap.get(conversation.getId());
+        if(messages!=null && !messages.isEmpty()){
+            startChatWithMessages(conversation.getId(), conversation.getGroupMembers(),
+                    new ArrayList<MonkeyItem>(messages), false);
+        }
+        else{
+            messagesMap.put(conversation.getId(), new ArrayList<MonkeyItem>());
+            startChatWithMessages(conversation.getId(), conversation.getGroupMembers(),
+                    new ArrayList<MonkeyItem>(messagesMap.get(conversation.getId())), false);
+        }
 
-        updateConversation(conversation.getId(), conversation.getSecondaryText(), MonkeyConversation.ConversationStatus.empty, 0, conversation.getDatetime());
+        //updateConversationBadge(conversation.getId(), 0);
 
         if(getSupportActionBar()!=null)
             getSupportActionBar().setTitle(conversation.getName());
@@ -1053,24 +1066,24 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onLoadMoreConversations(int loadedConversations) {
-        if(getService()!=null) {
-            if(monkeyConversationsFragment.getLastConversation()==null)
-                getService().getAllConversations(10, 0);
-            else {
-                MonkeyConversation conversation = monkeyConversationsFragment.getLastConversation();
-                getService().getAllConversations(10, conversation.getDatetime()/1000);
-            }
+
+        if(monkeyConversationsFragment.getLastConversation()==null)
+            getAllConversations(10, 0);
+        else {
+            MonkeyConversation conversation = monkeyConversationsFragment.getLastConversation();
+            getAllConversations(10, conversation.getDatetime()/1000);
         }
+
     }
 
     @Override
     public void onConversationDeleted(@NotNull MonkeyConversation conversation) {
-        if(getService()!=null) {
-            if (conversation.isGroup()) {
-                getService().removeGroupMember(conversation.getId(), myMonkeyID);
-            } else {
-                getService().deleteConversation(conversation.getId());
-            }
+
+        if (conversation.isGroup()) {
+            removeGroupMember(conversation.getId(), myMonkeyID);
+        } else {
+            deleteConversation(conversation.getId());
         }
+
     }
 }
