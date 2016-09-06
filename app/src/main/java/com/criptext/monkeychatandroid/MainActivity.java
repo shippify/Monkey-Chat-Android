@@ -1052,7 +1052,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     new ArrayList<MonkeyItem>(messagesMap.get(conversation.getId())), false);
         }
 
-        //updateConversationBadge(conversation.getId(), 0);
+        updateConversationBadge(conversation.getId(), 0);
 
         if(getSupportActionBar()!=null)
             getSupportActionBar().setTitle(conversation.getName());
