@@ -746,7 +746,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     mokConversation.getAvatarURL(), MonkeyConversation.ConversationStatus.empty.ordinal());
             if(messagesMap!=null && messagesMap.get(mokConversation.getConversationId())!=null){
                 MonkeyItem monkeyItem = new LinkedList<>(messagesMap.get(mokConversation.getConversationId())).getLast();
-                boolean isMyOwnMessage = monkeyItem.getContactSessionId().equals(myMonkeyID);
+                boolean isMyOwnMessage = monkeyItem.getSenderId().equals(myMonkeyID);
                 conversationItem.setSecondaryText(getSecondaryTextByMessageType(monkeyItem));
                 conversationItem.setDatetime(monkeyItem.getMessageTimestampOrder());
                 conversationItem.setTotalNewMessage(isMyOwnMessage? 0 : 1);
@@ -957,7 +957,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         } else { //Not error status, download the file.
             final MessageItem messageItem = (MessageItem) item;
             downloadFile(messageItem.getMessageId(), messageItem.getFilePath(),
-                    messageItem.getProps(), messageItem.getContactSessionId(),
+                    messageItem.getProps(), messageItem.getSenderId(),
                     messageItem.getMessageTimestampOrder(), getActiveConversation());
         }
 
@@ -1067,13 +1067,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onLoadMoreConversations(int loadedConversations) {
 
-        if(monkeyConversationsFragment.getLastConversation()==null)
-            getAllConversations(10, 0);
-        else {
-            MonkeyConversation conversation = monkeyConversationsFragment.getLastConversation();
-            getAllConversations(10, conversation.getDatetime()/1000);
+        if(monkeyConversationsFragment!=null) {
+            if (monkeyConversationsFragment.getLastConversation() == null)
+                getAllConversations(10, 0);
+            else {
+                MonkeyConversation conversation = monkeyConversationsFragment.getLastConversation();
+                getAllConversations(10, conversation.getDatetime() / 1000);
+            }
         }
-
     }
 
     @Override
