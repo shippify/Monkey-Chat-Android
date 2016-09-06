@@ -28,7 +28,7 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
 
     public MessageModel model;
 
-    private String senderSessionId, recieverSessionId, messageId, messageContent;
+    private String senderSessionId, recieverSessionId, messageId, oldMessageId, messageContent;
     private long timestamp, timestampOrder;
     private boolean isIncoming;
     private DeliveryStatus status;
@@ -147,6 +147,10 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
         this.messageId = messageId;
     }
 
+    public void setOldMessageId(String oldMessageId) {
+        this.oldMessageId = oldMessageId;
+    }
+
     @NotNull
     @Override
     public String getSenderId() {
@@ -233,7 +237,7 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
     @NotNull
     @Override
     public String getOldMessageId() {
-        return null;
+        return oldMessageId;
     }
 
     @Override

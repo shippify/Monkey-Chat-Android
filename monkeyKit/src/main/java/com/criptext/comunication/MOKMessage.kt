@@ -91,7 +91,19 @@ class MOKMessage(var message_id: String,var sid: String,var rid: String,var msg:
         get() = rid.startsWith("G:")
 
     fun isMyOwnMessage(mySessionID: String) : Boolean{
-        return sid == mySessionID
+        return sid.equals(mySessionID)
+    }
+
+    fun isMediaType(): Boolean{
+        if(props==null)
+            return false
+        return props!!.has("file_type")
+    }
+
+    fun getMediaType(): Int{
+        if(!isMediaType())
+            return MessageTypes.FileTypes.Default
+        return Integer.parseInt(props!!.get("file_type").asString)
     }
 
     companion object {

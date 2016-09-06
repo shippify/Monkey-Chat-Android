@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MessageTypes;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.lang.ref.WeakReference;
@@ -75,21 +76,25 @@ public class DatabaseHandler {
     public static MessageItem createMessage(MOKMessage message, Context context, String userSession, boolean isIncoming){
 
         //VERIFY IF IT IS A GROUP MESSAGE
-        String sid=message.getRid().contains("G")?message.getRid():message.getSid();
-        String rid=message.getRid().contains("G")?message.getSid():message.getRid();
+        String sid=message.isGroupConversation()?message.getRid():message.getSid();
+        String rid=message.isGroupConversation()?message.getSid():message.getRid();
 
-        boolean msgIsMyOwn = message.getSid().equals(userSession);
-        if(msgIsMyOwn) {//VERIFY IF IS IT MY OWN MESSAGE
+        //VERIFY IF IS IT MY OWN MESSAGE
+        if(message.isMyOwnMessage(userSession)) {
             sid = message.getSid();
             rid = message.getRid();
         }
 
         MonkeyItem.MonkeyItemType type = MonkeyItem.MonkeyItemType.text;
-        if (message.getProps().has("file_type")) {
-            if(Integer.parseInt(message.getProps().get("file_type").getAsString())==1)
-                type = MonkeyItem.MonkeyItemType.audio;
-            else if(Integer.parseInt(message.getProps().get("file_type").getAsString())==3)
-                type = MonkeyItem.MonkeyItemType.photo;
+        if (message.isMediaType()) {
+            switch (message.getFileType()){
+                case MessageTypes.FileTypes.Audio:
+                    type = MonkeyItem.MonkeyItemType.audio;
+                    break;
+                case MessageTypes.FileTypes.Photo:
+                    type = MonkeyItem.MonkeyItemType.photo;
+                    break;
+            }
         }
 
         MessageItem item = new MessageItem(sid, rid, message.getMessage_id(), message.getMsg(),
@@ -101,6 +106,8 @@ public class DatabaseHandler {
 
         if(isIncoming && (type==MonkeyItem.MonkeyItemType.audio || type== MonkeyItem.MonkeyItemType.photo))
             item.setStatus(MonkeyItem.DeliveryStatus.sending);
+
+        item.setOldMessageId(message.getOldId());
 
         switch (type){
             case audio:

@@ -132,8 +132,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         //finally load one page of messages.
 
         monkeyFragmentManager = new MonkeyFragmentManager(this);
-        monkeyFragmentManager.setContentLayout(savedInstanceState);
         monkeyFragmentManager.setConversationsTitle(getResources().getString(R.string.app_name));
+        monkeyFragmentManager.setContentLayout(savedInstanceState);
     }
 
     private void initRealm(){
