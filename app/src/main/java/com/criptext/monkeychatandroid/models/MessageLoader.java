@@ -110,7 +110,7 @@ public class MessageLoader {
             final MainActivity act = activityRef.get();
             if(act != null){
                 if(firstPage){
-                    act.startChatWithMessages(conversationId, membersIds, messages, hasReachedEnd);
+                    act.startChatWithMessages(conversationId, membersIds, messages, "", hasReachedEnd);
                 } else {
                     act.addOldMessages(messages, hasReachedEnd);
                     if(messages.size() < messageCounter.pageSize)

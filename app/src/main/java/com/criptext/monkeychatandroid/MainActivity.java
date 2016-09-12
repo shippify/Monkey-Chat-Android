@@ -457,9 +457,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param hasReachedEnd true of the initial messages are the only existing messages of the chat
      */
     public void startChatWithMessages(String conversationId, String membersIds, ArrayList<MonkeyItem> initialMessages,
-                                      boolean hasReachedEnd){
+                                      String chatTitle, boolean hasReachedEnd){
         messagesMap.put(conversationId, initialMessages);
-        MonkeyChatFragment fragment = MonkeyChatFragment.Companion.newInstance(conversationId, membersIds, hasReachedEnd);
+        MonkeyChatFragment fragment = MonkeyChatFragment.Companion.newInstance(conversationId, membersIds, chatTitle, hasReachedEnd);
         conversationsList = monkeyFragmentManager.setChatFragment(fragment, initInputListener(), voiceNotePlayer);
     }
     /**
@@ -525,11 +525,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             else if(messagesMap!=null && messagesMap.get(conversationId)!=null){
                 messagesMap.get(conversationId).addAll(arrayList);
             }
-            else{
+            else if(messagesMap!=null){
                 messagesMap.put(conversationId, arrayList);
             }
             //Validate if conversation does not exists
-            if(monkeyConversationsFragment.findConversationById(conversationId)==null){
+            if(monkeyConversationsFragment!=null && monkeyConversationsFragment.findConversationById(conversationId)==null){
                 getConversationInfo(conversationId);
             }
             it.remove();
@@ -1044,18 +1044,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         List<MonkeyItem> messages = messagesMap.get(conversation.getId());
         if(messages!=null && !messages.isEmpty()){
             startChatWithMessages(conversation.getId(), conversation.getGroupMembers(),
-                    new ArrayList<MonkeyItem>(messages), false);
+                    new ArrayList<MonkeyItem>(messages), conversation.getName(), false);
         }
         else{
             messagesMap.put(conversation.getId(), new ArrayList<MonkeyItem>());
             startChatWithMessages(conversation.getId(), conversation.getGroupMembers(),
-                    new ArrayList<MonkeyItem>(messagesMap.get(conversation.getId())), false);
+                    new ArrayList<MonkeyItem>(messagesMap.get(conversation.getId())), conversation.getName(), false);
         }
 
         updateConversationBadge(conversation.getId(), 0);
-
-        if(getSupportActionBar()!=null)
-            getSupportActionBar().setTitle(conversation.getName());
     }
 
     @Override

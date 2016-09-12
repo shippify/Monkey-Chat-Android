@@ -272,10 +272,12 @@ public class AsyncConnSocket implements ComServerDelegate{
             mainMessageHandler.sendMessage(msg);
 
             if (args.get("remaining_messages").getAsInt() > 0) {
-				if(protocol == MessageTypes.MOKProtocolSync)
-                	service.sendSync(lastTimeSynced);
-				else if(protocol == MessageTypes.MOKProtocolGet)
-					service.sendGet(lastMessageId);
+				if(protocol == MessageTypes.MOKProtocolSync) {
+                    Message msg2 = mainMessageHandler.obtainMessage();
+                    msg2.what = MessageTypes.MOKProtocolMessageSync;
+                    msg2.obj = lastTimeSynced;
+                    mainMessageHandler.sendMessage(msg2);
+                }
             }
             else{
                 service.setPortionsMessages(15);
@@ -546,7 +548,6 @@ public class AsyncConnSocket implements ComServerDelegate{
 			mainMessageHandler.sendMessage(msg);
 			break;
 		}
-		case MessageTypes.MOKProtocolGet:
 		case MessageTypes.MOKProtocolSync:{
 			processBatch(cmd, args, parser);
 			break;

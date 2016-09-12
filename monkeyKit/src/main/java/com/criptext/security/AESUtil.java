@@ -205,7 +205,7 @@ public class AESUtil {
  
     public static String decryptWithCustomKeyAndIV(String encryptedText, String key, String iv) throws Exception {
     	 
-    	System.out.println("MONKEY - Desencriptado msg con key:***"+key+"***iv:"+stripGarbage(iv));
+    	//System.out.println("MONKEY - Desencriptado msg con key:***"+key+"***iv:"+stripGarbage(iv));
     	
     	byte[] encryptedTextBytes;
     	encryptedTextBytes = NewBase64.decode(encryptedText,Base64.NO_WRAP);

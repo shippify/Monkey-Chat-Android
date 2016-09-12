@@ -147,15 +147,16 @@ public class MOKMessageHandler extends Handler {
                         service.startSocketConnection();
                         break;
                     }
-                    case MessageTypes.MOKProtocolGet: {
-                        service.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message.getMessage_id(), message.getSid(), message.getRid(), message.getParams(), message.getDatetime()});
-                        break;
-                    }
                     case MessageTypes.MOKProtocolSync: {
                         if(message!=null && message.getMonkeyAction() == MessageTypes.MOKGroupJoined)
                             service.processMessageFromHandler(CBTypes.onGroupsRecover, new Object[]{message.getMsg()});
                         else
                             service.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message.getMessage_id(), message.getSid(), message.getRid(), message.getParams(), message.getDatetime()});
+                        break;
+                    }
+                    case MessageTypes.MOKProtocolMessageSync: {
+                        long lastTimeSynced = (Long)msg.obj;
+                        service.sendSync(lastTimeSynced);
                         break;
                     }
                     default:

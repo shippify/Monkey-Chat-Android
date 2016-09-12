@@ -937,13 +937,13 @@ abstract class MonkeyKitSocketService : Service() {
             json.addProperty("cmd", MessageTypes.MOKProtocolSync);
 
             if(isSocketConnected()){
-                System.out.println("MONKEY - Enviando Sync:"+json.toString());
+                System.out.println("MONKEY - Sending Sync:"+json.toString());
                 waitingForSync = true
                 startWatchdog()
                 sendJsonThroughSocket(json)
             }
             else {
-                System.out.println("MONKEY - no pudo enviar Sync - socket desconectado " + asyncConnSocket.socketStatus);
+                System.out.println("MONKEY - could not sent Sync - socket disconnected " + asyncConnSocket.socketStatus);
                 //Thread.dumpStack();
             }
 
@@ -952,34 +952,6 @@ abstract class MonkeyKitSocketService : Service() {
         } catch (e: Exception) {
             e.printStackTrace();
         }
-    }
-
-    fun sendGet(since: String){
-
-        try {
-
-            val args = JsonObject();
-            val json = JsonObject();
-
-            args.addProperty("messages_since", since);
-            if(since.equals("0")) {
-                args.addProperty("groups", 1);
-            }
-            args.addProperty("qty", "" + portionsMessages);
-            json.add("args", args);
-            json.addProperty("cmd", MessageTypes.MOKProtocolGet);
-
-            if(isSocketConnected())
-                sendJsonThroughSocket(json)
-
-            startWatchdog()
-
-        } catch (e: Exception) {
-            e.printStackTrace();
-        }
-
-
-        lastTimeSynced = since.toLong();
     }
 
     /**
