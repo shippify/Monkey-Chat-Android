@@ -841,7 +841,17 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online) {
-
+        if(monkeyFragmentManager!=null) {
+            String subtitle = isOnline? "Online":"";
+            if(!isOnline){
+                subtitle = "Last seen: "+Utils.Companion.getFormattedDay(Long.valueOf(lastSeen) * 1000, this);
+            }
+            else if(senderId.contains("G:")){
+                int membersOnline = members_online.split(",").length;
+                subtitle = membersOnline + " " + (membersOnline>1?"members online":"member online");
+            }
+            monkeyFragmentManager.setSubtitle(subtitle);
+        }
     }
 
     @Override
@@ -1091,5 +1101,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
         DatabaseHandler.deleteConversation(conversation.getConvId());
 
+    }
+
+    @Override
+    public void onMessageRemoved(@NotNull MonkeyItem item, boolean unsent) {
+        //TODO Remove message from DB and send unsend command if necessary
     }
 }
