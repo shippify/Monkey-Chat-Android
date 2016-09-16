@@ -137,7 +137,7 @@ interface MonkeyKitDelegate {
      * This function is executed when a message arrived and stored in the DB.
      * @param message Objeto MOKMessage que representa al mensaje recibido.
      */
-    fun onMessageRecieved(message: MOKMessage)
+    fun onMessageReceived(message: MOKMessage)
 
     /**
      * When the message arrive to the server, MonkeyKit receive an ack. This callback come with

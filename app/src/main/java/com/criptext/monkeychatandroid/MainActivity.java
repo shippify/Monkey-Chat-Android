@@ -27,7 +27,6 @@ import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.ConversationItem;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.MessageItem;
-import com.criptext.monkeychatandroid.models.MessageLoader;
 import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
 import com.criptext.monkeykitui.conversation.ConversationsActivity;
@@ -56,22 +55,24 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import io.realm.Realm;
-
 public class MainActivity extends MKDelegateActivity implements ChatActivity, ConversationsActivity{
 
     private static String DATA_FRAGMENT = "MainActivity.chatDataFragment";
     //Since this is the Chat activity, we need a RecyclerView and an adapter. Additionally we
     //will store the messages in our own list so that they can be accessed easily.
-    MessageLoader messageLoader;
     MonkeyFragmentManager monkeyFragmentManager;
-
     MonkeyChatFragment monkeyChatFragment;
 
     MonkeyConversationsFragment monkeyConversationsFragment;
     HashMap<String, List<MonkeyItem>> messagesMap = new HashMap<>();
     Collection<MonkeyConversation> conversationsList = null;
     ChatDataFragment dataFragment;
+
+    int actualConversationsPage = 0;
+    int actualMessagesPage = 0;
+
+    static int CONV_PERPAGE = 20;
+    static int MESS_PERPAGE = 30;
     /**
      * This class is basically a media player for our voice notes. we pass this to MonkeyAdapter
      * so that it can handle all the media playback for us. However, we must initialize it in "onStart".
@@ -96,12 +97,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     private  SensorHandler sensorHandler;
 
     /**
-     * Realm instance. We use this to retreive messages. it must be initialized on the 'onStart" method
-     * and released on the "onStop".
-     */
-    private Realm realm;
-
-    /**
      * This class is used to handle group methods.
      */
     private GroupData groupData;
@@ -111,8 +106,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         super.onCreate(savedInstanceState);
 
         getRetainedData();
-        //First, initialize the database and the constants from SharedPreferences.
-        initRealm();
+        //First, initialize the constants from SharedPreferences.
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
         Log.d("MonkeyId", myMonkeyID);
@@ -136,11 +130,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         monkeyFragmentManager.setContentLayout(savedInstanceState);
     }
 
-    private void initRealm(){
-        if(realm == null)
-            realm = MonkeyChat.getInstance().getNewMonkeyRealm();
-    }
-
     public void registerWithGCM(){
         Intent intent = new Intent(this, SampleRegistrationService.class);
         intent.putExtra(ClientData.Companion.getAPP_ID_KEY(), SensitiveData.APP_ID);
@@ -158,10 +147,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     protected void onStop() {
-
         super.onStop();
-        realm.close();
-        realm = null;
         voiceNotePlayer.releasePlayer();
         sensorHandler.onStop();
     }
@@ -169,7 +155,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     private void getRetainedData(){
         final ChatDataFragment retainedFragment =(ChatDataFragment) getSupportFragmentManager().findFragmentByTag(DATA_FRAGMENT);
         if(retainedFragment != null) {
-            messageLoader = retainedFragment.messageLoader;
             messagesMap = retainedFragment.chatMap!=null?retainedFragment.chatMap:new HashMap<String, List<MonkeyItem>>();
             conversationsList = retainedFragment.conversationsList;
             groupData = retainedFragment.groupData;
@@ -191,8 +176,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     private void retainDataInFragment(){
         dataFragment.chatMap = this.messagesMap;
         dataFragment.conversationsList = this.conversationsList;
-        dataFragment.messageLoader = this.messageLoader;
         dataFragment.groupData = this.groupData;
+        dataFragment.actualConversationsPage = this.actualConversationsPage;
+        dataFragment.actualMessagesPage = this.actualMessagesPage;
     }
     @Override
     protected void onDestroy() {
@@ -204,8 +190,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     protected void onRestart(){
         super.onRestart();
-        initRealm();
     }
+
     @Override
     protected void onStart(){
         super.onStart();
@@ -237,7 +223,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
             } break;
             case R.id.action_deleteall:
-                DatabaseHandler.deleteAll(realm);
+                DatabaseHandler.deleteAll();
                 if(monkeyChatFragment != null) monkeyChatFragment.clearMessages();
                 break;
             default:
@@ -257,6 +243,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     public InputListener initInputListener(){
         return new InputListener() {
+            @Override
+            public void onNewItemFileError(int type) {
+                Toast.makeText(MainActivity.this, "Error writing file of type " +
+                        MonkeyItem.MonkeyItemType.values()[type], Toast.LENGTH_LONG).show();
+            }
+
             @Override
             public void onNewItem(@NotNull MonkeyItem item) {
 
@@ -288,11 +280,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 MessageItem newItem = new MessageItem(myMonkeyID, myFriendID, mokMessage.getMessage_id(),
                         item.getMessageText(), item.getMessageTimestamp(), item.getMessageTimestampOrder(), item.isIncomingMessage(),
                         MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
-                newItem.setParams(params);
+                newItem.setParams(params.toString());
 
                 switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
                     case audio:
-                        newItem.setDuration(item.getAudioDuration()/1000);
+                        newItem.setAudioDuration(item.getAudioDuration()/1000);
                         newItem.setMessageContent(item.getFilePath());
                         break;
                     case photo:
@@ -328,7 +320,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 firstTimestamp = ""+monkeyChatFragment.getFirstMessage().getMessageTimestamp();
             else if(messagesMap.get(conversationId)!=null && messagesMap.get(conversationId).size()>0)
                 firstTimestamp = ""+new ArrayList<MonkeyItem>(messagesMap.get(conversationId)).get(0).getMessageTimestamp();
-            getConversationMessages(conversationId, 30, firstTimestamp);
+            getConversationMessages(conversationId, MESS_PERPAGE, firstTimestamp);
         }
     }
 
@@ -350,22 +342,23 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param newStatus new status to change
      */
     private void updateMessage(String id, MonkeyItem.DeliveryStatus newStatus) {
-        //DatabaseHandler.updateMessageOutgoingStatus(realm, id, newStatus);
         if (monkeyChatFragment != null) {
             MessageItem monkeyItem = (MessageItem) monkeyChatFragment.findMonkeyItemById(id);
             if (monkeyItem != null) {
-                monkeyItem.setStatus(newStatus);
+                monkeyItem.setStatus(newStatus.ordinal());
+                DatabaseHandler.updateMessageStatus(id, newStatus);
                 monkeyChatFragment.rebindMonkeyItem(monkeyItem);
             }
         }
     }
 
-    private void updateMessage(String id, long dateorder, String conversationId, final MonkeyItem.DeliveryStatus newStatus) {
+    private void updateMessage(final String id, long dateorder, String conversationId, final MonkeyItem.DeliveryStatus newStatus) {
         MonkeyItemTransaction transaction = new MonkeyItemTransaction() {
                 @Override
                 public MonkeyItem invoke(MonkeyItem monkeyItem) {
                     MessageItem message = (MessageItem) monkeyItem;
-                    message.setStatus(newStatus);
+                    message.setStatus(newStatus.ordinal());
+                    DatabaseHandler.updateMessageStatus(id, newStatus);
                     return message;
                 }
             };
@@ -413,6 +406,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                             newConversationItem.setTotalNewMessage(0);
                         }
                         newConversationItem.setDatetime(dateTime>-1?dateTime:conversationItem.getDatetime());
+                        newConversationItem.save();
                     }
                 });
             }
@@ -424,6 +418,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             final ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
             if(conversationItem!=null) {
                 conversationItem.setTotalNewMessage(unread);
+                conversationItem.save();
                 monkeyConversationsFragment.updateConversation(conversationItem);
             }
         }
@@ -438,15 +433,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if (monkeyChatFragment != null) {
             MessageItem monkeyItem = (MessageItem) monkeyChatFragment.findMonkeyItemById(messageId);
             if (monkeyItem != null) {
-                updateConversation(monkeyItem.getRecieverSessionId(), getSecondaryTextByMessageType(monkeyItem),
+                updateConversation(monkeyItem.getReceiverSessionId(), getSecondaryTextByMessageType(monkeyItem),
                         read?MonkeyConversation.ConversationStatus.sentMessageRead:MonkeyConversation.ConversationStatus.deliveredMessage,
                         0, monkeyItem.getMessageTimestampOrder());
             }
         }
-    }
-
-    private void createNewConversation(){
-
     }
 
     /**
@@ -457,10 +448,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param hasReachedEnd true of the initial messages are the only existing messages of the chat
      */
     public void startChatWithMessages(String conversationId, String membersIds, ArrayList<MonkeyItem> initialMessages,
-                                      String chatTitle, boolean hasReachedEnd){
+                                      String chatTitle, String avatarURL, boolean hasReachedEnd){
         messagesMap.put(conversationId, initialMessages);
-        MonkeyChatFragment fragment = MonkeyChatFragment.Companion.newInstance(conversationId, membersIds, chatTitle, hasReachedEnd);
-        conversationsList = monkeyFragmentManager.setChatFragment(fragment, initInputListener(), voiceNotePlayer);
+        MonkeyChatFragment fragment = MonkeyChatFragment.Companion.newInstance(conversationId, membersIds, chatTitle, avatarURL, hasReachedEnd);
+        conversationsList = monkeyFragmentManager.setChatFragment(fragment, initInputListener(), voiceNotePlayer, chatTitle, avatarURL);
     }
     /**
      * Updates a sent message and updates de UI so that the user can see that it has been
@@ -477,9 +468,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     private void processNewMessage(MOKMessage message){
         MessageItem newItem = DatabaseHandler.createMessage(message, this, myMonkeyID, !message.isMyOwnMessage(myMonkeyID));
-        if(monkeyChatFragment != null && messageLoader!=null
-                && monkeyChatFragment.getConversationId().equals(message.getConversationID())) {
-            messageLoader.countNewMessage(message.getConversationID());
+        if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(message.getConversationID())) {
             monkeyChatFragment.smoothlyAddNewItem(newItem);
         }
         else if(messagesMap!=null && messagesMap.get(message.getConversationID())!=null){
@@ -505,8 +494,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         HashMap<String, Collection<MonkeyItem>> newConversationMessages = new HashMap<>();
         for(MOKMessage message: messages){
             String conversationId = message.getConversationID();
-            if(messageLoader!=null)
-                messageLoader.countNewMessage(conversationId);
             if(newConversationMessages.get(conversationId)==null){
                 newConversationMessages.put(conversationId, new ArrayList<MonkeyItem>());
             }
@@ -541,14 +528,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param messages
      */
     private void processOldMessages(ArrayList<MOKMessage> messages){
-        if(messageLoader==null)
-            return;
+
         ArrayList<MessageItem> messageItems = new ArrayList<>();
         for(MOKMessage message: messages){
-            messageLoader.countNewMessage(message.getConversationID());
             messageItems.add(DatabaseHandler.createMessage(message, this, myMonkeyID, !message.isMyOwnMessage(myMonkeyID)));
         }
         Collections.sort(messageItems);
+        DatabaseHandler.saveMessages(messageItems);
         if(monkeyChatFragment != null) {
             monkeyChatFragment.addOldMessages(new ArrayList<MonkeyItem>(messageItems), messages.size() == 0);
         }
@@ -586,7 +572,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             return;
         }
 
-        initRealm();
         //Since our chat fragment uses different activities to take and edit photos, we must forward
         // the onActivityResult event to it so that it can react to the results of take photo, choose
         //photo and edit photo.
@@ -599,21 +584,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
 
     @Override
-    public void storeSentMessage(final MOKMessage message) {
-        /*
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        DatabaseHandler.storeSendingMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), false),
-            new Realm.Transaction.OnSuccess() {
-                @Override
-                public void onSuccess() {
-                }
-            }, new Realm.Transaction.OnError() {
-                @Override
-                public void onError(Throwable error) {
-                    error.printStackTrace();
-                }
-            });
-            */
+    public void storeSendingMessage(final MOKMessage message) {
+        DatabaseHandler.storeSendingMessage(DatabaseHandler.createMessage(message, this, myMonkeyID, false));
     }
 
     /******
@@ -646,6 +618,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
         markMessageAsDelivered(oldId, read);
         updateConversationByMessage(oldId, read);
+        //If we use the same monkeyId for several devices (multisession) we receive an acknowledge for each
+        //message sent. So to validate if we have the message sent, we can send a sync message.
+        if((messageType == Integer.parseInt(MessageTypes.MOKText) || messageType == Integer.parseInt(MessageTypes.MOKFile))
+                && !DatabaseHandler.existMessage(oldId) && !DatabaseHandler.existMessage(newId)){
+            sendSync();
+        }
     }
 
     @Override
@@ -681,12 +659,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onMessageRecieved(@NonNull MOKMessage message) {
+    public void onMessageReceived(@NonNull MOKMessage message) {
         processNewMessage(message);
         boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
         updateConversation(isMyOwnMsg?message.getRid():message.getConversationID(), getSecondaryTextByMOkMessage(message),
                 isMyOwnMsg? MonkeyConversation.ConversationStatus.deliveredMessage:
                         MonkeyConversation.ConversationStatus.receivedMessage, isMyOwnMsg? 0 : 1, message.getDatetimeorder());
+
     }
 
     @Override
@@ -753,6 +732,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 conversationItem.setStatus(isMyOwnMessage? MonkeyConversation.ConversationStatus.receivedMessage.ordinal():
                         MonkeyConversation.ConversationStatus.deliveredMessage.ordinal());
                 messagesMap.get(mokConversation.getConversationId()).clear();
+                conversationItem.save();
             }
             if(monkeyConversationsFragment!=null) {
                 monkeyConversationsFragment.addNewConversation(conversationItem, true);
@@ -780,6 +760,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         MonkeyConversation.ConversationStatus.deliveredMessage.ordinal():
                         MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
                 messagesMap.get(mokUser.getMonkeyId()).clear();
+                conversationItem.save();
             }
             if(monkeyConversationsFragment!=null) {
                 monkeyConversationsFragment.addNewConversation(conversationItem, true);
@@ -804,7 +785,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             return;
         }
 
-        ArrayList<MonkeyConversation> conversationItems = new ArrayList<>();
+        ArrayList<MonkeyConversation> monkeyConversations = new ArrayList<>();
         for(MOKConversation mokConversation : conversations){
             String convName = "Unknown";
             String secondaryText = "Write to this conversation";
@@ -823,10 +804,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 conversationItem.status = MonkeyConversation.ConversationStatus.receivedMessage.ordinal();
             }
             else if(mokConversation.getLastMessage()!=null){
-//                ArrayList<MonkeyItem> monkeyItemArrayList = new ArrayList<>();
-//                monkeyItemArrayList.add(DatabaseHandler.createMessage(mokConversation.getLastMessage(), this,
-//                        myMonkeyID, !mokConversation.getLastMessage().isMyOwnMessage(myMonkeyID)));
-//                messagesMap.put(mokConversation.getConversationId(), monkeyItemArrayList);
                 if(mokConversation.getLastMessage().isMyOwnMessage(myMonkeyID)){
                     conversationItem.status = MonkeyConversation.ConversationStatus.deliveredMessage.ordinal();
                 }
@@ -834,10 +811,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     conversationItem.status = MonkeyConversation.ConversationStatus.receivedMessage.ordinal();
                 }
             }
-
-            conversationItems.add(conversationItem);
+            monkeyConversations.add(conversationItem);
         }
-        monkeyConversationsFragment.addOldConversations(conversationItems, conversationItems.size()==0);
+        List<ConversationItem> conversationItems = new ArrayList<>();
+        for(MonkeyConversation monkeyConversation: monkeyConversations){
+            conversationItems.add(new ConversationItem(monkeyConversation));
+        }
+        DatabaseHandler.saveConversations(conversationItems);
+        monkeyConversationsFragment.addOldConversations(monkeyConversations, monkeyConversations.size()==0);
     }
 
     @Override
@@ -881,12 +862,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         else if(messagesMap!=null && messagesMap.get(monkeyId)!=null){
             monkeyItemArrayList = new ArrayList<>(messagesMap.get(monkeyId));
         }
+        List<MessageItem> messageItemsToSave = new ArrayList<>();
         for(MonkeyItem item: monkeyItemArrayList){
             MessageItem messageItem = (MessageItem)item;
             if(!messageItem.isIncomingMessage()){
-                messageItem.setStatus(MonkeyItem.DeliveryStatus.read);
+                messageItem.setStatus(MonkeyItem.DeliveryStatus.read.ordinal());
+                messageItemsToSave.add(messageItem);
             }
         }
+        DatabaseHandler.saveMessages(messageItemsToSave);
         if(monkeyChatFragment!=null && monkeyChatFragment.getConversationId().equals(monkeyId)) {
             monkeyChatFragment.reloadAllMessages();
         }
@@ -939,7 +923,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             MessageItem message = (MessageItem) item;
             MOKMessage resendMessage = new MOKMessage(message.getMessageId(), myMonkeyID, myFriendID,
                     message.getMessageText(), "" + message.getMessageTimestamp(), "" + message.getMessageType(),
-                    message.getParams(), message.getProps());
+                    message.getJsonParams(), message.getJsonProps());
             resendFile(resendMessage, new PushMessage("You have a new message from the sample app"), true);
         }
     }
@@ -957,22 +941,30 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         } else { //Not error status, download the file.
             final MessageItem messageItem = (MessageItem) item;
             downloadFile(messageItem.getMessageId(), messageItem.getFilePath(),
-                    messageItem.getProps(), messageItem.getSenderId(),
+                    messageItem.getJsonProps(), messageItem.getSenderId(),
                     messageItem.getMessageTimestampOrder(), getActiveConversation());
         }
 
     }
 
     @Override
-    public void onLoadMoreData(String conversationId) {
-        addOldMessagesFromServer(conversationId);
+    public void onLoadMoreMessages(String conversationId) {
+
+        actualMessagesPage++;
+        List<MessageItem> messageItems = DatabaseHandler.getMessages(myMonkeyID, conversationId, MESS_PERPAGE, actualMessagesPage);
+        if(messageItems.size() > 0){
+            if(monkeyChatFragment != null) {
+                monkeyChatFragment.addOldMessages(new ArrayList<MonkeyItem>(messageItems), messageItems.size() == 0);
+            }
+        }
+        else {
+            addOldMessagesFromServer(conversationId);
+        }
     }
 
     @Override
     public void onDestroyWithPendingMessages(@NotNull ArrayList<MOKMessage> errorMessages) {
-        Realm newRealm = MonkeyChat.getInstance().getNewMonkeyRealm();
-        DatabaseHandler.markMessagesAsError(newRealm, errorMessages);
-        newRealm.close();
+        DatabaseHandler.markMessagesAsError(errorMessages);
     }
 
     @Override
@@ -1029,9 +1021,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
         else {
             conversations = new ArrayList<>();
-            final long datetime = System.currentTimeMillis();
-            conversations.add(new ConversationItem(myMonkeyID, "Mirror Chat", datetime, "Tap to talk to yourself",
-                    0, false, "", null, MonkeyConversation.ConversationStatus.empty.ordinal()));
+            //Get conversations from DB
+            conversations.addAll(DatabaseHandler.getConversations(CONV_PERPAGE, actualConversationsPage));
+            //Add a mirror chat
+            //final long datetime = System.currentTimeMillis();
+            //conversations.add(new ConversationItem(myMonkeyID, "Mirror Chat", datetime, "Tap to talk to yourself",
+            //        0, false, "", null, MonkeyConversation.ConversationStatus.empty.ordinal()));
         }
         monkeyConversationsFragment.insertConversations(conversations, false);
     }
@@ -1039,20 +1034,22 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onConversationClicked(@NotNull MonkeyConversation conversation) {
 
-        //Initialize the messageLoader
-        messageLoader = new MessageLoader(conversation.getId(), conversation.getGroupMembers(), myMonkeyID, this);
-        List<MonkeyItem> messages = messagesMap.get(conversation.getId());
+        actualMessagesPage = 0;
+        List<MonkeyItem> messages = messagesMap.get(conversation.getConvId());
         if(messages!=null && !messages.isEmpty()){
-            startChatWithMessages(conversation.getId(), conversation.getGroupMembers(),
-                    new ArrayList<MonkeyItem>(messages), conversation.getName(), false);
+            //Get initial messages from memory
+            startChatWithMessages(conversation.getConvId(), conversation.getGroupMembers(),
+                    new ArrayList<MonkeyItem>(messages), conversation.getName(), conversation.getAvatarFilePath(), false);
         }
         else{
-            messagesMap.put(conversation.getId(), new ArrayList<MonkeyItem>());
-            startChatWithMessages(conversation.getId(), conversation.getGroupMembers(),
-                    new ArrayList<MonkeyItem>(messagesMap.get(conversation.getId())), conversation.getName(), false);
+            //Get initial messages from DB
+            List<MessageItem> messageItems = DatabaseHandler.getMessages(myMonkeyID, conversation.getConvId(), MESS_PERPAGE, actualMessagesPage);
+            messagesMap.put(conversation.getConvId(), new ArrayList<MonkeyItem>(messageItems));
+            startChatWithMessages(conversation.getConvId(), conversation.getGroupMembers(),
+                    new ArrayList<MonkeyItem>(messagesMap.get(conversation.getConvId())), conversation.getName(), conversation.getAvatarFilePath(), false);
         }
 
-        updateConversationBadge(conversation.getId(), 0);
+        updateConversationBadge(conversation.getConvId(), 0);
     }
 
     @Override
@@ -1064,12 +1061,22 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onLoadMoreConversations(int loadedConversations) {
 
-        if(monkeyConversationsFragment!=null) {
+        if (monkeyConversationsFragment == null) {
+            return;
+        }
+
+        actualConversationsPage++;
+        List<ConversationItem> conversationItems = DatabaseHandler.getConversations(CONV_PERPAGE, actualConversationsPage);
+        if(conversationItems.size() > 0) {
+            monkeyConversationsFragment.addOldConversations(conversationItems, conversationItems.size()==0);
+        }
+        else{
+            //If there is no more conversations we get conversations from server
             if (monkeyConversationsFragment.getLastConversation() == null)
-                getAllConversations(10, 0);
+                getConversationsFromServer(CONV_PERPAGE, 0);
             else {
                 MonkeyConversation conversation = monkeyConversationsFragment.getLastConversation();
-                getAllConversations(10, conversation.getDatetime() / 1000);
+                getConversationsFromServer(CONV_PERPAGE, conversation.getDatetime() / 1000);
             }
         }
     }
@@ -1078,10 +1085,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onConversationDeleted(@NotNull MonkeyConversation conversation) {
 
         if (conversation.isGroup()) {
-            removeGroupMember(conversation.getId(), myMonkeyID);
+            removeGroupMember(conversation.getConvId(), myMonkeyID);
         } else {
-            deleteConversation(conversation.getId());
+            deleteConversation(conversation.getConvId());
         }
+        DatabaseHandler.deleteConversation(conversation.getConvId());
 
     }
 }

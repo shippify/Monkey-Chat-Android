@@ -2,7 +2,6 @@ package com.criptext.monkeychatandroid;
 
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
-import android.util.Log;
 
 import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
@@ -13,60 +12,25 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 
-import io.realm.Realm;
-
 /**
  * Created by Daniel Tigse on 4/19/16.
  */
 
 public class MyServiceClass extends MonkeyKitSocketService{
-    private Realm realm;
 
     @Override
     public void storeReceivedMessage(final MOKMessage message, final Runnable runnable) {
-        runnable.run();
-        /*
+
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        openDatabase();
-        DatabaseHandler.saveIncomingMessage(realm, DatabaseHandler.createMessage(message, this, prefs.getString("sessionid", ""), true),
-            new Realm.Transaction.OnSuccess() {
-                @Override
-                public void onSuccess() {
-                    //Log.d("StoreReceivedMessage", "success " + message.getMessage_id());
-                    runnable.run();
-                }
-            }, new Realm.Transaction.OnError() {
-                @Override
-                public void onError(Throwable error) {
-                    if(error instanceof IllegalArgumentException){
-                        Log.e("StoreReceivedMessage", error.getMessage());
-                    } else
-                        error.printStackTrace();
-                }
-            });
-            */
+        DatabaseHandler.saveIncomingMessage(DatabaseHandler.createMessage(message, this,
+                prefs.getString(MonkeyChat.MONKEY_ID, ""), true), runnable);
+
     }
 
     @Override
     public void storeMessageBatch(ArrayList<MOKMessage> messages, final Runnable runnable) {
-        runnable.run();
-        /*
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        openDatabase();
-        DatabaseHandler.saveMessageBatch(realm, messages, this, prefs.getString("sessionid", ""),
-                new Realm.Transaction.OnSuccess() {
-                    @Override
-                    public void onSuccess() {
-                        runnable.run();
-                    }
-                }, new Realm.Transaction.OnError() {
-                    @Override
-                    public void onError(Throwable error) {
-                        error.printStackTrace();
-                    }
-        });
-        */
-
+        DatabaseHandler.saveMessageBatch(messages, this, prefs.getString(MonkeyChat.MONKEY_ID, ""), runnable);
     }
 
     @NotNull
@@ -80,17 +44,10 @@ public class MyServiceClass extends MonkeyKitSocketService{
 
     @Override
     public void closeDatabase() {
-        if(realm != null)
-            realm.close();
-        realm = null;
     }
 
     @Override
     public void openDatabase() {
-        if(realm == null){
-            realm = MonkeyChat.getInstance().getNewMonkeyRealm();
-        }
-
     }
 
     @NotNull

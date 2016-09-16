@@ -81,7 +81,7 @@ interface SecureSocketService {
                     tipo == MessageTypes.blMessageShareAFriend ||
                     tipo == MessageTypes.blMessageDefault)
                     storeMessage(message, true, Runnable {
-                        delegate?.onMessageRecieved(message)
+                        delegate?.onMessageReceived(message)
                     })
             }
 

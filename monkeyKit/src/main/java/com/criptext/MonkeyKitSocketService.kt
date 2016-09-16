@@ -294,7 +294,7 @@ abstract class MonkeyKitSocketService : Service() {
                         //Message received and stored, update lastTimeSynced with with the timestamp
                         //that the server gave the message
                         lastTimeSynced = message.datetime.toLong();
-                        delegate?.onMessageRecieved(message)
+                        delegate?.onMessageReceived(message)
                         if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
                             ServiceTimeoutTask(this).execute()
                     })

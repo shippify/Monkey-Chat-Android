@@ -1,11 +1,11 @@
 package com.criptext.monkeychatandroid.models;
 
-import android.content.Context;
 import android.support.annotation.NonNull;
 
-import com.criptext.monkeychatandroid.MonkeyChat;
+import com.activeandroid.Model;
+import com.activeandroid.annotation.Column;
+import com.activeandroid.annotation.Table;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
-import com.criptext.monkeykitui.util.Utils;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -13,134 +13,103 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
-
-import io.realm.Realm;
-import io.realm.RealmConfiguration;
-import io.realm.RealmResults;
 
 /**
  * Created by gesuwall on 4/7/16.
  */
-public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
 
-    public MessageModel model;
+@Table(name = "MessageItem")
+public class MessageItem extends Model implements MonkeyItem, Comparable<MessageItem> {
 
-    private String senderSessionId, recieverSessionId, messageId, oldMessageId, messageContent;
-    private long timestamp, timestampOrder;
-    private boolean isIncoming;
-    private DeliveryStatus status;
-    private MonkeyItemType itemType;
-    /*AUDIO*/
-    private long duration;
-    /*PHOTO*/
-    private String placeHolderFilePath;
+    @Column(name = "senderSessionId", index = true)
+    public String senderSessionId;
+    @Column(name = "receiverSessionId", index = true)
+    public String receiverSessionId;
+    @Column(name = "messageId")
+    public String messageId;
+    @Column(name = "oldMessageId")
+    public String oldMessageId;
+    @Column(name = "messageContent")
+    public String messageContent;
+    @Column(name = "timestamp")
+    public long timestamp;
+    @Column(name = "timestampOrder")
+    public long timestampOrder;
+    @Column(name = "isIncoming")
+    public boolean isIncoming;
+    @Column(name = "status")
+    public int status;//DeliveryStatus
+    @Column(name = "itemType")
+    public int itemType;//MonkeyItemType
+    @Column(name = "audioDuration")
+    public long audioDuration;
+    @Column(name = "params")
+    public String params;//JsonObject
+    @Column(name = "props")
+    public String props;//JsonObject
 
-    private JsonObject params;
-    private JsonObject props;
-    private boolean isDownloading;
+    public MessageItem(){
+        super();
+    }
 
-    public MessageItem(String senderId, String recieverId, String messageId, String messageContent, long timestamp,
+    public MessageItem(String senderId, String receiverId, String messageId, String messageContent, long timestamp,
                        long timestampOrder, boolean isIncoming, MonkeyItemType itemType){
+        super();
         this.senderSessionId = senderId;
-        this.recieverSessionId = recieverId;
+        this.receiverSessionId = receiverId;
         this.messageId = messageId;
         this.messageContent = messageContent;
         this.timestamp = timestamp;
         this.timestampOrder = timestampOrder;
         this.isIncoming = isIncoming;
-        this.itemType = itemType;
-        this.placeHolderFilePath = "";
-        this.duration = 0;
-        this.status = DeliveryStatus.sending;
-        this.isDownloading = false;
-
-        model = new MessageModel(senderId, recieverId, messageId, messageContent, timestamp, isIncoming, itemType);
+        this.itemType = itemType.ordinal();
+        this.audioDuration = 0;
+        this.status = DeliveryStatus.sending.ordinal();
     }
 
-    public MessageItem(MessageModel messageModel){
-
-        this.senderSessionId = messageModel.getSenderSessionId();
-        this.recieverSessionId = messageModel.getRecieverSessionId();
-        this.messageId = messageModel.getMessageId();
-        this.messageContent = messageModel.getMessageContent();
-        this.timestamp = messageModel.getTimestamp();
-        this.isIncoming = messageModel.isIncoming();
-        this.itemType = MonkeyItemType.values()[messageModel.getItemType()];
-        this.placeHolderFilePath = messageModel.getPlaceHolderFilePath();
-        this.duration = messageModel.getDuration();
-        this.status = DeliveryStatus.values()[messageModel.getStatus()];
-        this.isDownloading = messageModel.isDownloading();
-
-        if(messageModel.getParams().length()>0){
-            JsonParser parser = new JsonParser();
-            this.params = parser.parse(messageModel.getParams()).getAsJsonObject();
-        }
-
-        if(messageModel.getProps().length()>0){
-            JsonParser parser = new JsonParser();
-            this.props = parser.parse(messageModel.getProps()).getAsJsonObject();
-        }
-
-        model = messageModel;
-    }
-
-    public MessageModel getModel() {
-        return model;
-    }
-
-    public void setStatus (DeliveryStatus status){
+    public void setStatus (int status){
         this.status = status;
     }
 
-    public void setDuration(long duration) {
-        this.duration = duration;
-        model.setDuration(duration);
-    }
-
-    public void setPlaceHolderFilePath(String placeHolderFilePath) {
-        this.placeHolderFilePath = placeHolderFilePath;
+    public void setAudioDuration(long audioDuration) {
+        this.audioDuration = audioDuration;
     }
 
     public void setMessageContent(String messageContent) {
         this.messageContent = messageContent;
-        model.setMessageContent(messageContent);
     }
 
-    public JsonObject getParams() {
+    public String getParams() {
         return params;
     }
 
-    public void setParams(JsonObject params) {
-        this.params = params;
-        model.setParams(params.toString());
+    public JsonObject getJsonParams() {
+        return new JsonParser().parse(params).getAsJsonObject();
     }
 
-    public JsonObject getProps() {
+    public void setParams(String params) {
+        this.params = params;
+    }
+
+    public String getProps() {
         return props;
     }
 
-    public void setProps(JsonObject props) {
+    public JsonObject getJsonProps() {
+        return new JsonParser().parse(props).getAsJsonObject();
+    }
+
+    public void setProps(String props) {
         this.props = props;
-        model.setProps(props.toString());
-    }
-
-    public boolean isDownloading() {
-        return isDownloading;
-    }
-
-    public void setDownloading(boolean downloading) {
-        isDownloading = downloading;
     }
 
     public String getConversationId(){
-        return recieverSessionId.startsWith("G:")?recieverSessionId:senderSessionId;
+        return receiverSessionId.startsWith("G:")? receiverSessionId :senderSessionId;
     }
 
-    public String getRecieverSessionId(){
-        return recieverSessionId;
+    public String getReceiverSessionId(){
+        return receiverSessionId;
     }
 
     public void setMessageId(String messageId) {
@@ -154,7 +123,7 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
     @NotNull
     @Override
     public String getSenderId() {
-        return senderSessionId.startsWith("G:")?recieverSessionId:senderSessionId;
+        return senderSessionId.startsWith("G:")? receiverSessionId :senderSessionId;
     }
 
     @Override
@@ -176,12 +145,12 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
     @NotNull
     @Override
     public DeliveryStatus getDeliveryStatus() {
-        return status;
+        return DeliveryStatus.values()[status];
     }
 
     @Override
     public int getMessageType() {
-        return itemType.ordinal();
+        return itemType;
     }
 
     @NotNull
@@ -199,7 +168,7 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
     @NotNull
     @Override
     public String getPlaceholderFilePath() {
-        return placeHolderFilePath;
+        return "";
     }
 
     @Override
@@ -209,20 +178,20 @@ public class MessageItem implements MonkeyItem, Comparable<MessageItem> {
 
     @Override
     public long getAudioDuration() {
-        return duration*1000;
+        return audioDuration*1000;
     }
 
     /**CUSTOM FUNCTIONS**/
 
-    public static ArrayList<MonkeyItem> insertSortCopy(List<MessageModel> realmlist){
+    public static ArrayList<MonkeyItem> insertSortCopy(List<MessageItem> realmlist){
 
         ArrayList<MonkeyItem> arrayList = new ArrayList<>();
         int total = realmlist.size();
         for(int i = 0; i < total; i++ ){
-            MessageModel temp = realmlist.get(i);
-            arrayList.add(new MessageItem(temp));
+            MessageItem temp = realmlist.get(i);
+            arrayList.add(temp);
             int j;
-            for(j = i - 1; j >= 0 && temp.getTimestamp() < realmlist.get(j).getTimestamp(); j-- )
+            for(j = i - 1; j >= 0 && temp.getMessageTimestamp() < realmlist.get(j).getMessageTimestamp(); j-- )
                 Collections.swap(arrayList, j, j + 1);
         }
 

@@ -141,7 +141,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
                                   params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
 
         val newMessage = sendFileMessage(filePath, monkeyIDFrom, monkeyIDTo, fileType, params, pushMessage, isEncrypted)
-        storeSentMessage(newMessage)
+        storeSendingMessage(newMessage)
         return newMessage
 
     }
@@ -173,7 +173,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
                               pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
 
         val newMessage = sendMessage(text, monkeyIDFrom, monkeyIDTo, params, pushMessage, isEncrypted)
-        storeSentMessage(newMessage)
+        storeSendingMessage(newMessage)
         return newMessage
     }
 
@@ -191,7 +191,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         return newMessage
     }
 
-    abstract fun storeSentMessage(message: MOKMessage)
+    abstract fun storeSendingMessage(message: MOKMessage)
 
     override fun onSocketConnected() {
         for(file in pendingFiles.values){
@@ -378,7 +378,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     /**
      * Get all conversation of a user using the monkey ID.
      */
-    fun getAllConversations(quantity: Int, fromTimestamp: Long){
+    fun getConversationsFromServer(quantity: Int, fromTimestamp: Long){
         val socketService = service
         socketService?.getAllConversations(quantity, fromTimestamp)
     }

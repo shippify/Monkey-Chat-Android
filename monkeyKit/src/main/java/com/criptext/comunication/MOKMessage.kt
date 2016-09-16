@@ -90,8 +90,8 @@ class MOKMessage(var message_id: String,var sid: String,var rid: String,var msg:
     val isGroupConversation: Boolean
         get() = rid.startsWith("G:")
 
-    fun isMyOwnMessage(mySessionID: String) : Boolean{
-        return sid.equals(mySessionID)
+    fun isMyOwnMessage(myMonkeyID: String) : Boolean{
+        return sid.equals(myMonkeyID)
     }
 
     fun isMediaType(): Boolean{

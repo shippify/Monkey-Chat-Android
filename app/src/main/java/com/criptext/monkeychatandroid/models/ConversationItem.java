@@ -1,5 +1,8 @@
 package com.criptext.monkeychatandroid.models;
 
+import com.activeandroid.Model;
+import com.activeandroid.annotation.Column;
+import com.activeandroid.annotation.Table;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 
 import org.jetbrains.annotations.NotNull;
@@ -8,20 +11,37 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Created by daniel on 8/24/16.
  */
-public class ConversationItem implements MonkeyConversation{
 
-    private String id;
+@Table(name = "ConversationItem")
+public class ConversationItem extends Model implements MonkeyConversation{
+
+    @Column(name = "idConv", index = true)
+    private String idConv;
+    @Column(name = "name")
     private String name;
+    @Column(name = "datetime")
     private long datetime;
+    @Column(name = "secondaryText")
     private String secondaryText;
+    @Column(name = "totalNewMessage")
     private int totalNewMessage;
+    @Column(name = "isGroup")
     private boolean isGroup;
+    @Column(name = "groupMembers")
     public String groupMembers;
+    @Column(name = "avatarFilePath")
     public String avatarFilePath;
+    @Column(name = "status")
     public int status;
 
-    public ConversationItem(String id, String name, long datetime, String secondaryText, int totalNewMessage, boolean isGroup, String groupMembers, String avatarFilePath, int status) {
-        this.id = id;
+    public ConversationItem(){
+        super();
+    }
+
+    public ConversationItem(String idConv, String name, long datetime, String secondaryText, int totalNewMessage,
+                            boolean isGroup, String groupMembers, String avatarFilePath, int status) {
+        super();
+        this.idConv = idConv;
         this.name = name;
         this.datetime = datetime;
         this.secondaryText = secondaryText;
@@ -32,8 +52,20 @@ public class ConversationItem implements MonkeyConversation{
         this.status = status;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public ConversationItem(MonkeyConversation conversation){
+        this.idConv = conversation.getConvId();
+        this.name = conversation.getName();
+        this.datetime = conversation.getDatetime();
+        this.secondaryText = conversation.getSecondaryText();
+        this.totalNewMessage = conversation.getTotalNewMessages();
+        this.isGroup = conversation.isGroup();
+        this.groupMembers = conversation.getGroupMembers();
+        this.avatarFilePath = conversation.getAvatarFilePath();
+        this.status = conversation.getStatus();
+    }
+
+    public void setId(String idConv) {
+        this.idConv = idConv;
     }
 
     public void setName(String name) {
@@ -70,8 +102,8 @@ public class ConversationItem implements MonkeyConversation{
 
     @NotNull
     @Override
-    public String getId() {
-        return id;
+    public String getConvId() {
+        return idConv;
     }
 
     @NotNull
