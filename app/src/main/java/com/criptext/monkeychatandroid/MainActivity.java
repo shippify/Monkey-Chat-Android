@@ -347,7 +347,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             if (monkeyItem != null) {
                 monkeyItem.setStatus(newStatus.ordinal());
                 DatabaseHandler.updateMessageStatus(id, newStatus);
-                monkeyChatFragment.rebindMonkeyItem(monkeyItem);
+                monkeyChatFragment.updateMessageDeliveryStatus(monkeyItem);
             }
         }
     }
@@ -451,7 +451,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                                       String chatTitle, String avatarURL, boolean hasReachedEnd){
         messagesMap.put(conversationId, initialMessages);
         MonkeyChatFragment fragment = MonkeyChatFragment.Companion.newInstance(conversationId, membersIds, chatTitle, avatarURL, hasReachedEnd);
-        conversationsList = monkeyFragmentManager.setChatFragment(fragment, initInputListener(), voiceNotePlayer, chatTitle, avatarURL);
+        conversationsList = monkeyFragmentManager.setChatFragment(fragment, initInputListener(), voiceNotePlayer);
     }
     /**
      * Updates a sent message and updates de UI so that the user can see that it has been
