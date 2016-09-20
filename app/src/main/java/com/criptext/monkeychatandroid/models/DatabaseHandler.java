@@ -8,6 +8,7 @@ import com.activeandroid.query.From;
 import com.activeandroid.query.Select;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
+import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.ArrayList;
@@ -35,8 +36,7 @@ public class DatabaseHandler {
 
     public static void storeSendingMessage(MessageItem messageItem) {
         //Message doesn't exists in DB so we just use save function
-        Long id = messageItem.save();
-        System.out.println("Message saved: "+id);
+        new SaveModelTask().execute(messageItem);
     }
 
     public static void saveMessageBatch(ArrayList<MOKMessage> messages, Context context,
@@ -184,7 +184,7 @@ public class DatabaseHandler {
         MessageItem result = getMessageById(messageId);
         if (result != null) {
             result.setStatus(outgoingMessageStatus.ordinal());
-            result.save();
+            new SaveModelTask().execute(result);
         }
     }
 
@@ -226,17 +226,29 @@ public class DatabaseHandler {
                 .execute();
     }
 
-    public static void saveConversations(List<ConversationItem> conversationItems){
-        ActiveAndroid.beginTransaction();
-        try {
-            for(ConversationItem conversationItem : conversationItems){
-                conversationItem.save();
-            }
-            ActiveAndroid.setTransactionSuccessful();
-        }
-        finally {
-            ActiveAndroid.endTransaction();
-        }
+    public static void saveConversations(ConversationItem[] conversations){
+        new SaveModelTask().execute(conversations);
+    }
+
+    public static ConversationItem getConversationById(String id) {
+        return new Select().from(ConversationItem.class).where("idConv = ?", id).executeSingle();
+    }
+
+    public static void updateConversationWithSentMessage(ConversationItem conversation,
+                final String secondaryText, final MonkeyConversation.ConversationStatus status,
+                                    final int unread){
+        conversation.setSecondaryText(secondaryText!=null?secondaryText:conversation.getSecondaryText());
+        conversation.setStatus(status.ordinal());
+        conversation.setTotalNewMessage(unread == 0 ? 0 : conversation.getTotalNewMessages()+unread);
+
+        if(status == MonkeyConversation.ConversationStatus.empty)
+            conversation.setTotalNewMessage(0);
+        new SaveModelTask().execute(conversation);
+    }
+
+    public static void updateConversationNewMessagesCount(ConversationItem conversationItem, int newMessages){
+        conversationItem.setTotalNewMessage(newMessages);
+        new SaveModelTask().execute(conversationItem);
     }
 
     public static void updateConversationStatus(String conversationId){

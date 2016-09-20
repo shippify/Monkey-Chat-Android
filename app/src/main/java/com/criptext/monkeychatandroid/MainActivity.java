@@ -24,8 +24,12 @@ import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.lib.MKDelegateActivity;
 import com.criptext.monkeychatandroid.dialogs.NewGroupDialog;
 import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
+import com.criptext.monkeychatandroid.models.AsyncDBHandler;
 import com.criptext.monkeychatandroid.models.ConversationItem;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
+import com.criptext.monkeychatandroid.models.FindConversationTask;
+import com.criptext.monkeychatandroid.models.FindMessageTask;
+import com.criptext.monkeychatandroid.models.GetMessagePageTask;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
@@ -101,6 +105,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     private GroupData groupData;
 
+    private AsyncDBHandler asyncDBHandler;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,6 +134,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         monkeyFragmentManager = new MonkeyFragmentManager(this);
         monkeyFragmentManager.setConversationsTitle(getResources().getString(R.string.app_name));
         monkeyFragmentManager.setContentLayout(savedInstanceState);
+
+        asyncDBHandler = new AsyncDBHandler();
     }
 
     public void registerWithGCM(){
@@ -185,6 +193,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         super.onDestroy();
         sensorHandler.onDestroy();
         retainDataInFragment();
+        asyncDBHandler.cancelAll();
     }
 
     @Override
@@ -417,8 +426,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(monkeyConversationsFragment!=null) {
             final ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
             if(conversationItem!=null) {
-                conversationItem.setTotalNewMessage(unread);
-                conversationItem.save();
+                DatabaseHandler.updateConversationNewMessagesCount(conversationItem, unread);
                 monkeyConversationsFragment.updateConversation(conversationItem);
             }
         }
@@ -426,18 +434,31 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     /**
      * Search a conversation by its message id and update its status.
-     * @param messageId message id
+     * @param message message that updates conversation's last text
      * @param read boolean if the message is read or not
      */
-    private void updateConversationByMessage(String messageId, boolean read){
-        if (monkeyChatFragment != null) {
-            MessageItem monkeyItem = (MessageItem) monkeyChatFragment.findMonkeyItemById(messageId);
-            if (monkeyItem != null) {
-                updateConversation(monkeyItem.getReceiverSessionId(), getSecondaryTextByMessageType(monkeyItem),
-                        read?MonkeyConversation.ConversationStatus.sentMessageRead:MonkeyConversation.ConversationStatus.deliveredMessage,
-                        0, monkeyItem.getMessageTimestampOrder());
+    private void updateConversationByMessage(final MessageItem message, final boolean read){
+        asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(ConversationItem result) {
+                if(result != null){
+
+                    monkeyConversationsFragment.updateConversation(result, new ConversationTransaction() {
+                        @Override
+                        public void updateConversation(MonkeyConversation monkeyConversation) {
+                            long dateTime = message.getMessageTimestampOrder();
+                            ConversationItem conversation = (ConversationItem) monkeyConversation;
+                            conversation.setDatetime(dateTime>-1?dateTime:conversation.getDatetime());
+                        }
+                    });
+
+                    DatabaseHandler.updateConversationWithSentMessage(result,
+                            getSecondaryTextByMessageType(message),
+                            read ? MonkeyConversation.ConversationStatus.sentMessageRead
+                                    : MonkeyConversation.ConversationStatus.deliveredMessage, 0);
+                }
             }
-        }
+        }, message.receiverSessionId);
     }
 
     /**
@@ -614,16 +635,27 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onAcknowledgeRecieved(@NotNull String senderId, @NotNull String recipientId,
-                          @NotNull String newId, @NotNull String oldId, boolean read, int messageType) {
+                          @NotNull String newId, final @NotNull String oldId, final boolean read,
+                                      final int messageType) {
+
         super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
-        markMessageAsDelivered(oldId, read);
-        updateConversationByMessage(oldId, read);
-        //If we use the same monkeyId for several devices (multisession) we receive an acknowledge for each
-        //message sent. So to validate if we have the message sent, we can send a sync message.
-        if((messageType == Integer.parseInt(MessageTypes.MOKText) || messageType == Integer.parseInt(MessageTypes.MOKFile))
-                && !DatabaseHandler.existMessage(oldId) && !DatabaseHandler.existMessage(newId)){
-            sendSync();
-        }
+        Log.d("MainActivity", "On ACK Received");
+
+        asyncDBHandler.getMessageById(new FindMessageTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(MessageItem result) {
+                if(result != null){
+                    markMessageAsDelivered(oldId, read);
+                    updateConversationByMessage(result, read);
+                } else if((messageType == Integer.parseInt(MessageTypes.MOKText)
+                        || messageType == Integer.parseInt(MessageTypes.MOKFile))){
+                    //If we use the same monkeyId for several devices (multisession) we receive an
+                    // acknowledge for each message sent. So to validate if we have the message
+                    // sent, we can send a sync message.
+                    sendSync();
+                }
+            }
+        }, oldId, newId);
     }
 
     @Override
@@ -813,9 +845,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
             monkeyConversations.add(conversationItem);
         }
-        List<ConversationItem> conversationItems = new ArrayList<>();
-        for(MonkeyConversation monkeyConversation: monkeyConversations){
-            conversationItems.add(new ConversationItem(monkeyConversation));
+        ConversationItem[] conversationItems = new ConversationItem[monkeyConversations.size()];
+        for(int i = 0; i < monkeyConversations.size(); i++){
+            conversationItems[i] = new ConversationItem(monkeyConversations.get(i));
         }
         DatabaseHandler.saveConversations(conversationItems);
         monkeyConversationsFragment.addOldConversations(monkeyConversations, monkeyConversations.size()==0);
@@ -958,18 +990,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onLoadMoreMessages(String conversationId) {
-
-        actualMessagesPage++;
-        List<MessageItem> messageItems = DatabaseHandler.getMessages(myMonkeyID, conversationId, MESS_PERPAGE, actualMessagesPage);
-        if(messageItems.size() > 0){
-            if(monkeyChatFragment != null) {
-                monkeyChatFragment.addOldMessages(new ArrayList<MonkeyItem>(messageItems), messageItems.size() == 0);
+    public void onLoadMoreMessages(final String conversationId) {
+        asyncDBHandler.getMessagePage(new GetMessagePageTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(List<MessageItem> messageItems) {
+                actualMessagesPage++;
+                if(messageItems.size() > 0){
+                    if(monkeyChatFragment != null) {
+                        monkeyChatFragment.addOldMessages(new ArrayList<MonkeyItem>(messageItems), messageItems.size() == 0);
+                    }
+                }
+                else {
+                    addOldMessagesFromServer(conversationId);
+                }
             }
-        }
-        else {
-            addOldMessagesFromServer(conversationId);
-        }
+        }, myMonkeyID, conversationId, MESS_PERPAGE, actualMessagesPage);
     }
 
     @Override
@@ -1042,7 +1077,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onConversationClicked(@NotNull MonkeyConversation conversation) {
+    public void onConversationClicked(final @NotNull MonkeyConversation conversation) {
 
         actualMessagesPage = 0;
         List<MonkeyItem> messages = messagesMap.get(conversation.getConvId());
@@ -1053,10 +1088,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
         else{
             //Get initial messages from DB
-            List<MessageItem> messageItems = DatabaseHandler.getMessages(myMonkeyID, conversation.getConvId(), MESS_PERPAGE, actualMessagesPage);
-            messagesMap.put(conversation.getConvId(), new ArrayList<MonkeyItem>(messageItems));
-            startChatWithMessages(conversation.getConvId(), conversation.getGroupMembers(),
-                    new ArrayList<MonkeyItem>(messagesMap.get(conversation.getConvId())), conversation.getName(), conversation.getAvatarFilePath(), false);
+            asyncDBHandler.getMessagePage(new GetMessagePageTask.OnQueryReturnedListener() {
+                @Override
+                public void onQueryReturned(List<MessageItem> messageItems) {
+                    messagesMap.put(conversation.getConvId(), new ArrayList<MonkeyItem>(messageItems));
+                    startChatWithMessages(conversation.getConvId(), conversation.getGroupMembers(),
+                            new ArrayList<>(messagesMap.get(conversation.getConvId())),
+                            conversation.getName(), conversation.getAvatarFilePath(), false);
+                }
+            }, myMonkeyID, conversation.getConvId(), MESS_PERPAGE, actualMessagesPage);
         }
 
         updateConversationBadge(conversation.getConvId(), 0);
