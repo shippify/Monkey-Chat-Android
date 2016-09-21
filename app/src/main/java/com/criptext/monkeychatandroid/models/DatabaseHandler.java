@@ -109,8 +109,10 @@ public class DatabaseHandler {
             }
         }
 
-        MessageItem item = new MessageItem(message.getSenderId(), message.getConversationID(), message.getMessage_id(), message.getMsg(),
-                Long.parseLong(message.getDatetime()), message.getDatetimeorder(), isIncoming, type);
+        MessageItem item = new MessageItem(message.getSenderId(), message.getConversationID(myMonkeyId),
+                message.getMessage_id(), message.getMsg(), Long.parseLong(message.getDatetime()),
+                message.getDatetimeorder(), isIncoming, type);
+
         item.setParams(message.getParams()!=null? message.getParams().toString() : "");
         item.setProps(message.getProps()!=null? message.getProps().toString() : "");
         if(!item.getMessageId().contains("-"))

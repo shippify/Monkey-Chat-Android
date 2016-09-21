@@ -488,21 +488,23 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param message
      */
     private void processNewMessage(MOKMessage message){
+        String conversationID = message.getConversationID(myMonkeyID);
         MessageItem newItem = DatabaseHandler.createMessage(message, this, myMonkeyID, !message.isMyOwnMessage(myMonkeyID));
-        if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(message.getConversationID())) {
+        if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationID)) {
             monkeyChatFragment.smoothlyAddNewItem(newItem);
         }
-        else if(messagesMap!=null && messagesMap.get(message.getConversationID())!=null){
-            messagesMap.get(message.getConversationID()).add(newItem);
+        else if(messagesMap!=null && messagesMap.get(conversationID)!=null){
+            messagesMap.get(conversationID).add(newItem);
         }
         else{
             ArrayList<MonkeyItem> monkeyItemArrayList = new ArrayList<>();
             monkeyItemArrayList.add(newItem);
-            messagesMap.put(message.getConversationID(), monkeyItemArrayList);
+            messagesMap.put(conversationID, monkeyItemArrayList);
         }
         //Validate if conversation does not exists
-        if(message.getConversationID()!=null && monkeyConversationsFragment.findConversationById(message.getConversationID())==null){
-            getConversationInfo(message.getConversationID());
+        if(monkeyConversationsFragment != null &&
+                monkeyConversationsFragment.findConversationById(conversationID)==null){
+            getConversationInfo(conversationID);
         }
     }
 
@@ -514,7 +516,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         HashMap<String, Collection<MonkeyItem>> newConversationMessages = new HashMap<>();
         for(MOKMessage message: messages){
-            String conversationId = message.getConversationID();
+            String conversationId = message.getConversationID(myMonkeyID);
             if(newConversationMessages.get(conversationId)==null){
                 newConversationMessages.put(conversationId, new ArrayList<MonkeyItem>());
             }
@@ -694,7 +696,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onMessageReceived(@NonNull MOKMessage message) {
         processNewMessage(message);
         boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
-        updateConversation(isMyOwnMsg?message.getRid():message.getConversationID(), getSecondaryTextByMOkMessage(message),
+        updateConversation(message.getConversationID(myMonkeyID), getSecondaryTextByMOkMessage(message),
                 isMyOwnMsg? MonkeyConversation.ConversationStatus.deliveredMessage:
                         MonkeyConversation.ConversationStatus.receivedMessage, isMyOwnMsg? 0 : 1, message.getDatetimeorder());
 
@@ -707,7 +709,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             processNewMessages(messages);
             MOKMessage message = messages.get(messages.size()-1);
             boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
-            updateConversation(isMyOwnMsg?message.getRid():message.getConversationID(), getSecondaryTextByMOkMessage(message),
+            updateConversation(message.getConversationID(myMonkeyID), getSecondaryTextByMOkMessage(message),
                     isMyOwnMsg? MonkeyConversation.ConversationStatus.deliveredMessage:
                             MonkeyConversation.ConversationStatus.receivedMessage, isMyOwnMsg? 0 : 1, message.getDatetimeorder());
         }
