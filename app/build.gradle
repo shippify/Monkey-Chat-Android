@@ -39,5 +39,5 @@ dependencies {
     compile 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
     compile project(':monkeyKit')
     //compile project(':monkeykitui')
-    compile 'com.github.Criptext:MonkeyUIAndroid:42fa5522fe'
+    compile 'com.github.Criptext:MonkeyUIAndroid:0c29050d0d'
 }
