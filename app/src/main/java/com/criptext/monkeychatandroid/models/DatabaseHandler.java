@@ -97,16 +97,6 @@ public class DatabaseHandler {
 
     public static MessageItem createMessage(MOKMessage message, Context context, String myMonkeyId, boolean isIncoming){
 
-        //VERIFY IF IT IS A GROUP MESSAGE
-        String sid=message.isGroupConversation()?message.getRid():message.getSid();
-        String rid=message.isGroupConversation()?message.getSid():message.getRid();
-
-        //VERIFY IF IS IT MY OWN MESSAGE
-        if(message.isMyOwnMessage(myMonkeyId)) {
-            sid = message.getSid();
-            rid = message.getRid();
-        }
-
         MonkeyItem.MonkeyItemType type = MonkeyItem.MonkeyItemType.text;
         if (message.isMediaType()) {
             switch (message.getFileType()){
@@ -119,7 +109,7 @@ public class DatabaseHandler {
             }
         }
 
-        MessageItem item = new MessageItem(sid, rid, message.getMessage_id(), message.getMsg(),
+        MessageItem item = new MessageItem(message.getSenderId(), message.getConversationID(), message.getMessage_id(), message.getMsg(),
                 Long.parseLong(message.getDatetime()), message.getDatetimeorder(), isIncoming, type);
         item.setParams(message.getParams()!=null? message.getParams().toString() : "");
         item.setProps(message.getProps()!=null? message.getProps().toString() : "");
@@ -148,32 +138,12 @@ public class DatabaseHandler {
     }
 
     public static List<MessageItem> getMessages(String myMonkeyId, String conversationId, int rowsPerPage, int pageNumber){
-
-        if (conversationId.startsWith("G:")) {
-            //In a group, all messages are either sent from or sent to an ID that starts with ':G'
-            //Let's get all those messages.
             return new Select()
                     .from(MessageItem.class)
-                    .where("receiverSessionId = ?", conversationId)
-                    .or("senderSessionId = ?", conversationId)
-                    .orderBy("timestampOrder DESC")
+                    .where("conversationId = ?", conversationId)
                     .limit(rowsPerPage)
                     .offset(pageNumber * rowsPerPage)
                     .execute();
-        } else {
-            //Let's just get all messages from DB.
-            return new Select()
-                    .from(MessageItem.class)
-                    .where("receiverSessionId LIKE ?", "%"+conversationId+"%")
-                    .and("senderSessionId NOT LIKE ?", "G:%")
-                    .and("senderSessionId = ?", myMonkeyId)
-                    .or("senderSessionId = ?", conversationId)
-                    .and("receiverSessionId NOT LIKE ?", "G:%")
-                    .orderBy("timestampOrder DESC")
-                    .limit(rowsPerPage)
-                    .offset(pageNumber * rowsPerPage)
-                    .execute();
-        }
     }
 
     public static void deleteAll(){

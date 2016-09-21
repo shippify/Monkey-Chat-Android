@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
 @Table(name = "ConversationItem")
 public class ConversationItem extends Model implements MonkeyConversation{
 
-    @Column(name = "idConv", index = true)
+    @Column(name = "idConv", unique = true)
     private String idConv;
     @Column(name = "name")
     private String name;

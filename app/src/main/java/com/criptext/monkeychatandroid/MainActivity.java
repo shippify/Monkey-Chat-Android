@@ -458,7 +458,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                                     : MonkeyConversation.ConversationStatus.deliveredMessage, 0);
                 }
             }
-        }, message.receiverSessionId);
+        }, message.getConversationId());
     }
 
     /**
