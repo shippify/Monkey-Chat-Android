@@ -33,6 +33,8 @@ public class ConversationItem extends Model implements MonkeyConversation{
     public String avatarFilePath;
     @Column(name = "status")
     public int status;
+    @Column(name = "lastRead")
+    public long lastRead;
 
     public ConversationItem(){
         super();
@@ -50,6 +52,7 @@ public class ConversationItem extends Model implements MonkeyConversation{
         this.groupMembers = groupMembers;
         this.avatarFilePath = avatarFilePath;
         this.status = status;
+        lastRead = 0;
     }
 
     public ConversationItem(MonkeyConversation conversation){
