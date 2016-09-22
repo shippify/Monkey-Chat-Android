@@ -20,6 +20,7 @@ import org.apache.commons.io.IOUtils
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
@@ -115,6 +116,7 @@ abstract class MonkeyFileService: IntentService(TAG){
             if(props.get("encr").asString == "1"){//Decrypt
                 val claves = KeyStoreCriptext.getString(this, mokDownload.sid);
                 val claveArray = claves.split(":")
+                Log.d("MonkeyFileService", "keys for ${mokDownload.sid}: ${claveArray[0]}")
                 resultBytes = aesUtil!!.decryptWithCustomKeyAndIV(downloadBytes, claveArray[0], claveArray[1])
                 if(props.get("device").asString == "web"){
                     var utf8str = resultBytes.toString(charset("utf8"))
@@ -128,7 +130,12 @@ abstract class MonkeyFileService: IntentService(TAG){
 
             if (props.get("cmpr").asString == "gzip") {//Decompress
                 val compressor = Compressor();
-                resultBytes = compressor.gzipDeCompress(resultBytes);
+                try {
+                    resultBytes = compressor.gzipDeCompress(resultBytes);
+                } catch (e: IOException){
+                    Log.e("MonkeyFileService", "message ${mokDownload.id} (${mokDownload.msg}) " +
+                        "could not be decompressed with gzip.")
+                }
             }
 
             val filepath = mokDownload.msg

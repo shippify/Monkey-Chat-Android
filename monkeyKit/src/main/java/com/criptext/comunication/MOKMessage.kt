@@ -81,11 +81,13 @@ class MOKMessage(var message_id: String,var sid: String,var rid: String,var msg:
             return "." + props!!.get("ext").asString
         }
 
-    val conversationID: String?
-        get() = if (rid.startsWith("G:"))  rid else sid
+    fun getConversationID(userMonkeyId: String) : String
+        = if (rid.startsWith("G:")) rid //message from group
+            else if(rid == userMonkeyId) sid //message sent to user
+            else rid //message sent by user
 
     val senderId: String?
-        get() = if (rid.startsWith("G:")) sid else rid
+        get() = sid
 
     val isGroupConversation: Boolean
         get() = rid.startsWith("G:")

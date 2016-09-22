@@ -7,6 +7,7 @@ import com.criptext.comunication.MOKUser;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,14 +23,14 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
     private HashMap<String, MOKUser> mokUserHashMap;
     private HashMap<String, Integer> userIndexHashMap;
     private boolean askingUsers = false;
-    private MonkeyKitSocketService service;
     private List<Integer> colorsForUsersInGroup;
     private int MAX_PARTICIPANTS = 50;
+    private WeakReference<MonkeyKitSocketService> serviceRef;
 
     public GroupData(String conversationId, String members, MonkeyKitSocketService service){
         this.conversationId = conversationId;
         this.membersIds = members;
-        this.service = service;
+        this.serviceRef = new WeakReference<>(service);
         mokUserHashMap = new HashMap<>();
         userIndexHashMap = new HashMap<>();
         initColorsForGroup();
@@ -60,6 +61,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
     }
 
     private void getMembers(){
+        final MonkeyKitSocketService service = serviceRef.get();
         if(!askingUsers && service!=null){
             service.getUsersInfo(membersIds);
         }

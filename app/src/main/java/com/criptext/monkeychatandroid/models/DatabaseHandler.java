@@ -8,6 +8,7 @@ import com.activeandroid.query.From;
 import com.activeandroid.query.Select;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
+import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.ArrayList;
@@ -35,8 +36,7 @@ public class DatabaseHandler {
 
     public static void storeSendingMessage(MessageItem messageItem) {
         //Message doesn't exists in DB so we just use save function
-        Long id = messageItem.save();
-        System.out.println("Message saved: "+id);
+        new SaveModelTask().execute(messageItem);
     }
 
     public static void saveMessageBatch(ArrayList<MOKMessage> messages, Context context,
@@ -97,16 +97,6 @@ public class DatabaseHandler {
 
     public static MessageItem createMessage(MOKMessage message, Context context, String myMonkeyId, boolean isIncoming){
 
-        //VERIFY IF IT IS A GROUP MESSAGE
-        String sid=message.isGroupConversation()?message.getRid():message.getSid();
-        String rid=message.isGroupConversation()?message.getSid():message.getRid();
-
-        //VERIFY IF IS IT MY OWN MESSAGE
-        if(message.isMyOwnMessage(myMonkeyId)) {
-            sid = message.getSid();
-            rid = message.getRid();
-        }
-
         MonkeyItem.MonkeyItemType type = MonkeyItem.MonkeyItemType.text;
         if (message.isMediaType()) {
             switch (message.getFileType()){
@@ -119,8 +109,10 @@ public class DatabaseHandler {
             }
         }
 
-        MessageItem item = new MessageItem(sid, rid, message.getMessage_id(), message.getMsg(),
-                Long.parseLong(message.getDatetime()), message.getDatetimeorder(), isIncoming, type);
+        MessageItem item = new MessageItem(message.getSenderId(), message.getConversationID(myMonkeyId),
+                message.getMessage_id(), message.getMsg(), Long.parseLong(message.getDatetime()),
+                message.getDatetimeorder(), isIncoming, type);
+
         item.setParams(message.getParams()!=null? message.getParams().toString() : "");
         item.setProps(message.getProps()!=null? message.getProps().toString() : "");
         if(!item.getMessageId().contains("-"))
@@ -148,32 +140,12 @@ public class DatabaseHandler {
     }
 
     public static List<MessageItem> getMessages(String myMonkeyId, String conversationId, int rowsPerPage, int pageNumber){
-
-        if (conversationId.startsWith("G:")) {
-            //In a group, all messages are either sent from or sent to an ID that starts with ':G'
-            //Let's get all those messages.
             return new Select()
                     .from(MessageItem.class)
-                    .where("receiverSessionId = ?", conversationId)
-                    .or("senderSessionId = ?", conversationId)
-                    .orderBy("timestampOrder DESC")
+                    .where("conversationId = ?", conversationId)
                     .limit(rowsPerPage)
                     .offset(pageNumber * rowsPerPage)
                     .execute();
-        } else {
-            //Let's just get all messages from DB.
-            return new Select()
-                    .from(MessageItem.class)
-                    .where("receiverSessionId LIKE ?", "%"+conversationId+"%")
-                    .and("senderSessionId NOT LIKE ?", "G:%")
-                    .and("senderSessionId = ?", myMonkeyId)
-                    .or("senderSessionId = ?", conversationId)
-                    .and("receiverSessionId NOT LIKE ?", "G:%")
-                    .orderBy("timestampOrder DESC")
-                    .limit(rowsPerPage)
-                    .offset(pageNumber * rowsPerPage)
-                    .execute();
-        }
     }
 
     public static void deleteAll(){
@@ -184,7 +156,7 @@ public class DatabaseHandler {
         MessageItem result = getMessageById(messageId);
         if (result != null) {
             result.setStatus(outgoingMessageStatus.ordinal());
-            result.save();
+            new SaveModelTask().execute(result);
         }
     }
 
@@ -226,17 +198,29 @@ public class DatabaseHandler {
                 .execute();
     }
 
-    public static void saveConversations(List<ConversationItem> conversationItems){
-        ActiveAndroid.beginTransaction();
-        try {
-            for(ConversationItem conversationItem : conversationItems){
-                conversationItem.save();
-            }
-            ActiveAndroid.setTransactionSuccessful();
-        }
-        finally {
-            ActiveAndroid.endTransaction();
-        }
+    public static void saveConversations(ConversationItem[] conversations){
+        new SaveModelTask().execute(conversations);
+    }
+
+    public static ConversationItem getConversationById(String id) {
+        return new Select().from(ConversationItem.class).where("idConv = ?", id).executeSingle();
+    }
+
+    public static void updateConversationWithSentMessage(ConversationItem conversation,
+                final String secondaryText, final MonkeyConversation.ConversationStatus status,
+                                    final int unread){
+        conversation.setSecondaryText(secondaryText!=null?secondaryText:conversation.getSecondaryText());
+        conversation.setStatus(status.ordinal());
+        conversation.setTotalNewMessage(unread == 0 ? 0 : conversation.getTotalNewMessages()+unread);
+
+        if(status == MonkeyConversation.ConversationStatus.empty)
+            conversation.setTotalNewMessage(0);
+        new SaveModelTask().execute(conversation);
+    }
+
+    public static void updateConversationNewMessagesCount(ConversationItem conversationItem, int newMessages){
+        conversationItem.setTotalNewMessage(newMessages);
+        new SaveModelTask().execute(conversationItem);
     }
 
     public static void updateConversationStatus(String conversationId){

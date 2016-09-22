@@ -22,10 +22,10 @@ import java.util.List;
 @Table(name = "MessageItem")
 public class MessageItem extends Model implements MonkeyItem, Comparable<MessageItem> {
 
-    @Column(name = "senderSessionId", index = true)
-    public String senderSessionId;
-    @Column(name = "receiverSessionId", index = true)
-    public String receiverSessionId;
+    @Column(name = "senderMonkeyId")
+    public String senderMonkeyId;
+    @Column(name = "conversationId", index = true)
+    public String conversationId;
     @Column(name = "messageId")
     public String messageId;
     @Column(name = "oldMessageId")
@@ -34,7 +34,7 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
     public String messageContent;
     @Column(name = "timestamp")
     public long timestamp;
-    @Column(name = "timestampOrder")
+    @Column(name = "timestampOrder", index = true)
     public long timestampOrder;
     @Column(name = "isIncoming")
     public boolean isIncoming;
@@ -53,11 +53,11 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
         super();
     }
 
-    public MessageItem(String senderId, String receiverId, String messageId, String messageContent, long timestamp,
+    public MessageItem(String senderId, String conversationId, String messageId, String messageContent, long timestamp,
                        long timestampOrder, boolean isIncoming, MonkeyItemType itemType){
         super();
-        this.senderSessionId = senderId;
-        this.receiverSessionId = receiverId;
+        this.senderMonkeyId = senderId;
+        this.conversationId = conversationId;
         this.messageId = messageId;
         this.messageContent = messageContent;
         this.timestamp = timestamp;
@@ -105,11 +105,7 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
     }
 
     public String getConversationId(){
-        return receiverSessionId.startsWith("G:")? receiverSessionId :senderSessionId;
-    }
-
-    public String getReceiverSessionId(){
-        return receiverSessionId;
+        return conversationId;
     }
 
     public void setMessageId(String messageId) {
@@ -123,7 +119,7 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
     @NotNull
     @Override
     public String getSenderId() {
-        return senderSessionId.startsWith("G:")? receiverSessionId :senderSessionId;
+        return senderMonkeyId;
     }
 
     @Override
@@ -179,23 +175,6 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
     @Override
     public long getAudioDuration() {
         return audioDuration*1000;
-    }
-
-    /**CUSTOM FUNCTIONS**/
-
-    public static ArrayList<MonkeyItem> insertSortCopy(List<MessageItem> realmlist){
-
-        ArrayList<MonkeyItem> arrayList = new ArrayList<>();
-        int total = realmlist.size();
-        for(int i = 0; i < total; i++ ){
-            MessageItem temp = realmlist.get(i);
-            arrayList.add(temp);
-            int j;
-            for(j = i - 1; j >= 0 && temp.getMessageTimestamp() < realmlist.get(j).getMessageTimestamp(); j-- )
-                Collections.swap(arrayList, j, j + 1);
-        }
-
-        return arrayList;
     }
 
     @Override
