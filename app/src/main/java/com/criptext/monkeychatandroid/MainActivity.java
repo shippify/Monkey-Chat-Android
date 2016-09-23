@@ -996,7 +996,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     }
                 }
                 else {
-                    //addOldMessagesFromServer(conversationId);
+                    addOldMessagesFromServer(conversationId);
                 }
             }
         }, myMonkeyID, conversationId, MESS_PERPAGE, actualMessagesPage);

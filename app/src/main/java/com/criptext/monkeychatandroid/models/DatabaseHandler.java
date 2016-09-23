@@ -26,12 +26,10 @@ public class DatabaseHandler {
     public static void saveIncomingMessage(MessageItem messageItem, Runnable runnable) {
 
         if (!existMessage(messageItem.getMessageId())){ //NO DUPLICATED
-            Long msgId = messageItem.save();
-            if(msgId != -1)
-                runnable.run();
+            //TODO use a callback
+            new SaveModelTask().execute(messageItem);
+            runnable.run();
         }
-        else
-            throw new IllegalArgumentException("messageItem: " + messageItem.getMessageId() + " already exists");
     }
 
     public static void storeNewMessage(MessageItem messageItem) {
