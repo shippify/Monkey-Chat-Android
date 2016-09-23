@@ -7,6 +7,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentTransaction;
 import android.text.TextUtils;
@@ -614,7 +615,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void storeSendingMessage(final MOKMessage message) {
-        DatabaseHandler.storeSendingMessage(DatabaseHandler.createMessage(message, this, myMonkeyID, false));
+        //TODO update conversation
+        DatabaseHandler.storeNewMessage(DatabaseHandler.createMessage(message, this, myMonkeyID, false));
     }
 
     /******

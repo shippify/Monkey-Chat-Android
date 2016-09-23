@@ -26,15 +26,13 @@ public class DatabaseHandler {
     public static void saveIncomingMessage(MessageItem messageItem, Runnable runnable) {
 
         if (!existMessage(messageItem.getMessageId())){ //NO DUPLICATED
-            Long msgId = messageItem.save();
-            if(msgId != -1)
-                runnable.run();
+            //TODO use a callback
+            new SaveModelTask().execute(messageItem);
+            runnable.run();
         }
-        else
-            throw new IllegalArgumentException("messageItem: " + messageItem.getMessageId() + " already exists");
     }
 
-    public static void storeSendingMessage(MessageItem messageItem) {
+    public static void storeNewMessage(MessageItem messageItem) {
         //Message doesn't exists in DB so we just use save function
         new SaveModelTask().execute(messageItem);
     }
@@ -145,6 +143,7 @@ public class DatabaseHandler {
                     .where("conversationId = ?", conversationId)
                     .limit(rowsPerPage)
                     .offset(pageNumber * rowsPerPage)
+                    .orderBy("timestampOrder DESC")
                     .execute();
     }
 
