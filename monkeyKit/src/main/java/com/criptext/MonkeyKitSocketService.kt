@@ -1097,7 +1097,7 @@ abstract class MonkeyKitSocketService : Service() {
                 return Integer.parseInt(prefs!!.getString("sport","1139"))
             }
 
-        val httpsURL = "http://sandbox.monkey.criptext.com"
+        val httpsURL = "https://monkey.criptext.com"
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
         var status = ServiceStatus.dead
 

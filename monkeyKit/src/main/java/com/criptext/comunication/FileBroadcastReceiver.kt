@@ -23,7 +23,6 @@ class FileBroadcastReceiver(val service: MonkeyKitSocketService) : BroadcastRece
                  val mokMessage = MOKMessage(intent)
                  if (response != null) {
                      val parser = JsonParser()
-                     Log.d("FileBroadcastReceiver", response)
                      val jsonResp = parser.parse(response).asJsonObject
                      handleSentFile(jsonResp, mokMessage)
                  } else

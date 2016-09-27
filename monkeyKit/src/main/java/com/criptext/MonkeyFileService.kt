@@ -116,7 +116,7 @@ abstract class MonkeyFileService: IntentService(TAG){
             if(props.get("encr").asString == "1"){//Decrypt
                 val claves = KeyStoreCriptext.getString(this, mokDownload.sid);
                 val claveArray = claves.split(":")
-                Log.d("MonkeyFileService", "keys for ${mokDownload.sid}: ${claveArray[0]}")
+                //Log.d("MonkeyFileService", "keys for ${mokDownload.sid}: ${claveArray[0]}")
                 resultBytes = aesUtil!!.decryptWithCustomKeyAndIV(downloadBytes, claveArray[0], claveArray[1])
                 if(props.get("device").asString == "web"){
                     var utf8str = resultBytes.toString(charset("utf8"))
@@ -190,17 +190,20 @@ abstract class MonkeyFileService: IntentService(TAG){
                 .header("Authorization", credentials)
                 .post(body).build()
 
-
         try {
-            val response = httpClient.newCall(request).execute().body().string();
-            if(response != null)
-                Log.d("FileService", response)
-            return response
+            val response = httpClient.newCall(request).execute();
+            if(response != null && response.isSuccessful)
+                return response.body().string()
+            else
+                Log.e("MonkeyFileService", "upload error. Unexpected code ${response.code()}")
         }catch(ex: Exception){
+            ex.printStackTrace()
             return null
         } finally{
             FileUtils.deleteQuietly(sendFile)
         }
+
+        return null
     }
 
     private fun downloadFile(httpClient: OkHttpClient,credentials: String, url: String): ByteArray?{

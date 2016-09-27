@@ -194,6 +194,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         super.onDestroy();
         sensorHandler.onDestroy();
         retainDataInFragment();
+        if(monkeyChatFragment != null)
+            monkeyChatFragment.setInputListener(null);
         asyncDBHandler.cancelAll();
     }
 
@@ -291,6 +293,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         item.getMessageText(), item.getMessageTimestamp(), item.getMessageTimestampOrder(), item.isIncomingMessage(),
                         MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
                 newItem.setParams(params.toString());
+                newItem.setProps(mokMessage.getProps().toString());
 
                 switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
                     case audio:
@@ -301,6 +304,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         newItem.setMessageContent(item.getFilePath());
                         break;
                 }
+
                 if(monkeyChatFragment != null)
                     monkeyChatFragment.smoothlyAddNewItem(newItem); // Add to recyclerView
             }
@@ -445,7 +449,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             public void onQueryReturned(ConversationItem result) {
                 if(result != null){
 
-                    monkeyConversationsFragment.updateConversation(result, new ConversationTransaction() {
+                    ConversationTransaction transaction = new ConversationTransaction() {
                         @Override
                         public void updateConversation(MonkeyConversation monkeyConversation) {
                             long dateTime = message.getMessageTimestampOrder();
@@ -453,7 +457,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                             conversation.setDatetime(dateTime>-1?dateTime:conversation.getDatetime());
                             conversation.lastRead = message.getMessageTimestampOrder();
                         }
-                    });
+                    };
+
+                    if(monkeyConversationsFragment != null)
+                        monkeyConversationsFragment.updateConversation(result, transaction);
+                    else
+                        transaction.updateConversation(result);
 
                     DatabaseHandler.updateConversationWithSentMessage(result,
                             getSecondaryTextByMessageType(message),
