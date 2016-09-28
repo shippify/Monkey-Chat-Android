@@ -701,7 +701,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onMessageReceived(@NonNull MOKMessage message) {
-        Log.d("onGetUserInfo", "received " + message.getMessage_id());
         processNewMessage(message);
         boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
         updateConversation(message.getConversationID(myMonkeyID), getSecondaryTextByMOkMessage(message),
@@ -805,7 +804,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 conversationItem.save();
             }
 
-            Log.d("onGetUserInfo", conversationItem.getName());
             if(monkeyConversationsFragment!=null) {
                 monkeyConversationsFragment.addNewConversation(conversationItem, true);
             }
