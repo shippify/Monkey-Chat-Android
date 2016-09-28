@@ -224,16 +224,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             case android.R.id.home:
                 onBackPressed();
                 break;
-            case R.id.action_newgroup:
-            {
-                FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-                ft.addToBackStack(null);
-
-                // Create and show the dialog.
-                NewGroupDialog newFragment = NewGroupDialog.newInstance();
-                newFragment.show(ft, "dialog");
-
-            } break;
             case R.id.action_deleteall:
                 DatabaseHandler.deleteAll();
                 if(monkeyChatFragment != null) monkeyChatFragment.clearMessages();
@@ -711,6 +701,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onMessageReceived(@NonNull MOKMessage message) {
+        Log.d("onGetUserInfo", "received " + message.getMessage_id());
         processNewMessage(message);
         boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
         updateConversation(message.getConversationID(myMonkeyID), getSecondaryTextByMOkMessage(message),
@@ -813,6 +804,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 messagesMap.get(mokUser.getMonkeyId()).clear();
                 conversationItem.save();
             }
+
+            Log.d("onGetUserInfo", conversationItem.getName());
             if(monkeyConversationsFragment!=null) {
                 monkeyConversationsFragment.addNewConversation(conversationItem, true);
             }

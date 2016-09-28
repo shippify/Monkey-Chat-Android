@@ -4,9 +4,9 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <item android:id="@+id/action_newgroup"
+    <!-- <item android:id="@+id/action_newgroup"
         android:title="@string/new_group"
-        app:showAsAction="never" />
+        app:showAsAction="never" /> -->
 	<item android:id="@+id/action_deleteall"
           android:title="@string/menu_deleteall"
           app:showAsAction="never" />
