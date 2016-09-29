@@ -1294,7 +1294,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onMessageRemoved(@NotNull MonkeyItem item, boolean unsent) {
-
         if(unsent){
             unsendMessage(item.getSenderId(), ((MessageItem)item).getConversationId(), item.getMessageId());
         }else{
