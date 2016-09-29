@@ -531,6 +531,11 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         socketService?.deleteConversation(conversationId)
     }
 
+    fun unsendMessage(senderId: String, recipientId: String, messageId: String){
+        val socketService = service
+        socketService?.unsendMessage(senderId, recipientId, messageId)
+    }
+
     private data class DownloadMessage(val fileMessageId: String, val filepath: String,
                                        val props: JsonObject)
     companion object{

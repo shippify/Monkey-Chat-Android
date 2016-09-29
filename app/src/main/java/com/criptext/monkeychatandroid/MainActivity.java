@@ -342,9 +342,27 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     /**
      * Update a status message. This is normally used after you send a message.
+     * @param oldId message old id
      * @param id message id
      * @param newStatus new status to change
      */
+    private void updateMessage(final String oldId, final String id, final MonkeyItem.DeliveryStatus newStatus) {
+        MonkeyItemTransaction transaction = new MonkeyItemTransaction() {
+            @Override
+            public MonkeyItem invoke(MonkeyItem monkeyItem) {
+                MessageItem message = (MessageItem) monkeyItem;
+                message.setMessageId(id);
+                message.setOldMessageId(oldId);
+                message.setStatus(newStatus.ordinal());
+                DatabaseHandler.updateMessageStatus(oldId, id, newStatus);
+                return message;
+            }
+        };
+        if (monkeyChatFragment != null) {
+            monkeyChatFragment.updateMessageWithId(oldId, transaction);
+        }
+    }
+
     private void updateMessage(String id, MonkeyItem.DeliveryStatus newStatus) {
         if (monkeyChatFragment != null) {
             MessageItem monkeyItem = (MessageItem) monkeyChatFragment.findMonkeyItemById(id);
@@ -532,8 +550,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * successfully delivered
      * @param oldId The old Id of the message.
      */
-    private void markMessageAsDelivered(String oldId){
-        updateMessage(oldId, MonkeyItem.DeliveryStatus.delivered);
+    private void markMessageAsDelivered(String oldId, String newId){
+        updateMessage(oldId, newId, MonkeyItem.DeliveryStatus.delivered);
     }
 
     /**
@@ -691,7 +709,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onAcknowledgeRecieved(@NotNull String senderId, @NotNull String recipientId,
-                          @NotNull String newId, final @NotNull String oldId, final boolean read,
+                          final @NotNull String newId, final @NotNull String oldId, final boolean read,
                                       final int messageType) {
 
         super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
@@ -701,8 +719,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             @Override
             public void onQueryReturned(MessageItem result) {
                 if(result != null){
-                    markMessageAsDelivered(oldId);
+                    markMessageAsDelivered(oldId, newId);
                     updateConversationByMessage(result, read);
+
                 } else if((messageType == Integer.parseInt(MessageTypes.MOKText)
                         || messageType == Integer.parseInt(MessageTypes.MOKFile))){
                     //If we use the same monkeyId for several devices (multisession) we receive an
@@ -1190,6 +1209,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onMessageRemoved(@NotNull MonkeyItem item, boolean unsent) {
+        DatabaseHandler.deleteMessage(item.getMessageId());
+        if(unsent){
+            unsendMessage(item.getSenderId(), ((MessageItem)item).getConversationId(), item.getMessageId());
+        }
         //TODO Remove message from DB and send unsend command if necessary
     }
 }

@@ -151,6 +151,16 @@ public class DatabaseHandler {
         new Delete().from(MessageItem.class).execute();
     }
 
+    public static void updateMessageStatus(String OldMessageId, String messageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
+        MessageItem result = getMessageById(OldMessageId);
+        if (result != null) {
+            result.setStatus(outgoingMessageStatus.ordinal());
+            result.setOldMessageId(OldMessageId);
+            result.setMessageId(messageId);
+            new SaveModelTask().execute(result);
+        }
+    }
+
     public static void updateMessageStatus(String messageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
         MessageItem result = getMessageById(messageId);
         if (result != null) {

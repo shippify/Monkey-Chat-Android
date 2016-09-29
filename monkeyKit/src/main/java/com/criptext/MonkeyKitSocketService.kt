@@ -945,14 +945,17 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyId ID of the user or group
      * @param messageid ID of the message that you want to unsend
      */
-    fun unsendMessage(monkeyId: String, messageId: String) {
+    fun unsendMessage(senderId: String, recipientId: String, messageId: String) {
+        if(senderId != serviceClientData.monkeyId){
+            return;
+        }
 
         try {
             val args = JsonObject()
             val json = JsonObject()
 
             args.addProperty("id", messageId)
-            args.addProperty("rid", monkeyId)
+            args.addProperty("rid", recipientId)
             json.add("args", args)
             json.addProperty("cmd", MessageTypes.MOKProtocolDelete)
 
