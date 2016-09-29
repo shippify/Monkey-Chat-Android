@@ -2,6 +2,8 @@ package com.criptext.http;
 
 import android.os.AsyncTask;
 import android.util.Base64;
+import android.util.Log;
+
 import com.androidquery.callback.AjaxCallback;
 import com.androidquery.callback.AjaxStatus;
 import com.criptext.MonkeyKitSocketService;
@@ -223,6 +225,9 @@ public class UserManager extends AQueryHttp {
                                                         remote, currentConv.get("last_seen").getAsLong()*1000, currentConv.get("unread").getAsInt(),
                                                         currentConv.has("last_modified") ? (long)currentConv.get("last_modified").getAsDouble()*1000 : 0));
 
+                                            } catch (IllegalArgumentException ex) {
+                                                Log.e("MonkeyKit", "Error fetching conversation: " +
+                                                        ex.getMessage());
                                             } catch (Exception ex) {
                                                 ex.printStackTrace();
                                             }

@@ -26,7 +26,7 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
     public String senderMonkeyId;
     @Column(name = "conversationId", index = true)
     public String conversationId;
-    @Column(name = "messageId")
+    @Column(name = "messageId", unique = true)
     public String messageId;
     @Column(name = "oldMessageId")
     public String oldMessageId;

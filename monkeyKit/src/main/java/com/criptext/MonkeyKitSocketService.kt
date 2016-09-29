@@ -901,22 +901,6 @@ abstract class MonkeyKitSocketService : Service() {
 
     fun requestKeysForMessage(encryptedMessage: MOKMessage){
 
-        fun filter(list: MutableList<MOKMessage>, predicate: (MOKMessage) -> Boolean): List<MOKMessage>{
-            val filtered = mutableListOf<MOKMessage>()
-            var cont = 0
-            for(item in list){
-                if(predicate.invoke(item)){
-                    filtered.add(list.removeAt(cont))
-                }
-                cont++
-            }
-
-            return filtered.toList()
-        }
-
-
-            //val idPredicate: (MOKMessage) -> Boolean =  { it -> it.sid == first.sid }
-            //val sameConversationMsgs = filter(pendingMessages, idPredicate)
             val task = OpenConversationTask(this, encryptedMessage)
             task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, encryptedMessage.sid) //LAME
     }

@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.crypto.BadPaddingException;
+
 public class AsyncConnSocket implements ComServerDelegate{
 
 
@@ -373,10 +375,15 @@ public class AsyncConnSocket implements ComServerDelegate{
             } catch (IOException ex){
                 Log.d("MonkeyKit", "Message with content no encrypted");
             }
-            catch (Exception e){
+            catch (BadPaddingException e){
                 Log.d("MonkeyKit", "BadPaddingException Wrong Keys");
                 return MessageTypes.MOKProtocolMessageWrongKeys;
             }
+			catch (Exception e){
+				Log.e("MonkeyKit", "unknown exception. keys = " + claves);
+				e.printStackTrace();
+				return MessageTypes.MOKProtocolMessageWrongKeys;
+			}
         }
 		return MessageTypes.MOKProtocolMessageHasKeys;
 	}
