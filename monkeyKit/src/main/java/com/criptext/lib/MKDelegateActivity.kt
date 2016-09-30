@@ -125,17 +125,16 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
 
     /**
-     * stores a file message into the database and uploads it asynchronously so that it can be sent
-     * to the conversation.
-     * @param filepath the absolute path to the file to upload
-     * @param monkeyIDFrom monkeyId of the user that sends the file.
-     * @param monkeyIDTo monkeyId of the user or group that will receive the file.
-     * @param fileType an Int describing the type of the file to upload. It should be a constant from
-     * MessageTypes
-     * @param params a JsonObject with any additional info that you wish to send with your file
-     * @param pushMessage a PushMessage object with the message that you wish to display in the push
-     * notification to send with the file
-     * @param isEncrypted true if the file should be sent using encryption.
+     * sends a file to a conversation and stores the message to the database.
+     * @param filePath The path of the file to send.
+     * @param monkeyIDFrom Monkey ID of the user that sends the file.
+     * @param monkeyIDTo ID of the user or group that will receive the file.
+     * @param fileType An integer with the type of the file. It should be a MessageTypes constant
+     * @param params JsonObject with additional information to send with the file.
+     * @param pushMessage message to display in the push notification of the receiving user(s).
+     * @param isEncrypted true if the file should be encrypted before sending.
+     * @return The sent MOKMessage with a temporal negative ID. You should replace this ID when the
+     * server acknowledges the message.
      */
     fun persistFileMessageAndSend(filePath: String, monkeyIDFrom: String, monkeyIDTo: String, fileType: Int,
                                   params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
@@ -146,6 +145,35 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     }
 
+    /**
+     * sends a file to a list of users and stores the message to the database.
+     * @param filePath The path of the file to send.
+     * @param monkeyIDFrom Monkey ID of the user that sends the file.
+     * @param monkeyIDTo ID of the user or group that will receive the file.
+     * @param fileType An integer with the type of the file. It should be a MessageTypes constant
+     * @param params JsonObject with additional information to send with the file.
+     * @param pushMessage message to display in the push notification of the receiving user(s).
+     * @param isEncrypted true if the file should be encrypted before sending.
+     * @return A list of the sent MOKMessages with a temporal negative ID's. You should replace
+     * these ID's when the server acknowledges each message.
+     */
+    fun persistFileMessageAndBroadcast(filePath: String, monkeyIDFrom: String, monkeyIDTo:
+        List<String>, fileType: Int, params: JsonObject, pushMessage: PushMessage,
+                                       isEncrypted: Boolean) =
+    monkeyIDTo.map { id -> persistFileMessageAndSend(filePath, monkeyIDFrom, id, fileType, params,
+            pushMessage, isEncrypted) }
+    /**
+     * sends a file to a conversation.
+     * @param filePath The path of the file to send.
+     * @param monkeyIDFrom Monkey ID of the user that sends the file.
+     * @param monkeyIDTo ID of the user or group that will receive the file.
+     * @param fileType An integer with the type of the file. It should be a MessageTypes constant
+     * @param params JsonObject with additional information to send with the file.
+     * @param pushMessage message to display in the push notification of the receiving user(s).
+     * @param isEncrypted true if the file should be encrypted before sending.
+     * @return The sent MOKMessage with a temporal negative ID. You should replace this ID when the
+     * server acknowledges the message.
+     */
     fun sendFileMessage(filePath: String, monkeyIDFrom: String, monkeyIDTo: String, fileType: Int,
                                   params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
         val newMessage = createMOKMessage(filePath, monkeyIDFrom, monkeyIDTo, fileType, params)
@@ -169,14 +197,91 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     }
 
+    /**
+     * sends a file to a list of users.
+     * @param filePath The path of the file to send.
+     * @param monkeyIDFrom Monkey ID of the user that sends the file.
+     * @param monkeyIDTo A list of Monkey IDs of the users that will receive the file.
+     * @param fileType An integer with the type of the file. It should be a MessageTypes constant
+     * @param params JsonObject with additional information to send with the file.
+     * @param pushMessage message to display in the push notification of the receiving user(s).
+     * @param isEncrypted true if the file should be encrypted before sending.
+     * @return a List of the sent MOKMessage's with temporal negative ID's. You should replace these
+     * ID's when the server acknowledges each message.
+     *
+     */
+    fun broadcastFileMessage(filePath: String, monkeyIDFrom: String, monkeyIDTo: List<String>, fileType: Int,
+                                  params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean) =
+        monkeyIDTo.map { id -> sendFileMessage(filePath, monkeyIDFrom, id, fileType, params,
+                pushMessage, isEncrypted) }
+
+    /**
+     * sends a text message to a conversation and stores it to the database using the
+     * storeSendingMessage method.
+     * @param text The text to send
+     * @param monkeyIDFrom Monkey ID of the user that sends the message.
+     * @param monkeyIDTo Monkey ID of the user or conversation that will receive the message.
+     * @param params JsonObject with additional information to send in the message.
+     * @param pushMessage message to display in the push notification of the receiving user(s).
+     * @param isEncrypted true if the message should be encrypted before sending.
+     * @return a MOKMessage of the sent message with a temporal negative ID. You should replace this
+     * ID when the server acknowledges the message.
+     *
+     */
     fun persistMessageAndSend(text: String, monkeyIDFrom: String, monkeyIDTo: String, params: JsonObject,
                               pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
-
         val newMessage = sendMessage(text, monkeyIDFrom, monkeyIDTo, params, pushMessage, isEncrypted)
         storeSendingMessage(newMessage)
         return newMessage
     }
 
+    /**
+     * sends a text message to a list of users and stores it to the database using the
+     * storeSendingMessage method.
+     * @param text The text to send
+     * @param monkeyIDFrom Monkey ID of the user that sends the message.
+     * @param monkeyIDTo Monkey ID of the user or conversation that will receive the message.
+     * @param params JsonObject with additional information to send in the message.
+     * @param pushMessage message to display in the push notification of the receiving user(s).
+     * @param isEncrypted true if the message should be encrypted before sending.
+     * @return a List of the sent MOKMessage's with temporal negative ID's. You should replace these
+     * ID's when the server acknowledges each message.
+     *
+     */
+    fun persistMessageAndBroadcast(text: String, monkeyIDFrom: String, monkeyIDTo: List<String>, params: JsonObject,
+                              pushMessage: PushMessage, isEncrypted: Boolean) =
+        monkeyIDTo.map { id -> persistMessageAndSend(text, monkeyIDFrom, id, params, pushMessage,
+                isEncrypted)
+        }
+    /**
+     * sends a text message to a list of users.
+     * @param text The text to send
+     * @param monkeyIDFrom Monkey ID of the user that sends the message.
+     * @param monkeyIDTo A list of Monkey IDs of the users that will receive the message.
+     * @param params JsonObject with additional information to send in the message.
+     * @param pushMessage message to display in the push notification of the receiving user(s).
+     * @param isEncrypted true if the message should be encrypted before sending.
+     * @return a List of the sent MOKMessage's with temporal negative ID's. You should replace these
+     * ID's when the server acknowledges each message.
+     *
+     */
+    fun broadcastMessage(text: String, monkeyIDFrom: String, monkeyIDTo: List<String>, params: JsonObject,
+                              pushMessage: PushMessage, isEncrypted: Boolean) =
+        monkeyIDTo.map { id -> sendMessage(text, monkeyIDFrom, id, params, pushMessage, isEncrypted) }
+
+
+    /**
+     * sends a text message to a conversation.
+     * @param text The text to send
+     * @param monkeyIDFrom Monkey ID of the user that sends the message.
+     * @param monkeyIDTo Monkey ID of the user or conversation that will receive the message.
+     * @param params JsonObject with additional information to send in the message.
+     * @param pushMessage message to display in the push notification of the receiving user(s).
+     * @param isEncrypted true if the message should be encrypted before sending.
+     * @return a MOKMessage of the sent message with a temporal negative ID. You should replace this
+     * ID when the server acknowledges the message.
+     *
+     */
     fun sendMessage(text: String, monkeyIDFrom: String, monkeyIDTo: String, params: JsonObject,
                               pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
         val newMessage = createMOKMessage(text, monkeyIDFrom, monkeyIDTo,

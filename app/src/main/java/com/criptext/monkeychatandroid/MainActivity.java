@@ -446,9 +446,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     /**
-     * Search a conversation by its message id and update its status.
-     * @param message message that updates conversation's last text
-     * @param read boolean if the message is read or not
+     * Search a conversation by its message id and update its last read status.
+     * @param convId ID of the conversation to update
+     * @param lastRead the new lastRead value.
      */
     private void updateConversationLastRead(final String convId, final long lastRead){
         asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
