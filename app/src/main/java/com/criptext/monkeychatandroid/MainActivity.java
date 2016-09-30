@@ -392,29 +392,46 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     private void updateConversation(final String conversationId, final String secondaryText, final MonkeyConversation.ConversationStatus status,
                                     final int unread, final long dateTime, final long lastRead){
+        final ConversationTransaction transaction = new ConversationTransaction() {
+            @Override
+            public void updateConversation(@NotNull MonkeyConversation conversation) {
+                ConversationItem newConversationItem = (ConversationItem)conversation;
+                newConversationItem.setSecondaryText(secondaryText!=null?secondaryText:conversation.getSecondaryText());
+                if(status != MonkeyConversation.ConversationStatus.empty &&
+                        (conversation.getStatus() != MonkeyConversation.ConversationStatus.receivedMessage.ordinal()
+                        || status != MonkeyConversation.ConversationStatus.sentMessageRead)){
+                    newConversationItem.setStatus(status.ordinal());
+                    newConversationItem.setTotalNewMessage(unread == 0 ? 0 : conversation.getTotalNewMessages()+unread);
+                }
+                if(status == MonkeyConversation.ConversationStatus.empty ||
+                        (monkeyChatFragment!=null && monkeyChatFragment.getConversationId().equals(conversationId))){
+                    newConversationItem.setTotalNewMessage(0);
+                }
+                newConversationItem.setDatetime(dateTime>-1?dateTime:conversation.getDatetime());
+                newConversationItem.lastRead = Math.max(lastRead, newConversationItem.lastRead);
+
+                if(conversation.isGroup() && conversation.getStatus() ==
+                        MonkeyConversation.ConversationStatus.sentMessageRead.ordinal())
+                    newConversationItem.setStatus(MonkeyConversation.ConversationStatus.
+                            deliveredMessage.ordinal());
+            }
+        };
+
         if(monkeyConversationsFragment!=null) {
             final ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
             if(conversationItem!=null) {
-                monkeyConversationsFragment.updateConversation(conversationItem, new ConversationTransaction() {
-                    @Override
-                    public void updateConversation(@NotNull MonkeyConversation conversation) {
-                        ConversationItem newConversationItem = (ConversationItem)conversation;
-                        newConversationItem.setSecondaryText(secondaryText!=null?secondaryText:conversationItem.getSecondaryText());
-                        if(status != MonkeyConversation.ConversationStatus.empty && (conversationItem.getStatus() != MonkeyConversation.ConversationStatus.receivedMessage.ordinal()
-                                || status != MonkeyConversation.ConversationStatus.sentMessageRead)){
-                            newConversationItem.setStatus(status.ordinal());
-                            newConversationItem.setTotalNewMessage(unread == 0 ? 0 : conversationItem.getTotalNewMessages()+unread);
-                        }
-                        if(status == MonkeyConversation.ConversationStatus.empty ||
-                                (monkeyChatFragment!=null && monkeyChatFragment.getConversationId().equals(conversationId))){
-                            newConversationItem.setTotalNewMessage(0);
-                        }
-                        newConversationItem.setDatetime(dateTime>-1?dateTime:conversationItem.getDatetime());
-                        newConversationItem.lastRead = Math.max(lastRead, newConversationItem.lastRead);
-                        newConversationItem.save();
-                    }
-                });
+                monkeyConversationsFragment.updateConversation(conversationItem, transaction);
+                DatabaseHandler.updateConversation(conversationItem);
             }
+        } else { //Conversation not in memory, look in database and update.
+             asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
+                @Override
+                public void onQueryReturned(ConversationItem result) {
+                    transaction.updateConversation(result);
+                    DatabaseHandler.updateConversation(result);
+
+                }
+            }, conversationId);
         }
     }
 
@@ -426,6 +443,36 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 monkeyConversationsFragment.updateConversation(conversationItem);
             }
         }
+    }
+
+    /**
+     * Search a conversation by its message id and update its status.
+     * @param message message that updates conversation's last text
+     * @param read boolean if the message is read or not
+     */
+    private void updateConversationLastRead(final String convId, final long lastRead){
+        asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(ConversationItem result) {
+                if(result != null){
+
+                    ConversationTransaction transaction = new ConversationTransaction() {
+                        @Override
+                        public void updateConversation(MonkeyConversation monkeyConversation) {
+                            ConversationItem conversation = (ConversationItem) monkeyConversation;
+                            conversation.lastRead = lastRead;
+                        }
+                    };
+
+                    if(monkeyConversationsFragment != null)
+                        monkeyConversationsFragment.updateConversation(result, transaction);
+
+                    transaction.updateConversation(result);
+
+                    DatabaseHandler.updateConversation(result);
+                }
+            }
+        }, convId);
     }
 
     /**
@@ -648,7 +695,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                                       final int messageType) {
 
         super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
-        Log.d("MainActivity", "On ACK Received");
+        Log.d("MainActivity", "On ACK Received read? " + read);
 
         asyncDBHandler.getMessageById(new FindMessageTask.OnQueryReturnedListener() {
             @Override
@@ -885,14 +932,22 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online) {
         if(monkeyFragmentManager!=null) {
             String subtitle = isOnline? "Online":"";
+            long lastSeenValue = Long.valueOf(lastSeen);
+            boolean isGroupConversation = senderId.contains("G:");
             if(!isOnline){
-                subtitle = "Last seen: "+Utils.Companion.getFormattedDay(Long.valueOf(lastSeen) * 1000, this);
+                subtitle = "Last seen: "+Utils.Companion.getFormattedDay(lastSeenValue * 1000, this);
             }
-            else if(senderId.contains("G:")){
+            else if(isGroupConversation){
                 int membersOnline = members_online.split(",").length;
                 subtitle = membersOnline + " " + (membersOnline>1?"members online":"member online");
             }
             monkeyFragmentManager.setSubtitle(subtitle);
+
+            if(!isGroupConversation && monkeyChatFragment!=null &&
+                    monkeyChatFragment.getConversationId().equals(senderId)) {
+                monkeyChatFragment.setLastRead(lastSeenValue);
+                updateConversationLastRead(senderId, lastSeenValue);
+            }
         }
     }
 
@@ -905,12 +960,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onContactOpenMyConversation(String monkeyId) {
         //Update the conversation status
         long newLastReadValue = System.currentTimeMillis();
-        updateConversation(monkeyId, null, MonkeyConversation.ConversationStatus.sentMessageRead,
-                0, -1, newLastReadValue);
         if(monkeyChatFragment!=null && monkeyChatFragment.getConversationId().equals(monkeyId)) {
             monkeyChatFragment.setLastRead(newLastReadValue);
-            monkeyChatFragment.reloadAllMessages();
+            MonkeyItem newestMessage = monkeyChatFragment.getLastMessage();
+            if(newestMessage != null) newLastReadValue = newestMessage.getMessageTimestamp();
         }
+        updateConversation(monkeyId, null, MonkeyConversation.ConversationStatus.sentMessageRead,
+                0, -1, newLastReadValue);
     }
 
     @Override
