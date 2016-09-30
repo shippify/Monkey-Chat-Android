@@ -346,30 +346,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param id message id
      * @param newStatus new status to change
      */
-    private void updateMessage(final String oldId, final String id, final MonkeyItem.DeliveryStatus newStatus) {
-        MonkeyItemTransaction transaction = new MonkeyItemTransaction() {
-            @Override
-            public MonkeyItem invoke(MonkeyItem monkeyItem) {
-                MessageItem message = (MessageItem) monkeyItem;
-                message.setMessageId(id);
-                message.setOldMessageId(oldId);
-                message.setStatus(newStatus.ordinal());
-                DatabaseHandler.updateMessageStatus(oldId, id, newStatus);
-                return message;
-            }
-        };
-        if (monkeyChatFragment != null) {
-            monkeyChatFragment.updateMessageWithId(oldId, transaction);
-        }
-    }
 
-    private void updateMessage(String id, MonkeyItem.DeliveryStatus newStatus) {
+    private void updateMessage(String id, String oldId, MonkeyItem.DeliveryStatus newStatus) {
         if (monkeyChatFragment != null) {
-            MessageItem monkeyItem = (MessageItem) monkeyChatFragment.findMonkeyItemById(id);
-            if (monkeyItem != null) {
-                monkeyItem.setStatus(newStatus.ordinal());
-                DatabaseHandler.updateMessageStatus(id, newStatus);
-                monkeyChatFragment.updateMessageDeliveryStatus(monkeyItem);
+            MessageItem message = (MessageItem) monkeyChatFragment.findMonkeyItemById(oldId != null ? oldId : id);
+            if (message != null) {
+                message.setStatus(newStatus.ordinal());
+                if(oldId != null){
+                    message.setOldMessageId(oldId);
+                    message.setMessageId(id);
+                    DatabaseHandler.updateMessageStatus(id, oldId, newStatus);
+
+                }else{
+                    DatabaseHandler.updateMessageStatus(id, null, newStatus);
+                }
+                monkeyChatFragment.updateMessageDeliveryStatus(message);
             }
         }
     }
@@ -380,7 +371,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 public MonkeyItem invoke(MonkeyItem monkeyItem) {
                     MessageItem message = (MessageItem) monkeyItem;
                     message.setStatus(newStatus.ordinal());
-                    DatabaseHandler.updateMessageStatus(id, newStatus);
+                    DatabaseHandler.updateMessageStatus(id, null, newStatus);
                     return message;
                 }
             };
@@ -400,6 +391,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
         }
     }
+
     /**
      * Update a conversation according to the params received.
      * @param conversationId conversation id to change
@@ -452,6 +444,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }, conversationId);
         }
     }
+
 
     private void updateConversationBadge(String conversationId, int unread){
         if(monkeyConversationsFragment!=null) {
@@ -551,7 +544,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param oldId The old Id of the message.
      */
     private void markMessageAsDelivered(String oldId, String newId){
-        updateMessage(oldId, newId, MonkeyItem.DeliveryStatus.delivered);
+        updateMessage(newId, oldId, MonkeyItem.DeliveryStatus.delivered);
     }
 
     /**
@@ -703,7 +696,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                                        String conversationId, boolean success) {
         //TODO use better search algorithm
         super.onFileDownloadFinished(fileMessageId, fileMessageTimestamp, conversationId, success);
-        updateMessage(fileMessageId,
+        updateMessage(fileMessageId, null,
                 success ? MonkeyItem.DeliveryStatus.delivered : MonkeyItem.DeliveryStatus.error);
     }
 
@@ -943,7 +936,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onFileFailsUpload(MOKMessage message) {
         super.onFileFailsUpload(message);
-        updateMessage(message.getMessage_id(), MonkeyItem.DeliveryStatus.error);
+        updateMessage(message.getMessage_id(), null, MonkeyItem.DeliveryStatus.error);
     }
 
 
@@ -973,7 +966,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onDeleteRecieved(String messageId, String senderId, String recipientId, String datetime) {
-        //Server requested to delete a message, we could implement it here, but for now we wont
+        monkeyChatFragment.removeMonkeyItem(messageId);
     }
 
     @Override
@@ -1022,7 +1015,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onFileUploadRequested(@NotNull MonkeyItem item) {
         if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
-            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
+            updateMessage(item.getMessageId(), null, MonkeyItem.DeliveryStatus.sending);
             if(monkeyChatFragment != null)
                 monkeyChatFragment.rebindMonkeyItem(item);
         }
@@ -1043,7 +1036,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             //If the message failed to download previously, mark it as sending and rebind.
             //Rebinding will update the UI to a loading view and call this method again to start
             //the download
-            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
+            updateMessage(item.getMessageId(), null, MonkeyItem.DeliveryStatus.sending);
             if(monkeyChatFragment != null)
                 monkeyChatFragment.rebindMonkeyItem(item);
         } else { //Not error status, download the file.
@@ -1209,10 +1202,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onMessageRemoved(@NotNull MonkeyItem item, boolean unsent) {
-        DatabaseHandler.deleteMessage(item.getMessageId());
+        MessageItem message = DatabaseHandler.unsendMessage(item.getMessageId());
         if(unsent){
             unsendMessage(item.getSenderId(), ((MessageItem)item).getConversationId(), item.getMessageId());
+            updateConversation(message.getConversationId(), getSecondaryTextByMessageType(message), MonkeyConversation.ConversationStatus.sentMessageRead, 0, message.getMessageTimestampOrder(), 0);
         }
         //TODO Remove message from DB and send unsend command if necessary
+        //(final String conversationId, final String secondaryText, final MonkeyConversation.ConversationStatus status,
+        //final int unread, final long dateTime, final long lastRead)
     }
 }

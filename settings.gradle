@@ -1,1 +1,1 @@
-include ':app', ':monkeyKit'
+include ':app', ':monkeyKit', ':monkeykitui'

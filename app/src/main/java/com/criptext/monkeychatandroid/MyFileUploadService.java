@@ -13,13 +13,13 @@ import org.jetbrains.annotations.NotNull;
 public class MyFileUploadService extends MonkeyFileService{
     @Override
     public void onFileUploadFinished(@NotNull MOKMessage mokMessage, boolean error) {
-        DatabaseHandler.updateMessageStatus(mokMessage.getMessage_id(),
+        DatabaseHandler.updateMessageStatus(mokMessage.getMessage_id(), null,
                 error ? MonkeyItem.DeliveryStatus.error : MonkeyItem.DeliveryStatus.delivered);
     }
 
     @Override
     public void onFileDownloadFinished(@NotNull String messageId, @NotNull String conversationId, boolean error) {
-        DatabaseHandler.updateMessageStatus(messageId,
+        DatabaseHandler.updateMessageStatus(messageId, null,
                 error ? MonkeyItem.DeliveryStatus.error : MonkeyItem.DeliveryStatus.delivered);
     }
 }

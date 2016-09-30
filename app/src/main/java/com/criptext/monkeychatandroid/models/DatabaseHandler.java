@@ -151,20 +151,14 @@ public class DatabaseHandler {
         new Delete().from(MessageItem.class).execute();
     }
 
-    public static void updateMessageStatus(String OldMessageId, String messageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
-        MessageItem result = getMessageById(OldMessageId);
+    public static void updateMessageStatus(String messageId, String OldMessageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
+        MessageItem result = getMessageById(OldMessageId != null ? OldMessageId : messageId);
         if (result != null) {
             result.setStatus(outgoingMessageStatus.ordinal());
-            result.setOldMessageId(OldMessageId);
-            result.setMessageId(messageId);
-            new SaveModelTask().execute(result);
-        }
-    }
-
-    public static void updateMessageStatus(String messageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
-        MessageItem result = getMessageById(messageId);
-        if (result != null) {
-            result.setStatus(outgoingMessageStatus.ordinal());
+            if(OldMessageId != null){
+                result.setOldMessageId(OldMessageId);
+                result.setMessageId(messageId);
+            }
             new SaveModelTask().execute(result);
         }
     }
@@ -187,6 +181,11 @@ public class DatabaseHandler {
         finally {
             ActiveAndroid.endTransaction();
         }
+    }
+
+    public static MessageItem unsendMessage(String messageId){
+        deleteMessage(messageId);
+        return new Select().from(MessageItem.class).orderBy("timestamp DESC").executeSingle();
     }
 
     public static void deleteMessage(String messageId){
