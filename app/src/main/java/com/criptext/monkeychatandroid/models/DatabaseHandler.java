@@ -217,13 +217,13 @@ public class DatabaseHandler {
         new SaveModelTask().execute(conversation);
     }
 
+    public static void updateConversation(ConversationItem conversation){
+        new SaveModelTask().execute(conversation);
+    }
+
     public static void updateConversationNewMessagesCount(ConversationItem conversationItem, int newMessages){
         conversationItem.setTotalNewMessage(newMessages);
         new SaveModelTask().execute(conversationItem);
-    }
-
-    public static void updateConversationStatus(String conversationId){
-
     }
 
     public static void deleteConversation(String conversationId){
