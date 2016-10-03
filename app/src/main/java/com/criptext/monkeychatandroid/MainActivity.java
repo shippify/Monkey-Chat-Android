@@ -966,7 +966,19 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onDeleteRecieved(String messageId, String senderId, String recipientId, String datetime) {
-        monkeyChatFragment.removeMonkeyItem(messageId);
+
+        String conversationId = senderId.equals(myMonkeyID) ? recipientId : senderId;
+        MessageItem message = DatabaseHandler.lastConversationMessage(conversationId);
+
+        if(monkeyChatFragment != null) {
+            monkeyChatFragment.removeMonkeyItem(messageId);
+        }
+        if(message != null && message.getMessageId().equals(messageId)){
+            MessageItem lastMessage = DatabaseHandler.unsendMessage(messageId, conversationId);
+            updateConversation(lastMessage.getConversationId(), getSecondaryTextByMessageType(lastMessage), MonkeyConversation.ConversationStatus.sentMessageRead, 0, lastMessage.getMessageTimestampOrder(), 0);
+            return;
+        }
+        DatabaseHandler.deleteMessage(messageId);
     }
 
     @Override
@@ -1202,10 +1214,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onMessageRemoved(@NotNull MonkeyItem item, boolean unsent) {
-        MessageItem message = DatabaseHandler.unsendMessage(item.getMessageId());
+
         if(unsent){
             unsendMessage(item.getSenderId(), ((MessageItem)item).getConversationId(), item.getMessageId());
-            updateConversation(message.getConversationId(), getSecondaryTextByMessageType(message), MonkeyConversation.ConversationStatus.sentMessageRead, 0, message.getMessageTimestampOrder(), 0);
+        }else{
+            DatabaseHandler.deleteMessage(item.getMessageId());
         }
         //TODO Remove message from DB and send unsend command if necessary
         //(final String conversationId, final String secondaryText, final MonkeyConversation.ConversationStatus status,

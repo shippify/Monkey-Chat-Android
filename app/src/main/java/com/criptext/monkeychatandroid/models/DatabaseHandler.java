@@ -183,9 +183,13 @@ public class DatabaseHandler {
         }
     }
 
-    public static MessageItem unsendMessage(String messageId){
+    public static MessageItem unsendMessage(String messageId, String conversationId){
         deleteMessage(messageId);
-        return new Select().from(MessageItem.class).orderBy("timestamp DESC").executeSingle();
+        return new Select().from(MessageItem.class).where("conversationId = ?", conversationId).orderBy("timestamp DESC").executeSingle();
+    }
+
+    public static MessageItem lastConversationMessage(String conversationId){
+        return new Select().from(MessageItem.class).where("conversationId = ?", conversationId).orderBy("timestamp DESC").executeSingle();
     }
 
     public static void deleteMessage(String messageId){
