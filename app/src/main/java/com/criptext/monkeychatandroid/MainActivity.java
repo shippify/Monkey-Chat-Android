@@ -449,7 +449,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     /**
      * Search a conversation by its message id and update its status.
-       unsend working with messages
+        unsend working with messages
      */
     private void updateConversationLastRead(final String convId, final long lastRead){
         asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
@@ -1016,6 +1016,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         String conversationId = senderId.equals(myMonkeyID) ? recipientId : senderId;
         MessageItem message = DatabaseHandler.lastConversationMessage(conversationId);
         int unreadCounter = 0;
+
+        MonkeyConversationsFragment conversationsFragment = conversationManager.fragment;
         MonkeyConversation.ConversationStatus status;
 
         if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationId)) {
@@ -1031,7 +1033,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         unreadCounter = conversationItem.getTotalNewMessages() - 1;
                     }
                 }
-
                 int position = MonkeyItem.Companion.findLastPositionById(messageId, conversationMessages);
                 if(position > -1){
                     conversationMessages.remove(position);
@@ -1041,7 +1042,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         if(message != null && message.getMessageId().equals(messageId)){
             MessageItem lastMessage = DatabaseHandler.unsendMessage(messageId, conversationId);
-
             /* THIS IS WRONG
             status = lastMessage.isIncomingMessage() ?
                     MonkeyConversation.ConversationStatus.receivedMessage:
