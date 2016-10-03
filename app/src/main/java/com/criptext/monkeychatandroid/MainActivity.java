@@ -407,9 +407,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             public void updateConversation(@NotNull MonkeyConversation conversation) {
                 ConversationItem newConversationItem = (ConversationItem)conversation;
                 newConversationItem.setSecondaryText(secondaryText!=null?secondaryText:conversation.getSecondaryText());
-                if(status != MonkeyConversation.ConversationStatus.empty &&
-                        (conversation.getStatus() != MonkeyConversation.ConversationStatus.receivedMessage.ordinal()
-                        || status != MonkeyConversation.ConversationStatus.sentMessageRead)){
+                if(status != MonkeyConversation.ConversationStatus.empty){
                     newConversationItem.setStatus(status.ordinal());
                     newConversationItem.setTotalNewMessage(unread == 0 ? 0 : conversation.getTotalNewMessages()+unread);
                 }
@@ -457,9 +455,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     /**
-     * Search a conversation by its message id and update its last read status.
-     * @param convId ID of the conversation to update
-     * @param lastRead the new lastRead value.
+     * Search a conversation by its message id and update its status.
+       unsend working with messages
      */
     private void updateConversationLastRead(final String convId, final long lastRead){
         asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
@@ -965,18 +962,43 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onDeleteRecieved(String messageId, String senderId, String recipientId, String datetime) {
+    public void onDeleteReceived(String messageId, String senderId, String recipientId) {
 
         String conversationId = senderId.equals(myMonkeyID) ? recipientId : senderId;
         MessageItem message = DatabaseHandler.lastConversationMessage(conversationId);
+        int unreadCounter = 0;
+        ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
+        MonkeyConversation.ConversationStatus status;
 
-        if(monkeyChatFragment != null) {
+        if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationId)) {
             monkeyChatFragment.removeMonkeyItem(messageId);
+        }else{
+            List<MonkeyItem> conversationMessages = messagesMap.get(conversationId);
+            if(conversationMessages != null){
+                if(conversationItem!=null && conversationItem.getTotalNewMessages() > 0) {
+                    if(conversationMessages.size() - MonkeyItem.Companion.findItemPositionIdInList(messageId, conversationMessages) <= conversationItem.getTotalNewMessages()){
+                        unreadCounter = conversationItem.getTotalNewMessages() - 1;
+                    }
+                }
+
+                int position = MonkeyItem.Companion.findItemPositionIdInList(messageId, conversationMessages);
+                if(position > -1){
+                    conversationMessages.remove(position);
+                }
+            }
         }
+
         if(message != null && message.getMessageId().equals(messageId)){
             MessageItem lastMessage = DatabaseHandler.unsendMessage(messageId, conversationId);
-            updateConversation(lastMessage.getConversationId(), getSecondaryTextByMessageType(lastMessage), MonkeyConversation.ConversationStatus.sentMessageRead, 0, lastMessage.getMessageTimestampOrder(), 0);
+
+            status = lastMessage.getSenderId().equals(myMonkeyID) ? MonkeyConversation.ConversationStatus.deliveredMessage : MonkeyConversation.ConversationStatus.receivedMessage;
+            if(status.equals(MonkeyConversation.ConversationStatus.deliveredMessage) && lastMessage.getMessageTimestamp() <= conversationItem.lastRead){
+                status = MonkeyConversation.ConversationStatus.sentMessageRead;
+            }
+            updateConversation(lastMessage.getConversationId(), getSecondaryTextByMessageType(lastMessage), status, unreadCounter > 0 ? -1 : 0, lastMessage.getMessageTimestampOrder(), 0);
             return;
+        }else if(unreadCounter != 0){
+            updateConversationBadge(conversationId, unreadCounter);
         }
         DatabaseHandler.deleteMessage(messageId);
     }
@@ -1220,8 +1242,5 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }else{
             DatabaseHandler.deleteMessage(item.getMessageId());
         }
-        //TODO Remove message from DB and send unsend command if necessary
-        //(final String conversationId, final String secondaryText, final MonkeyConversation.ConversationStatus status,
-        //final int unread, final long dateTime, final long lastRead)
     }
 }

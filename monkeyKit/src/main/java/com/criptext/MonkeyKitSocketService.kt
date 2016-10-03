@@ -337,7 +337,8 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onSocketDisconnected()
             }
             CBTypes.onDeleteReceived -> {
-                delegate?.onDeleteRecieved(info[0] as String, info[1] as String, info[2] as String, info[3] as String)
+                lastTimeSynced = info[3].toString().toLong()
+                delegate?.onDeleteReceived(info[0] as String, info[1] as String, info[2] as String)
             }
             CBTypes.onUpdateUserData -> {
                 delegate?.onUpdateUserData(info[0] as String, info[1] as Exception?)
