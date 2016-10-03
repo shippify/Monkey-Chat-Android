@@ -142,9 +142,6 @@ public class MOKMessageHandler extends Handler {
                     }
                     case MessageTypes.MessageSocketDisconnected:{
                         service.processMessageFromHandler(CBTypes.onSocketDisconnected, new Object[]{""});//new Object[]{""}
-                        //If socket disconnected and this handler is still alive we should reconnect
-                        //immediately.
-                        service.startSocketConnection();
                         break;
                     }
                     case MessageTypes.MOKProtocolSync: {
@@ -156,7 +153,7 @@ public class MOKMessageHandler extends Handler {
                     }
                     case MessageTypes.MOKProtocolMessageSync: {
                         long lastTimeSynced = (Long)msg.obj;
-                        service.sendSync(lastTimeSynced);
+                        //service.sendSync(lastTimeSynced);
                         break;
                     }
                     default:

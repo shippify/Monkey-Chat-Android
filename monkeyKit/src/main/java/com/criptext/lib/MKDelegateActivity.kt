@@ -19,7 +19,7 @@ import java.util.*
 
 abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
-    var service: MonkeyKitSocketService? = null
+    private var service: MonkeyKitSocketService? = null
 
     abstract val serviceClassName: Class<*>
 
@@ -55,7 +55,6 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             service = sService
 
             forwardTextMsgsToService(sService)
-            onBoundToService()
 
         }
 
@@ -89,8 +88,6 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         service = null
         unbindService(monkeyKitConnection)
     }
-
-    abstract fun onBoundToService()
 
     /**
      * Crea un nuevo MOKMessage con Id unico y con un timestamp actual. Al crear un nuevo MOKMessage
@@ -421,9 +418,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * @param from a timestamp to be used as reference. Messages received must not be older than
      * this timestamp
      */
-    fun sendSync(from: Long){
+    /*fun sendSync(from: Long){
         this.service?.sendSync(from)
-    }
+    }*/
 
 
     /**
@@ -433,10 +430,10 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * The sync operation is done automatically every time the socket connects to the network. in
      * most cases there is no need for you to call this method manually.
      */
-    fun sendSync(){
+    /*fun sendSync(){
         val socketService = service
         socketService?.sendSync(socketService.lastTimeSynced)
-    }
+    }*/
 
     /**
      * Set your status to online or offline depending of the boolean received.
@@ -485,6 +482,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      */
     fun getConversationsFromServer(quantity: Int, fromTimestamp: Long){
         val socketService = service
+        Log.d("SocketService","status: ${MonkeyKitSocketService.status}")
         socketService?.getAllConversations(quantity, fromTimestamp)
     }
 
@@ -520,6 +518,10 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         socketService?.addGroupMember(new_member, group_id)
     }
 
+    fun getUsersInfo(userIds: String){
+        val socketService = service
+        socketService?.getUsersInfo(userIds)
+    }
     /**
      * Delete a conversation.
      * @param monkeyid monkeyid ID of the user.

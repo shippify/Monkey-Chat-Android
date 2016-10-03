@@ -1,5 +1,6 @@
 package com.criptext.http
 
+import android.content.Context
 import android.os.AsyncTask
 import android.util.Log
 import com.criptext.ClientData
@@ -21,7 +22,9 @@ import java.util.concurrent.TimeUnit
  * Created by gesuwall on 6/6/16.
  */
 
-class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOKMessage?) : AsyncTask<String, Void, OpenConversationTask.OpenConvData>(){
+class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOKMessage?) :
+        AsyncTask<String, Void, OpenConversationTask.OpenConvData>(){
+
    val serviceRef: WeakReference<MonkeyKitSocketService>
     val clientData: ClientData
 
@@ -60,7 +63,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
         }
 
         //decrypt the pending message
-        return attemptToDecryptPendingMessage(
+        return attemptToDecryptWithOpenResponse(
                 openConversationResponse = response,
                 aesutil = aesutil,
                 pendingMessage = undecrypted,
@@ -82,7 +85,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
                             val validKey: String, val conversationId: String)
     companion object {
 
-        fun authorizedHttpClient(clientData: ClientData) = OkHttpClient().newBuilder()
+        fun authorizedHttpClient(clientData: ClientData, timeout: Long) = OkHttpClient().newBuilder()
                 .authenticator({ route, response ->
                     val credential = Credentials.basic(clientData.appId, clientData.appKey);
                     response.request().newBuilder()
@@ -90,8 +93,10 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
                 })
                 .connectTimeout(10, TimeUnit.SECONDS)
                 .writeTimeout(10, TimeUnit.SECONDS)
-                .readTimeout(20, TimeUnit.SECONDS)
+                .readTimeout(timeout, TimeUnit.SECONDS)
                 .build()
+
+        fun authorizedHttpClient(clientData: ClientData) = authorizedHttpClient(clientData, 20)
 
         fun sendOpenConversationRequest(user_to: String, clientData: ClientData): JsonObject {
 
@@ -116,11 +121,11 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
         }
 
-        fun getTextEncryptedWithLatestKeys(msg: MOKMessage, clientData: ClientData): String? {
+        fun getTextEncryptedWithLatestKeys(msgId: String, clientData: ClientData): String? {
             //TODO TEST THIS!!
             val http = authorizedHttpClient(clientData)
             val request = Request.Builder()
-                    .url(MonkeyKitSocketService.httpsURL + "/message/${msg.message_id}/open/secure")
+                    .url(MonkeyKitSocketService.httpsURL + "/message/$msgId/open/secure")
                     .build()
             val response = http.newCall(request).execute().body().string();
             val parser = JsonParser()
@@ -132,8 +137,22 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
             return null
         }
 
-        fun attemptToDecryptPendingMessage(openConversationResponse: JsonObject, clientData: ClientData,
-                                            aesutil: AESUtil, pendingMessage: MOKMessage)
+
+        fun attemptToDecryptWithNewKeys(message: MOKMessage, clientData: ClientData,
+                                    newKey: String): Boolean {
+            //1st attempt to decrypt, if it works return
+            if (DecryptTask.decryptMessage(EncryptedMsg.fromSecret(message, newKey))) {
+                return true
+            } else {
+                //Decryption didn't work with current key. Ask the server to encrypt again with current keys
+                //then do a 2nd attempt to decrypt, if it works add to decrypted list
+                message.msg = getTextEncryptedWithLatestKeys(message.message_id, clientData) ?: message.msg
+                return DecryptTask.decryptMessage((EncryptedMsg.fromSecret(message, newKey)))
+                }
+        }
+
+        fun attemptToDecryptWithOpenResponse(openConversationResponse: JsonObject, clientData: ClientData,
+                                             aesutil: AESUtil, pendingMessage: MOKMessage)
                 : OpenConvData? {
 
             val data = openConversationResponse.getAsJsonObject("data");
@@ -154,28 +173,36 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
             //the result of this decryption is a string key and IV separated by ':'. Ready to use
             val conversationKey = aesutil.decrypt(encryptedKey);
 
-            val decryptedList = mutableListOf<MOKMessage>()
-            //1st attempt to decrypt, if it works add message to decrypted list
-            if (DecryptTask.decryptMessage(EncryptedMsg.fromSecret(pendingMessage,
-                    conversationKey))) {
+            val decrypted = attemptToDecryptWithNewKeys(pendingMessage, clientData, conversationKey)
+            if(decrypted)
                 return OpenConvData(pendingMessage, null, conversationKey, conversationId)
-            } else {
-                //Decryption didn't work with current key. Ask the server to encrypt again with current keys
-                //then do a 2nd attempt to decrypt, if it works add to decrypted list
-                pendingMessage.msg = getTextEncryptedWithLatestKeys(pendingMessage, clientData) ?: ""
-                if (DecryptTask.decryptMessage((EncryptedMsg.fromSecret(pendingMessage, conversationKey))))
-                    return OpenConvData(pendingMessage, null, conversationKey, conversationId)
-                else { //The 2 decryption attempts have failed. Discard the message
-                    Log.e("OpenConversationTask", "can't decrypt ${pendingMessage.message_id}. discarding")
-                    return OpenConvData(null, pendingMessage, conversationKey, conversationId)
-                }
+            else {
+                Log.e("OpenConversationTask", "can't decrypt ${pendingMessage.message_id}. discarding")
+                return OpenConvData(null, pendingMessage, conversationKey, conversationId)
             }
-            //return all the messages that were successfully decrypted
-            return null
-
-
         }
 
+        fun attemptToDecrypt(message: MOKMessage, clientData: ClientData, aesutil: AESUtil,
+                             existingKey: String): String? {
+            if(existingKey.isEmpty())
+                return null//invalid key
+
+            //1st attempt to decrypt, if it works return
+            if (DecryptTask.decryptMessage(EncryptedMsg.fromSecret(message, existingKey))) {
+                return existingKey
+            } else {
+                val response = sendOpenConversationRequest(message.sid, clientData)
+                //retry to decrypt the pending message with the key from response
+                val convData =  attemptToDecryptWithOpenResponse(
+                        openConversationResponse = response, aesutil = aesutil,
+                        pendingMessage = message, clientData = clientData)
+
+                if(convData?.messageOkDecrypted != null)
+                    return convData!!.validKey
+                else return null
+
+            }
+        }
     }
 
 }
