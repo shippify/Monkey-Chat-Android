@@ -8,12 +8,20 @@ import com.criptext.MonkeyFileService
 import com.criptext.MonkeyKitSocketService
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import java.lang.ref.WeakReference
 
 /**
- * Created by gesuwall on 8/3/16.
+ * Receives the broadcast messages from the FileService that runs in a background thread. useful
+ * to post updates about file uplaad/download to the main thread.
+ * Created by Gabriel on 8/3/16.
  */
 
-class FileBroadcastReceiver(val service: MonkeyKitSocketService) : BroadcastReceiver(){
+class FileBroadcastReceiver(service: MonkeyKitSocketService) : BroadcastReceiver(){
+    val serviceRef: WeakReference<MonkeyKitSocketService>
+
+    init {
+        serviceRef = WeakReference(service)
+    }
 
     override fun onReceive(p0: Context?, p1: Intent?) {
         val intent = p1!!
@@ -26,13 +34,14 @@ class FileBroadcastReceiver(val service: MonkeyKitSocketService) : BroadcastRece
                      val jsonResp = parser.parse(response).asJsonObject
                      handleSentFile(jsonResp, mokMessage)
                  } else
-                     service.processMessageFromHandler(CBTypes.onFileFailsUpload, arrayOf(mokMessage))
+                     serviceRef.get()?.processMessageFromHandler(CBTypes.onFileFailsUpload,
+                             arrayOf(mokMessage))
              }
              MonkeyFileService.DOWNLOAD_ACTION -> {
                  val msgId = intent.getStringExtra(MOKMessage.ID_KEY)
                  val timeorder = intent.getLongExtra(MOKMessage.DATESORT_KEY, 0L)
                  val convId = intent.getStringExtra(MOKMessage.CONVERSATION_KEY)
-                 service.processMessageFromHandler(CBTypes.onFileDownloadFinished,
+                 serviceRef.get()?.processMessageFromHandler(CBTypes.onFileDownloadFinished,
                          arrayOf(msgId, timeorder, convId, response != null))
 
              }
@@ -45,7 +54,7 @@ class FileBroadcastReceiver(val service: MonkeyKitSocketService) : BroadcastRece
                 val props = JsonObject();
                 props.addProperty("status", MessageTypes.Status.delivered);
                 props.addProperty("old_id", newMessage.message_id);
-                service?.processMessageFromHandler(CBTypes.onAcknowledgeReceived
+                serviceRef.get()?.processMessageFromHandler(CBTypes.onAcknowledgeReceived
                         , arrayOf(newMessage.rid, newMessage.sid, response.get("messageId").asString
                                     ,newMessage.message_id, false, 2));
 

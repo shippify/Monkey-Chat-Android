@@ -72,6 +72,7 @@ public class KeyStoreCriptext {
 
     public static Long getLastSync(Context ctx)
     {
+        if(ctx == null) return 0L;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
         return prefs.getLong(LAST_SYNC_KEY, 0);
     }

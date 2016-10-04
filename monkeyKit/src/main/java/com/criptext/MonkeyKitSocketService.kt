@@ -24,7 +24,6 @@ import org.apache.http.client.ClientProtocolException
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.params.BasicHttpParams
 import org.apache.http.params.HttpConnectionParams
-import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -98,14 +97,13 @@ abstract class MonkeyKitSocketService : Service() {
      */
     private val pendingMessages: MutableList<JsonObject> = mutableListOf();
 
+    private val pendingActions: MutableList<Runnable> = mutableListOf();
+
     var broadcastReceiver: BroadcastReceiver? = null
 
     lateinit var messageHandler: MOKMessageHandler
 
     internal var receiver : ConnectionChangeReceiver? = null
-
-
-    var waitingForSync = false
 
     /**
      * Starts MonkeyFileService to download a file. once the download is finished. the
@@ -121,29 +119,30 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun downloadFile(fileMessageId: String, fileName: String, props: String, monkeyId: String,
                      sortdate: Long, conversationId: String){
-        val intent = Intent(this, uploadServiceClass)
-        intent.putExtra(MOKMessage.MSG_KEY, fileName)
-        intent.putExtra(MOKMessage.PROPS_KEY, props)
-        intent.putExtra(MOKMessage.SID_KEY, monkeyId)
-        intent.putExtra(MOKMessage.ID_KEY, fileMessageId)
-        intent.putExtra(MOKMessage.DATESORT_KEY, sortdate)
-        intent.putExtra(MOKMessage.CONVERSATION_KEY, conversationId)
-        intent.putExtra(MonkeyFileService.ISUPLOAD_KEY, false)
-        intent.putExtra(MonkeyFileService.APPID_KEY, clientData.appId)
-        intent.putExtra(MonkeyFileService.APPKEY_KEY, clientData.appKey)
+        if(status == ServiceStatus.initializing){
+            pendingActions.add(Runnable {
+                downloadFile(fileMessageId, fileName, props, monkeyId, sortdate, conversationId)
+            })
+        } else {
+            val intent = Intent(this, uploadServiceClass)
+            intent.putExtra(MOKMessage.MSG_KEY, fileName)
+            intent.putExtra(MOKMessage.PROPS_KEY, props)
+            intent.putExtra(MOKMessage.SID_KEY, monkeyId)
+            intent.putExtra(MOKMessage.ID_KEY, fileMessageId)
+            intent.putExtra(MOKMessage.DATESORT_KEY, sortdate)
+            intent.putExtra(MOKMessage.CONVERSATION_KEY, conversationId)
+            intent.putExtra(MonkeyFileService.ISUPLOAD_KEY, false)
+            intent.putExtra(MonkeyFileService.APPID_KEY, clientData.appId)
+            intent.putExtra(MonkeyFileService.APPKEY_KEY, clientData.appKey)
 
-        startService(intent)
+            startService(intent)
+        }
     }
 
     private fun initializeMonkeyKitService(){
         messageHandler = MOKMessageHandler(this)
         status = ServiceStatus.initializing
         openDatabase();
-        broadcastReceiver = FileBroadcastReceiver(this)
-        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
-                IntentFilter(MonkeyFileService.UPLOAD_ACTION))
-        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
-                IntentFilter(MonkeyFileService.DOWNLOAD_ACTION))
         val asyncAES = AsyncAESInitializer(this)
         asyncAES.execute()
     }
@@ -160,8 +159,10 @@ abstract class MonkeyKitSocketService : Service() {
     override fun onBind(intent: Intent?): IBinder? {
         if(status == ServiceStatus.dead)
             initializeMonkeyKitService()
-        else
+        else {
+            Log.d("SocketService", "binding with existing service, status: ${MonkeyKitSocketService.status}")
             status = ServiceStatus.bound
+        }
 
         return MonkeyBinder()
     }
@@ -173,13 +174,23 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * This method gets called by the Async Intializer on its PostExecute method.
      */
-    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData) {
+    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, batch: List<MOKMessage>) {
+        Log.d("SocketService", "start connection")
         clientData = cdata
         userManager = UserManager(this, aesUtil)
         groupManager = GroupManager(this, aesUtil)
+        broadcastReceiver = FileBroadcastReceiver(this)
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
+                IntentFilter(MonkeyFileService.UPLOAD_ACTION))
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
+                IntentFilter(MonkeyFileService.DOWNLOAD_ACTION))
         this.aesutil = aesUtil
         startSocketConnection()
-        startConnectivityBoradcastReceiver() //start connectivity service after client data is initialized
+        startConnectivityBroadcastReceiver() //start connectivity service after client data is initialized
+
+        if(batch.isNotEmpty()){
+            processMessageFromHandler(CBTypes.onMessageBatchReady, arrayOf(ArrayList(batch)))
+        }
     }
 
     fun startSocketConnection() {
@@ -191,6 +202,8 @@ abstract class MonkeyKitSocketService : Service() {
 
         asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
         asyncConnSocket.conectSocket()
+
+
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
@@ -235,7 +248,7 @@ abstract class MonkeyKitSocketService : Service() {
             unregisterReceiver(receiver)
     }
 
-    fun startConnectivityBoradcastReceiver(){
+    private fun startConnectivityBroadcastReceiver(){
 
         if(receiver==null) {
             receiver = ConnectionChangeReceiver(this)
@@ -248,20 +261,23 @@ abstract class MonkeyKitSocketService : Service() {
 
         fun getService(delegate: MonkeyKitDelegate): MonkeyKitSocketService{
             this@MonkeyKitSocketService.delegate = delegate
-            status = ServiceStatus.bound
+            if(status != ServiceStatus.initializing)
+                status = ServiceStatus.bound
             Log.d("MonkeyKitSocketService", "set delegate. ${this@MonkeyKitSocketService.delegate != null}")
             return this@MonkeyKitSocketService;
         }
 
     }
-
-    fun releaseWakeLock(){
+    private fun playPendingActions(){
+        val totalActions = pendingActions.size
+        for (i in 1..totalActions){
+            val action = pendingActions.removeAt(0)
+            action.run()
+        }
+    }
+    private fun releaseWakeLock(){
         wakeLock?.release()
         wakeLock = null
-    }
-
-    fun addMessageToDecrypt(encrypted: MOKMessage) {
-        //TODO ADD UNDECRYPTED MAYBE?
     }
 
     fun processMessageFromHandler(method:CBTypes, info:Array<Any>) {
@@ -278,8 +294,9 @@ abstract class MonkeyKitSocketService : Service() {
             }
             CBTypes.onSocketConnected -> {
                 resendPendingMessages()
+                playPendingActions()
                 delegate?.onSocketConnected()
-                sendSync(lastTimeSynced)
+                //sendSync(lastTimeSynced)
             }
             CBTypes.onMessageReceived -> {
                 val message = info[0] as MOKMessage
@@ -314,6 +331,9 @@ abstract class MonkeyKitSocketService : Service() {
             }
 
             CBTypes.onSocketDisconnected -> {
+                //If socket disconnected and this handler is still alive we should reconnect
+                //immediately.
+                startSocketConnection()
                 delegate?.onSocketDisconnected()
             }
             CBTypes.onDeleteReceived -> {
@@ -393,7 +413,7 @@ abstract class MonkeyKitSocketService : Service() {
     val serviceClientData: ClientData
         get() = clientData
 
-    fun decryptAES(encryptedText: String) = aesutil.decrypt(encryptedText)
+    private fun decryptAES(encryptedText: String) = aesutil.decrypt(encryptedText)
 
     fun isSocketConnected() = status >= ServiceStatus.running && asyncSocketIsConnected
 
@@ -407,7 +427,6 @@ abstract class MonkeyKitSocketService : Service() {
      }
 
     fun notifySyncSuccess() {
-        waitingForSync = false
         clearWatchdog()
 
     }
@@ -416,7 +435,7 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * Creates a new watchdog only if watchdog variable is null.
      */
-     fun startWatchdog(){
+     private fun startWatchdog(){
         if(watchdog == null) {
             watchdog = Watchdog(this);
             watchdog!!.start();
@@ -427,7 +446,7 @@ abstract class MonkeyKitSocketService : Service() {
      * Makes a copy of the current state of the pendingMessages list and sends through the socket
      * all the contained messages.
      */
-    fun resendPendingMessages(){
+    private fun resendPendingMessages(){
         val messages = pendingMessages.toList()
         for(msg in messages)
             sendJsonThroughSocket(msg)
@@ -440,15 +459,15 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * get the id of a message
      */
-    fun getJsonMessageId(json: JsonObject) = json.get("args").asJsonObject.get("id").asString
+    private fun getJsonMessageId(json: JsonObject) = json.get("args").asJsonObject.get("id").asString
 
     /**
      * Uses binary search to remove a message from the pending messages list.
      * @param id id of the message to remove
      */
     fun removePendingMessage(id: String){
-        val index = pendingMessages.binarySearch { n ->
-            id.compareTo(getJsonMessageId(n))
+        val index = pendingMessages.indexOfFirst { n ->
+            id.compareTo(getJsonMessageId(n)) == 0
         }
 
         if(index > -1) {
@@ -458,8 +477,8 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
 
-    fun clearWatchdog(){
-        if(pendingMessages.isEmpty() && !waitingForSync) {
+    private fun clearWatchdog(){
+        if(pendingMessages.isEmpty()) {
             watchdog?.cancel()
             watchdog = null
         }
@@ -518,14 +537,10 @@ abstract class MonkeyKitSocketService : Service() {
             args.addProperty("msg", if (encrypted) aesutil.encrypt(elmensaje) else Base64.encodeToString(elmensaje.toByteArray(), Base64.NO_WRAP));
             args.addProperty("type", MessageTypes.MOKText);
             args.addProperty("push", pushMessage.toString());
-            if (params != null)
-                args.addProperty("params", params.toString());
-            if (props != null) {
-                if (!encrypted)
-                    props.addProperty("encoding", "base64")
-                args.addProperty("props", props.toString());
-            }
-
+            args.addProperty("params", params.toString());
+            if (!encrypted)
+                props.addProperty("encoding", "base64")
+            args.addProperty("props", props.toString());
             json.add("args", args);
             json.addProperty("cmd", MessageTypes.MOKProtocolMessage);
         } catch(ex: Exception){
@@ -535,7 +550,7 @@ abstract class MonkeyKitSocketService : Service() {
         return json;
     }
 
-    fun sendJsonThroughSocket(json: JsonObject) {
+    private fun sendJsonThroughSocket(json: JsonObject) {
         asyncConnSocket.sendMessage(json);
     }
 
@@ -547,7 +562,11 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun sendNotification(sessionIDTo: String, paramsObject: JSONObject, pushMessage: String) {
 
-        try {
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                sendNotification(sessionIDTo, paramsObject, pushMessage)
+            })
+        } else try {
             val args = JsonObject()
             val json = JsonObject()
 
@@ -587,7 +606,11 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun sendTemporalNotification(sessionIDTo: String, paramsObject: JSONObject) {
 
-        try {
+        if (status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                sendTemporalNotification(sessionIDTo, paramsObject)
+            })
+        } else try {
 
             val args = JsonObject()
             val json = JsonObject()
@@ -618,7 +641,12 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyid monkeyid ID of the user or group.
      */
     fun getUserInfoById(monkeyId: String){
-        userManager.getUserInfoById(monkeyId)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                getUserInfoById(monkeyId)
+            })
+        } else
+            userManager.getUserInfoById(monkeyId)
     }
 
     /**
@@ -626,7 +654,12 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyIds string separate by coma with the monkey ids
      */
     fun getUsersInfo(monkeyIds: String){
-        userManager.getUsersInfo(monkeyIds)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                getUsersInfo(monkeyIds)
+            })
+        } else
+            userManager.getUsersInfo(monkeyIds)
     }
 
     /**
@@ -634,7 +667,12 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyid monkeyid ID of the user or group.
      */
     fun getGroupInfoById(monkeyId: String){
-        groupManager.getGroupInfoById(monkeyId)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                getGroupInfoById(monkeyId)
+            })
+        } else
+            groupManager.getGroupInfoById(monkeyId)
     }
 
     /**
@@ -643,7 +681,12 @@ abstract class MonkeyKitSocketService : Service() {
      * @param userInfo JSONObject that contains user data.
      */
     fun updateUserData(monkeyId: String, userInfo: JSONObject) {
-        userManager.updateUserData(monkeyId, userInfo)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                updateUserData(monkeyId, userInfo)
+            })
+        } else
+            userManager.updateUserData(monkeyId, userInfo)
     }
 
     /**
@@ -652,14 +695,24 @@ abstract class MonkeyKitSocketService : Service() {
      * @param groupInfo JSONObject that contains group data.
      */
     fun updateGroupData(monkeyId: String, groupInfo: JSONObject) {
-        groupManager.updateGroupData(monkeyId, groupInfo)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                updateGroupData(monkeyId, groupInfo)
+            })
+        } else
+            groupManager.updateGroupData(monkeyId, groupInfo)
     }
 
     /**
      * Get all conversation of a user using the monkey ID.
      */
     fun getAllConversations(quantity: Int, fromTimestamp: Long){
-        userManager.getConversations(clientData.monkeyId, quantity, fromTimestamp, asyncConnSocket)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                getAllConversations(quantity, fromTimestamp)
+            })
+        } else
+           userManager.getConversations(clientData.monkeyId, quantity, fromTimestamp, asyncConnSocket)
     }
 
     /**
@@ -669,7 +722,13 @@ abstract class MonkeyKitSocketService : Service() {
      * @param lastTimeStamp last timestamp of the message loaded.
      */
     fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String){
-        userManager.getConversationMessages(clientData.monkeyId, conversationId, numberOfMessages, lastTimeStamp, asyncConnSocket)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                getConversationMessages(conversationId, numberOfMessages, lastTimeStamp)
+            })
+        } else
+            userManager.getConversationMessages(clientData.monkeyId, conversationId,
+                    numberOfMessages, lastTimeStamp, asyncConnSocket)
     }
 
     /**
@@ -677,7 +736,12 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyid monkeyid ID of the user.
      */
     fun deleteConversation(conversationId: String){
-        userManager.deleteConversation(clientData.monkeyId, conversationId)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                deleteConversation(conversationId)
+            })
+        } else
+            userManager.deleteConversation(clientData.monkeyId, conversationId)
     }
 
     /**
@@ -687,7 +751,12 @@ abstract class MonkeyKitSocketService : Service() {
      * @param group_id String with the group id (optional)
      */
     fun createGroup(members: String, group_name: String, group_id: String?){
-        groupManager.createGroup(members, group_name, group_id)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                createGroup(members, group_name, group_id)
+            })
+        } else
+            groupManager.createGroup(members, group_name, group_id)
     }
 
     /**
@@ -697,7 +766,12 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkey_id ID of member to delete
      */
     fun removeGroupMember(group_id: String, monkey_id: String){
-        groupManager.removeGroupMember(group_id, monkey_id)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                removeGroupMember(group_id, monkey_id)
+            })
+        } else
+            groupManager.removeGroupMember(group_id, monkey_id)
     }
 
     /**
@@ -706,22 +780,12 @@ abstract class MonkeyKitSocketService : Service() {
      * @param group_id ID of the group
      */
     fun addGroupMember(new_member: String, group_id: String){
-        groupManager.addGroupMember(new_member, group_id)
-    }
-
-    /**
-     * Intenta decriptar un MOKMessage. Si no tiene llaves o estan mal, hace los requerimientos
-     * pertinentes al servidor y recursivamente vuelve a intentar. Si no tiene llaves, las pide al server.
-     * Si estan mal las llaves, pide las ultimas llaves al server, si son iguales a las que ya tiene,
-     * pide al server el texto del mensaje encriptado con las ultimas llaves. Si nada de eso funciona
-     * retorna null
-     * @param message El mensaje a decriptar
-     * *
-     * @return El mensaje con su texto decriptado. Si no se pudo decriptar retorna null
-     */
-
-    fun getKeysAndDecryptMOKMessage(message: MOKMessage): MOKMessage? {
-        return asyncConnSocket.getKeysAndDecryptMOKMessage(message, false)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                addGroupMember(new_member, group_id)
+            })
+        } else
+            groupManager.addGroupMember(new_member, group_id)
     }
 
     /**
@@ -741,7 +805,7 @@ abstract class MonkeyKitSocketService : Service() {
 
             try {
 
-                val props = createSendProps(newMessage.message_id!!, encrypted);
+                val props = createSendProps(newMessage.message_id, encrypted);
                 newMessage.props = props;
 
 
@@ -749,8 +813,12 @@ abstract class MonkeyKitSocketService : Service() {
                         newMessage.params ?: JsonObject(), props, encrypted);
 
 
-                addMessageToWatchdog(json);
-                sendJsonThroughSocket(json);
+                if(status == ServiceStatus.initializing) {
+                    pendingMessages.add(json)
+                } else {
+                    addMessageToWatchdog(json);
+                    sendJsonThroughSocket(json);
+                }
 
             }
             catch (e: Exception) {
@@ -762,32 +830,21 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun sendFileMessage(newMessage: MOKMessage, pushMessage: PushMessage, encrypted: Boolean){
-        val intent = Intent(this, uploadServiceClass)
-        newMessage.toIntent(intent)
-        intent.putExtra(MonkeyFileService.ISUPLOAD_KEY, true)
-        intent.putExtra(MonkeyFileService.PUSH_KEY, pushMessage.toString())
-        intent.putExtra(MonkeyFileService.ENCR_KEY, encrypted)
-        intent.putExtra(MonkeyFileService.APPID_KEY, clientData.appId)
-        intent.putExtra(MonkeyFileService.APPKEY_KEY, clientData.appKey)
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                sendFileMessage(newMessage, pushMessage, encrypted)
+            })
+        } else {
+            val intent = Intent(this, uploadServiceClass)
+            newMessage.toIntent(intent)
+            intent.putExtra(MonkeyFileService.ISUPLOAD_KEY, true)
+            intent.putExtra(MonkeyFileService.PUSH_KEY, pushMessage.toString())
+            intent.putExtra(MonkeyFileService.ENCR_KEY, encrypted)
+            intent.putExtra(MonkeyFileService.APPID_KEY, clientData.appId)
+            intent.putExtra(MonkeyFileService.APPKEY_KEY, clientData.appKey)
 
-        startService(intent)
-    }
-
-    private fun createSendProps(old_id: String, filepath: String, fileType: Int, originalSize: Int, encrypted: Boolean): JsonObject{
-        val props = JsonObject();
-        props.addProperty("str", "0");
-        props.addProperty("encr", if (encrypted) "1" else "0")
-        props.addProperty("device", "android");
-        props.addProperty("old_id", old_id);
-
-        val ext = FilenameUtils.getExtension(filepath)
-        props.addProperty("cmpr", "gzip");
-        props.addProperty("file_type", fileType);
-        props.addProperty("ext", ext);
-        props.addProperty("filename", FilenameUtils.getName(filepath));
-        props.addProperty("mime_type", MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext));
-        props.addProperty("size", originalSize);
-        return props;
+            startService(intent)
+        }
     }
 
     /**
@@ -796,7 +853,11 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun openConversation(conversationID: String){
 
-        try {
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                openConversation(conversationID)
+            })
+        } else try {
             val args = JsonObject()
             val json = JsonObject()
 
@@ -824,7 +885,11 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun closeConversation(conversationId: String) {
 
-        try {
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                closeConversation(conversationId)
+            })
+        } else try {
             val args = JsonObject()
             val json = JsonObject()
 
@@ -851,7 +916,11 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun setOnline(online: Boolean) {
 
-        try {
+        if(status == ServiceStatus.initializing) {
+            pendingActions.add(Runnable {
+                setOnline(online)
+            })
+        } else try {
             val args = JsonObject()
             val json = JsonObject()
 
@@ -887,10 +956,11 @@ abstract class MonkeyKitSocketService : Service() {
             json.add("args", args)
             json.addProperty("cmd", MessageTypes.MOKProtocolDelete)
 
-            if (isSocketConnected()) {
-                sendJsonThroughSocket(json)
-            } else{
-                Thread.dumpStack()
+            if(status == ServiceStatus.initializing) {
+                pendingMessages.add(json)
+            } else {
+                addMessageToWatchdog(json);
+                sendJsonThroughSocket(json);
             }
 
         } catch (e: Exception) {
@@ -900,42 +970,8 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun requestKeysForMessage(encryptedMessage: MOKMessage){
-
-            val task = OpenConversationTask(this, encryptedMessage)
-            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, encryptedMessage.sid) //LAME
-    }
-
-    fun sendSync(lastTimeSync: Long){
-        try {
-
-           val args = JsonObject();
-           val json = JsonObject();
-
-            args.addProperty("since", lastTimeSync);
-
-            if(lastTimeSync == 0L) {
-                args.addProperty("groups", 1);
-            }
-            args.addProperty("qty", ""+ portionsMessages);
-            json.add("args", args);
-            json.addProperty("cmd", MessageTypes.MOKProtocolSync);
-
-            if(isSocketConnected()){
-                System.out.println("MONKEY - Sending Sync:"+json.toString());
-                waitingForSync = true
-                startWatchdog()
-                sendJsonThroughSocket(json)
-            }
-            else {
-                System.out.println("MONKEY - could not sent Sync - socket disconnected " + asyncConnSocket.socketStatus);
-                //Thread.dumpStack();
-            }
-
-
-
-        } catch (e: Exception) {
-            e.printStackTrace();
-        }
+        val task = OpenConversationTask(this, encryptedMessage)
+        task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, encryptedMessage.sid) //LAME
     }
 
     /**
@@ -987,7 +1023,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param messageId Id del mensaje cuyo texto se quiere obtener
      * @return Un String con el texto encriptado con las llaves mas recientes.
      */
-    public fun requestTextWithLatestKeys(messageId: String): String?{
+    fun requestTextWithLatestKeys(messageId: String): String?{
         val httpParams = BasicHttpParams();
         HttpConnectionParams.setConnectionTimeout(httpParams, 20000);
         HttpConnectionParams.setSoTimeout(httpParams, 25000);

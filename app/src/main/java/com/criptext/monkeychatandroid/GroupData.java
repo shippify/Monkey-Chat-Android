@@ -4,6 +4,7 @@ import android.graphics.Color;
 
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKUser;
+import com.criptext.lib.MKDelegateActivity;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -25,12 +26,12 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
     private boolean askingUsers = false;
     private List<Integer> colorsForUsersInGroup;
     private int MAX_PARTICIPANTS = 50;
-    private WeakReference<MonkeyKitSocketService> serviceRef;
+    private MKDelegateActivity delegate;
 
-    public GroupData(String conversationId, String members, MonkeyKitSocketService service){
+    public GroupData(String conversationId, String members, MKDelegateActivity act){
         this.conversationId = conversationId;
         this.membersIds = members;
-        this.serviceRef = new WeakReference<>(service);
+        this.delegate = act;
         mokUserHashMap = new HashMap<>();
         userIndexHashMap = new HashMap<>();
         initColorsForGroup();
@@ -61,9 +62,8 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
     }
 
     private void getMembers(){
-        final MonkeyKitSocketService service = serviceRef.get();
-        if(!askingUsers && service!=null){
-            service.getUsersInfo(membersIds);
+        if(!askingUsers){
+            delegate.getUsersInfo(membersIds);
         }
     }
 

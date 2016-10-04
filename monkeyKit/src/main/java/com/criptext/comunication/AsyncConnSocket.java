@@ -316,7 +316,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 			//LLEGARON MUCHOS MENSAJES POR ENDE LLAMO UPDATES CON VALORES MENORES
 			int msgQuantity = Math.max(service.getPortionsMessages() - 1, 1);
 			service.setPortionsMessages(msgQuantity);
-			service.sendSync(service.getLastTimeSynced());
+			//service.sendSync(service.getLastTimeSynced());
 		}
 	}
 
@@ -327,7 +327,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	 * @param props
 	 * @return
 	 */
-	public MOKMessage createMOKMessageFromJSON(JsonObject args, JsonObject params, JsonObject props, boolean sameDateTime){
+	public static MOKMessage createMOKMessageFromJSON(JsonObject args, JsonObject params, JsonObject props, boolean sameDateTime){
 		MOKMessage remote = new MOKMessage(args.get("id").getAsString(),
 						args.get("sid").getAsString(),
 						args.get("rid").getAsString(),

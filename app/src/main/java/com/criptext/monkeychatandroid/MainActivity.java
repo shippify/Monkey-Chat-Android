@@ -446,9 +446,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     /**
-     * Search a conversation by its message id and update its status.
-     * @param message message that updates conversation's last text
-     * @param read boolean if the message is read or not
+     * Search a conversation by its message id and update its last read status.
+     * @param convId ID of the conversation to update
+     * @param lastRead the new lastRead value.
      */
     private void updateConversationLastRead(final String convId, final long lastRead){
         asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
@@ -708,7 +708,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     //If we use the same monkeyId for several devices (multisession) we receive an
                     // acknowledge for each message sent. So to validate if we have the message
                     // sent, we can send a sync message.
-                    sendSync();
+                    //sendSync();
                 }
             }
         }, oldId, newId);
@@ -932,10 +932,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online) {
         if(monkeyFragmentManager!=null) {
             String subtitle = isOnline? "Online":"";
-            long lastSeenValue = Long.valueOf(lastSeen);
+            long lastSeenValue = System.currentTimeMillis();
             boolean isGroupConversation = senderId.contains("G:");
             if(!isOnline){
                 subtitle = "Last seen: "+Utils.Companion.getFormattedDay(lastSeenValue * 1000, this);
+                lastSeenValue = Long.valueOf(lastSeen);
             }
             else if(isGroupConversation){
                 int membersOnline = members_online.split(",").length;
@@ -978,11 +979,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         //Provide the class of the service that we subclassed so that MKActivityDelegate can automatically
         //handle the binding and unbinding for us.
         return MyServiceClass.class;
-    }
-
-    @Override
-    public void onBoundToService() {
-
     }
 
     @Override
@@ -1078,7 +1074,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public GroupChat getGroupChat(@NotNull String conversationId, @NonNull String membersIds) {
         if(conversationId.contains("G:") && (groupData == null || !groupData.getConversationId().equals(conversationId))) {
-            groupData = new GroupData(conversationId, membersIds, getService());
+            groupData = new GroupData(conversationId, membersIds, this);
         }
         else if(groupData!=null && !groupData.getConversationId().equals(conversationId)){
             groupData = null;
