@@ -38,6 +38,6 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
     compile project(':monkeyKit')
-    //compile project(':monkeykitui')
-    compile 'com.github.Criptext:MonkeyUIAndroid:6a22798217'
+    compile project(':monkeykitui')
+    //compile 'com.github.Criptext:MonkeyUIAndroid:6a22798217'
 }
