@@ -976,12 +976,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             List<MonkeyItem> conversationMessages = messagesMap.get(conversationId);
             if(conversationMessages != null){
                 if(conversationItem!=null && conversationItem.getTotalNewMessages() > 0) {
-                    if(conversationMessages.size() - MonkeyItem.Companion.findItemPositionIdInList(messageId, conversationMessages) <= conversationItem.getTotalNewMessages()){
+                    if(conversationMessages.size() - MonkeyItem.Companion.findLastPositionById(messageId, conversationMessages) <= conversationItem.getTotalNewMessages()){
                         unreadCounter = conversationItem.getTotalNewMessages() - 1;
                     }
                 }
 
-                int position = MonkeyItem.Companion.findItemPositionIdInList(messageId, conversationMessages);
+                int position = MonkeyItem.Companion.findLastPositionById(messageId, conversationMessages);
                 if(position > -1){
                     conversationMessages.remove(position);
                 }
