@@ -17,7 +17,9 @@ import android.widget.Toast;
 
 import com.criptext.ClientData;
 import com.criptext.comunication.MOKConversation;
+import com.criptext.comunication.MOKDelete;
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MOKNotification;
 import com.criptext.comunication.MOKUser;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.comunication.PushMessage;
@@ -573,7 +575,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * adds new messages to the adapter so that it can be displayed in the RecyclerView.
      * @param messages
      */
-    private void processNewMessages(ArrayList<MOKMessage> messages){
+    private void processNewMessages(List<MOKMessage> messages){
 
         HashMap<String, Collection<MonkeyItem>> newConversationMessages = new HashMap<>();
         for(MOKMessage message: messages){
@@ -766,7 +768,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onMessageBatchReady(ArrayList<MOKMessage> messages) {
+    public void onSyncComplete(List<MOKMessage> messages, List<MOKNotification> notifications, List<MOKDelete> deletes) {
         setStatusBarState(Utils.ConnectionStatus.connected);
         if(messages.size()>0){
             processNewMessages(messages);
@@ -944,8 +946,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             long lastSeenValue = System.currentTimeMillis();
             boolean isGroupConversation = senderId.contains("G:");
             if(!isOnline){
+                if(lastSeen.isEmpty())
+                    lastSeenValue = 0L;
+                else
+                    lastSeenValue = Long.valueOf(lastSeen);
                 subtitle = "Last seen: "+Utils.Companion.getFormattedDay(lastSeenValue * 1000, this);
-                lastSeenValue = Long.valueOf(lastSeen);
             }
             else if(isGroupConversation){
                 int membersOnline = members_online.split(",").length;

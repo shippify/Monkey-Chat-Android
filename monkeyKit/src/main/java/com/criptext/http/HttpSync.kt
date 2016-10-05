@@ -6,9 +6,7 @@ import android.util.Base64
 import android.util.Log
 import com.criptext.ClientData
 import com.criptext.MonkeyKitSocketService
-import com.criptext.comunication.AsyncConnSocket
-import com.criptext.comunication.MOKMessage
-import com.criptext.comunication.MessageTypes
+import com.criptext.comunication.*
 import com.criptext.lib.KeyStoreCriptext
 import com.criptext.security.AESUtil
 import com.google.gson.JsonArray
@@ -46,7 +44,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             null
         }
 
-    fun getBatch(since: Long, qty: Int): List<MOKMessage>{
+    fun getBatch(since: Long, qty: Int): SyncResponse {
             //TODO TEST THIS!!
             val parser = JsonParser()
             val request = Request.Builder()
@@ -65,17 +63,17 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
                 val body = response.body()
                 val jsonResponse = parser.parse(body.string()).asJsonObject
                 val data = jsonResponse.getAsJsonObject("data")
-                val batch = processBatch(data)
+                var batch = processBatch(data)
                 val remaining = data.get("remaining").asInt
                 if(remaining > 0)
-                    batch.addAll(getBatch(since, Math.min(remaining, qty)))
+                    batch = batch.addAll(getBatch(since, Math.min(remaining, qty)))
                 body.close()
                 return batch
             } else {
                 Log.e("HttpSync", response.body().string())
             }
 
-            return listOf()
+            return SyncResponse(listOf(), listOf(), listOf())
     }
     fun getJsonFromMessage(jsonMessage: JsonObject, key: String, parser: JsonParser): JsonObject?{
         if (jsonMessage.has(key)) {
@@ -100,6 +98,29 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         }
         return ""
     }
+
+    private fun processMessage(messages: MutableList<MOKMessage>, currentMessage: JsonObject,
+                               currentMessageType: String, props: JsonObject?, params: JsonObject?) {
+        val messageIsEncrypted = if(props?.has("encr") ?: false) props!!.get("encr").asInt == 1 else false
+        val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true)
+        if (messageIsEncrypted){
+            val existingKey = getKeyForConversation(remote.sid)
+            val validKey = OpenConversationTask.attemptToDecrypt(remote, clientData, aesUtil, existingKey)
+            if(validKey == null){
+                //No key could decrypt this message, discard
+                return
+            } else {
+                if(validKey != existingKey)
+                    keyMap.put(remote.sid, validKey) //update the keyMap with valid keys
+            }
+        }
+        else if ((props?.has("encoding") ?: false) && (currentMessageType != MessageTypes.MOKFile)) {
+            if(props?.get("encoding")?.asString  == "base64")
+                remote.msg = String(Base64.decode(remote.msg.toByteArray(), Base64.NO_WRAP))
+        }
+
+        messages.add(remote);
+    }
     /**
 	 * Procesa el JSONArray que llega despues de un GET O SYNC. Decripta los mensajes que necesitan
 	 * ser decriptados y arma un ArrayList de MOKMessages para pasarselo al Thread principal
@@ -107,11 +128,13 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 	 * @param data JsonObject "args" del GET o SYNC
 	 * @param parser
 	 */
-	private fun processBatch(data: JsonObject): MutableList<MOKMessage>{
+	private fun processBatch(data: JsonObject): SyncResponse{
 		System.out.println("MOK PROTOCOL SYNC");
         val parser = JsonParser()
         val array = data.get("messages").asJsonArray;
-        val batch: MutableList<MOKMessage> = mutableListOf()
+        val messages: MutableList<MOKMessage> = mutableListOf()
+        val notifications: MutableList<MOKNotification> = mutableListOf()
+        val deletes: MutableList<MOKDelete> = mutableListOf()
 
        array.forEach { jsonMessage ->
             val currentMessage = jsonMessage.asJsonObject
@@ -119,37 +142,34 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             val params = getJsonFromMessage(currentMessage, "params", parser)
 
             val currentMessageType = currentMessage.get("type").asString
-            val messageIsEncrypted = if(props?.has("encr") ?: false) props!!.get("encr").asInt == 1 else false
             if (currentMessageType == MessageTypes.MOKText || currentMessageType == MessageTypes.MOKFile) {
-                val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true)
-                if (messageIsEncrypted){
-                    val existingKey = getKeyForConversation(remote.sid)
-                    val validKey = OpenConversationTask.attemptToDecrypt(remote, clientData, aesUtil, existingKey)
-                    if(validKey == null){
-                        //No key could decrypt this message, discard
-                        return mutableListOf()
-                    } else {
-                        if(validKey != existingKey)
-                            keyMap.put(remote.sid, validKey) //update the keyMap with valid keys
-                    }
-                }
-                else if ((props?.has("encoding") ?: false) && (currentMessageType != MessageTypes.MOKFile)) {
-                    if(props?.get("encoding")?.asString  == "base64")
-                        remote.msg = String(Base64.decode(remote.msg.toByteArray(), Base64.NO_WRAP))
-                }
-
-                batch.add(remote);
+                processMessage(messages, currentMessage, currentMessageType, props, params)
             }
             else if(currentMessageType == MessageTypes.MOKNotif){
-                //val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
+                val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
+                notifications.add(MOKNotification(remote))
+
             }
             else if(currentMessageType == MessageTypes.MOKProtocolDelete.toString()){
-                //DELETE
+                val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, false);
+                deletes.add(MOKDelete(remote))
             }
         }
 
-        return batch;
+        return SyncResponse(messages, notifications, deletes);
 	}
+
+    data class SyncResponse(val messages: List<MOKMessage>, val notifications: List<MOKNotification>,
+                            val deletes: List<MOKDelete>) {
+
+        fun addAll(resp: SyncResponse) = SyncResponse(messages + resp.messages,
+                notifications + resp.notifications, deletes + resp.deletes)
+
+        fun isNotEmpty() = messages.isNotEmpty() || notifications.isNotEmpty() ||  deletes.isNotEmpty()
+
+        fun newTimestamp() = messages.lastOrNull()?.datetime?.toLong() ?: notifications.lastOrNull()?.timestamp
+                            ?: deletes.lastOrNull()?.timestamp
+    }
 
     companion object {
         fun newInstance(ctx: Context?, clientData: ClientData): HttpSync?{

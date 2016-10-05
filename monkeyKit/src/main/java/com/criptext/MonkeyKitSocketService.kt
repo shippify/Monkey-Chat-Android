@@ -174,7 +174,7 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * This method gets called by the Async Intializer on its PostExecute method.
      */
-    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, batch: List<MOKMessage>) {
+    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, syncResp: HttpSync.SyncResponse) {
         Log.d("SocketService", "start connection")
         clientData = cdata
         userManager = UserManager(this, aesUtil)
@@ -188,8 +188,9 @@ abstract class MonkeyKitSocketService : Service() {
         startSocketConnection()
         startConnectivityBroadcastReceiver() //start connectivity service after client data is initialized
 
-        if(batch.isNotEmpty()){
-            processMessageFromHandler(CBTypes.onMessageBatchReady, arrayOf(ArrayList(batch)))
+        if(syncResp.isNotEmpty()){
+            processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(syncResp.messages,
+                    syncResp.notifications, syncResp.deletes))
         }
     }
 
@@ -317,14 +318,14 @@ abstract class MonkeyKitSocketService : Service() {
                     })
             }
 
-            CBTypes.onMessageBatchReady -> {
-                val batch = info[0] as ArrayList<MOKMessage>;
+            CBTypes.onSyncComplete -> {
+                val batch = info[0] as List<MOKMessage>;
                 storeMessageBatch(batch, Runnable {
                     //Message batch received and stored, update lastTimeSynced with with the timestamp
                     //that the server gave to the last message
                     if(batch.isNotEmpty())
                         lastTimeSynced = batch.last().datetime.toLong();
-                    delegate?.onMessageBatchReady(batch);
+                    delegate?.onSyncComplete(batch, info[1] as List<MOKNotification>, info[2] as List<MOKDelete>);
                     if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
                         ServiceTimeoutTask(this).execute()
                 });
@@ -1096,7 +1097,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param messages
      * @param runnable Este runnable debe ejecutarse despues de guardar el batch de mensajes
      */
-    abstract fun storeMessageBatch(messages: ArrayList<MOKMessage>, runnable: Runnable);
+    abstract fun storeMessageBatch(messages: List<MOKMessage>, runnable: Runnable);
 
     /**
      * Loads all credentials needed to initialize the service. This method will be called in

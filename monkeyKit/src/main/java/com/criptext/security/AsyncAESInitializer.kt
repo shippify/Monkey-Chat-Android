@@ -52,17 +52,16 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
             //send sync
             val httpSync = HttpSync.newInstance(appContextRef.get(), cData)
             if(httpSync != null){
-                Log.d("SocketService", "get batch since $lastSync")
-                val batch = httpSync.getBatch(lastSync, 100)
-                Log.d("SocketService", "got batch size: ${batch.size}")
-                val last = if(batch.isNotEmpty()) batch.last() else null
+                val response = httpSync.getBatch(lastSync, 100)
+                val last = response.newTimestamp()
                 if(last != null) //if sync successful update lastSync
-                    KeyStoreCriptext.setLastSync(appContextRef.get(), last.datetime.toLong())
+                    KeyStoreCriptext.setLastSync(appContextRef.get(), last)
 
-                return InitializerResult(pendingMessages, httpSync.aesUtil, batch, cData)
+                return InitializerResult(pendingMessages, httpSync.aesUtil, response, cData)
 
             }
-            return InitializerResult(pendingMessages, null, listOf(), cData)
+            return InitializerResult(pendingMessages, null,
+                    HttpSync.SyncResponse(listOf(), listOf(), listOf()), cData)
     }
 
     override fun onPostExecute(result: InitializerResult?) {
@@ -70,11 +69,11 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
         val messages = result!!.pendingMessages
         if(messages != null && messages.isNotEmpty())
             service.addPendingMessages(messages)
-        service?.startSocketConnection(result.util!!, result.clientData, result.batch)
+        service?.startSocketConnection(result.util!!, result.clientData, result.syncResp)
     }
 
     data class InitializerResult(val pendingMessages: List<JsonObject>?, val util: AESUtil?,
-                                 val batch: List<MOKMessage>, val clientData: ClientData)
+                                 val syncResp: HttpSync.SyncResponse, val clientData: ClientData)
 
 
 }

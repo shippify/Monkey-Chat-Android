@@ -12,6 +12,7 @@ import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -37,13 +38,14 @@ public class DatabaseHandler {
         new SaveModelTask().execute(messageItem);
     }
 
-    public static void saveMessageBatch(ArrayList<MOKMessage> messages, Context context,
+    public static void saveMessageBatch(List<MOKMessage> messages, Context context,
                                         String userSession, Runnable runnable) {
 
         ActiveAndroid.beginTransaction();
         try {
-            for(int i = messages.size() - 1; i > -1; i--){
-                MOKMessage message = messages.get(i);
+            Iterator<MOKMessage> iterator = messages.iterator();
+            while (iterator.hasNext()) {
+                MOKMessage message = iterator.next();
                 //Sometimes the acknowledge get lost for network reasons. So thanks to your own messages arrive in
                 //the sync response you can verify that the message is already sent using the old_id param.
                 boolean existOldMessage = false;
@@ -60,7 +62,7 @@ public class DatabaseHandler {
                     MessageItem messageItem = createMessage(message, context, userSession, !message.isMyOwnMessage(userSession));
                     messageItem.save();
                 } else
-                    messages.remove(i);
+                    messages.remove(message);
                 //TODO VALIDATE IF CONVERSATION DOESN'T EXIST AND CREATE IT
             }
             ActiveAndroid.setTransactionSuccessful();

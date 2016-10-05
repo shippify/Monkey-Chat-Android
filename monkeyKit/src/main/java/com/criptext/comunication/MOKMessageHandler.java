@@ -80,10 +80,6 @@ public class MOKMessageHandler extends Handler {
                                 service.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message.getMessage_id(), message.getSid(), message.getRid(), message.getParams(), message.getDatetime()});
                         }
                         break;
-                    case MessageTypes.MOKProtocolMessageBatch:
-                        service.notifySyncSuccess();
-                        service.processMessageFromHandler(CBTypes.onMessageBatchReady, new Object[]{(ArrayList<MOKMessage>)msg.obj});
-                        break;
                     case MessageTypes.MOKProtocolMessageHasKeys:
                         service.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
                         break;
