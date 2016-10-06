@@ -11,6 +11,7 @@ import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -29,7 +30,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
     }
 
     @Override
-    public void storeMessageBatch(List<MOKMessage> messages, final Runnable runnable) {
+    public void storeMessageBatch(HashMap<String, List<MOKMessage>> messages, final Runnable runnable) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         DatabaseHandler.saveMessageBatch(messages, this, prefs.getString(MonkeyChat.MONKEY_ID, ""), runnable);
     }

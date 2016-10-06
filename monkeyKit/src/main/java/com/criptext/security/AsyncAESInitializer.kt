@@ -48,20 +48,16 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
             if(!isSyncService) //get pending messages if this service does more than just sync
                 pendingMessages = PendingMessageStore.retrieve(appContextRef.get())
             //get the last sync timestamp from shared prefs
-            val lastSync = KeyStoreCriptext.getLastSync(appContextRef.get())
+            var lastSync = KeyStoreCriptext.getLastSync(appContextRef.get())
             //send sync
             val httpSync = HttpSync.newInstance(appContextRef.get(), cData)
             if(httpSync != null){
-                val response = httpSync.getBatch(lastSync, 100)
-                val last = response.newTimestamp()
-                if(last != null) //if sync successful update lastSync
-                    KeyStoreCriptext.setLastSync(appContextRef.get(), last)
-
+                val response = httpSync.execute(lastSync, 50)
+                response.newTimestamp = Math.max(response.newTimestamp, lastSync)
                 return InitializerResult(pendingMessages, httpSync.aesUtil, response, cData)
-
             }
             return InitializerResult(pendingMessages, null,
-                    HttpSync.SyncResponse(listOf(), listOf(), listOf()), cData)
+                    HttpSync.SyncData(cData.monkeyId, null), cData)
     }
 
     override fun onPostExecute(result: InitializerResult?) {
@@ -73,7 +69,7 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
     }
 
     data class InitializerResult(val pendingMessages: List<JsonObject>?, val util: AESUtil?,
-                                 val syncResp: HttpSync.SyncResponse, val clientData: ClientData)
+                                 val syncResp: HttpSync.SyncData, val clientData: ClientData)
 
 
 }

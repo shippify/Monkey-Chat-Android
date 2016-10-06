@@ -58,9 +58,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MainActivity extends MKDelegateActivity implements ChatActivity, ConversationsActivity{
 
@@ -367,33 +369,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
     }
 
-    private void updateMessage(final String id, long dateorder, String conversationId, final MonkeyItem.DeliveryStatus newStatus) {
-        MonkeyItemTransaction transaction = new MonkeyItemTransaction() {
-                @Override
-                public MonkeyItem invoke(MonkeyItem monkeyItem) {
-                    MessageItem message = (MessageItem) monkeyItem;
-                    message.setStatus(newStatus.ordinal());
-                    DatabaseHandler.updateMessageStatus(id, null, newStatus);
-                    return message;
-                }
-            };
-
-        if (monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationId)) {
-            //If conversation is currently open
-            monkeyChatFragment.updateMessage(id, dateorder, transaction);
-        } else {
-            //Look for the conversation
-            List<MonkeyItem> conversationMessages = messagesMap.get(conversationId);
-            if(conversationMessages != null){
-                int position = MonkeyItem.Companion.findItemPositionInList(id, dateorder, conversationMessages);
-                if(position > -1){
-                    MonkeyItem updateItem = conversationMessages.remove(position);
-                    conversationMessages.add(position, transaction.invoke(updateItem));
-                }
-            }
-        }
-    }
-
     /**
      * Update a conversation according to the params received.
      * @param conversationId conversation id to change
@@ -402,9 +377,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param unread number of messages without read
      * @param dateTime new date time of the conversation
      */
-    private void updateConversation(final String conversationId, final String secondaryText, final MonkeyConversation.ConversationStatus status,
-                                    final int unread, final long dateTime, final long lastRead){
-        final ConversationTransaction transaction = new ConversationTransaction() {
+    private ConversationTransaction newConversationTransaction(final String conversationId,
+                                    final String secondaryText,
+                                    final MonkeyConversation.ConversationStatus status, final int unread,
+                                    final long dateTime, final long lastRead) {
+        return new ConversationTransaction() {
             @Override
             public void updateConversation(@NotNull MonkeyConversation conversation) {
                 ConversationItem newConversationItem = (ConversationItem)conversation;
@@ -426,7 +403,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                             deliveredMessage.ordinal());
             }
         };
+    }
 
+    /**
+     * Update a conversation according to the params received.
+     * @param conversationId conversation id to change
+     * @param secondaryText secondary text
+     * @param status new status
+     * @param unread number of messages without read
+     * @param dateTime new date time of the conversation
+     */
+    private void updateConversation(final String conversationId, final String secondaryText,
+                                    final MonkeyConversation.ConversationStatus status, final int unread,
+                                    final long dateTime, final long lastRead){
+        final ConversationTransaction transaction = newConversationTransaction(conversationId,
+                secondaryText, status, unread, dateTime, lastRead);
         if(monkeyConversationsFragment!=null) {
             final ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
             if(conversationItem!=null) {
@@ -575,38 +566,23 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * adds new messages to the adapter so that it can be displayed in the RecyclerView.
      * @param messages
      */
-    private void processNewMessages(List<MOKMessage> messages){
+    private void processNewMessages(String conversationId, List<MonkeyItem> messages){
 
-        HashMap<String, Collection<MonkeyItem>> newConversationMessages = new HashMap<>();
-        for(MOKMessage message: messages){
-            String conversationId = message.getConversationID(myMonkeyID);
-            if(newConversationMessages.get(conversationId)==null){
-                newConversationMessages.put(conversationId, new ArrayList<MonkeyItem>());
-            }
-            newConversationMessages.get(conversationId).
-                    add(DatabaseHandler.createMessage(message, this, myMonkeyID, !message.isMyOwnMessage(myMonkeyID)));
-        }
-
-        Iterator it = newConversationMessages.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry)it.next();
-            String conversationId = (String)pair.getKey();
-            ArrayList<MonkeyItem> arrayList = (ArrayList<MonkeyItem>) pair.getValue();
-            if(monkeyChatFragment!=null && monkeyChatFragment.getConversationId().equals(conversationId)){
-                monkeyChatFragment.smoothlyAddNewItems(arrayList);
+            if(monkeyChatFragment!=null && monkeyChatFragment.getConversationId().
+                    equals(conversationId)){
+                monkeyChatFragment.smoothlyAddNewItems(messages);
             }
             else if(messagesMap!=null && messagesMap.get(conversationId)!=null){
-                messagesMap.get(conversationId).addAll(arrayList);
+                messagesMap.get(conversationId).addAll(messages);
             }
             else if(messagesMap!=null){
-                messagesMap.put(conversationId, arrayList);
+                messagesMap.put(conversationId, messages);
             }
             //Validate if conversation does not exists
-            if(monkeyConversationsFragment!=null && monkeyConversationsFragment.findConversationById(conversationId)==null){
+            if(monkeyConversationsFragment!=null && monkeyConversationsFragment.
+                    findConversationById(conversationId)==null){
                 getConversationInfo(conversationId);
             }
-            it.remove();
-        }
     }
 
     /**
@@ -768,16 +744,47 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onSyncComplete(List<MOKMessage> messages, List<MOKNotification> notifications, List<MOKDelete> deletes) {
+    public void onSyncComplete(HashMap<String, List<MOKMessage>> conversationMessages,
+                               List<MOKNotification> notifications, List<MOKDelete> deletes) {
         setStatusBarState(Utils.ConnectionStatus.connected);
-        if(messages.size()>0){
-            processNewMessages(messages);
-            MOKMessage message = messages.get(messages.size()-1);
+        Iterator<Map.Entry<String, List<MOKMessage>>> iterator = conversationMessages.entrySet().iterator();
+        HashMap<MonkeyConversation, ConversationTransaction> updates = new HashMap<>();
+        HashMap<String, ConversationTransaction> dbUpdates = new HashMap<>();
+        while(iterator.hasNext()) {
+            Map.Entry<String, List<MOKMessage>> entry = iterator.next();
+            String id = entry.getKey();
+            List<MOKMessage> value = entry.getValue();
+            List<MonkeyItem> messages = new LinkedList<>();
+            int newMessages = 0;
+            for(MOKMessage mokMessage : value) {
+                messages.add(DatabaseHandler.createMessage(mokMessage, this, myMonkeyID,
+                        !mokMessage.getSid().equals(myMonkeyID)));
+                if(!mokMessage.isMyOwnMessage(myMonkeyID))
+                    newMessages++;
+            }
+
+            processNewMessages(id, messages);
+            MOKMessage message = value.get(value.size() - 1);
             boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
-            updateConversation(message.getConversationID(myMonkeyID), getSecondaryTextByMOkMessage(message),
+            ConversationTransaction transaction = newConversationTransaction(
+                    message.getConversationID(myMonkeyID), getSecondaryTextByMOkMessage(message),
                     isMyOwnMsg? MonkeyConversation.ConversationStatus.deliveredMessage:
-                            MonkeyConversation.ConversationStatus.receivedMessage, isMyOwnMsg? 0 : 1, message.getDatetimeorder(), 0L);
+                            MonkeyConversation.ConversationStatus.receivedMessage,
+                    newMessages, message.getDatetimeorder(), 0L);
+            MonkeyConversation conversation = null;
+            dbUpdates.put(id, transaction);
+            if(monkeyConversationsFragment != null)
+                conversation = monkeyConversationsFragment.findConversationById(id);
+            if(conversation != null) {
+                updates.put(conversation, transaction);
+            }
         }
+
+        if(monkeyConversationsFragment != null)
+            monkeyConversationsFragment.updateConversations(updates.entrySet());
+
+        DatabaseHandler.updateConversations(dbUpdates);
+
     }
 
     @Override
@@ -1017,8 +1024,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             MonkeyItem newestMessage = monkeyChatFragment.getLastMessage();
             if(newestMessage != null) newLastReadValue = newestMessage.getMessageTimestamp();
         }
-        updateConversation(monkeyId, null, MonkeyConversation.ConversationStatus.sentMessageRead,
-                0, -1, newLastReadValue);
+        //updateConversation(monkeyId, null, MonkeyConversation.ConversationStatus.sentMessageRead,
+         //       0, -1, newLastReadValue);
     }
 
     @Override

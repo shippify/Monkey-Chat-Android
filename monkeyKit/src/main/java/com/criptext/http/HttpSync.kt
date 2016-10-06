@@ -44,8 +44,8 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             null
         }
 
-    fun getBatch(since: Long, qty: Int): SyncResponse {
-            //TODO TEST THIS!!
+    private fun getBatch(since: Long, qty: Int): SyncResponse {
+            Log.d("HttpSync", "get batch since $since")
             val parser = JsonParser()
             val request = Request.Builder()
                     .url(MonkeyKitSocketService.httpsURL + "/user/messages/" +
@@ -75,6 +75,9 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 
             return SyncResponse(listOf(), listOf(), listOf())
     }
+
+    fun execute(since: Long, qty: Int) = SyncData(clientData.monkeyId, getBatch(since, qty))
+
     fun getJsonFromMessage(jsonMessage: JsonObject, key: String, parser: JsonParser): JsonObject?{
         if (jsonMessage.has(key)) {
             val paramsStr = jsonMessage.get(key)?.asString
@@ -92,8 +95,10 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             val ctx = contextRef.get()
             if (ctx != null) {
                 val keyFromStore = KeyStoreCriptext.getString(ctx, id)
-                keyMap.put(id, keyFromStore)
-                return keyFromStore
+                if(keyFromStore.isNotEmpty()) {
+                    keyMap.put(id, keyFromStore)
+                    return keyFromStore
+                }
             }
         }
         return ""
@@ -169,6 +174,38 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 
         fun newTimestamp() = messages.lastOrNull()?.datetime?.toLong() ?: notifications.lastOrNull()?.timestamp
                             ?: deletes.lastOrNull()?.timestamp
+    }
+
+    class SyncData(monkeyId: String, response: SyncResponse?) {
+        val notifications: List<MOKNotification>
+        val deletes: List<MOKDelete>
+        val syncedConversations: HashMap<String, MutableList<MOKMessage>>
+        var newTimestamp: Long
+
+        init {
+            notifications = response?.notifications ?: listOf()
+            deletes = response?.deletes ?: listOf()
+            syncedConversations = hashMapOf()
+            newTimestamp = response?.newTimestamp() ?: 0L
+
+            fun getMessageList(conversationId: String): MutableList<MOKMessage>{
+                if(!syncedConversations.containsKey(conversationId))
+                    syncedConversations[conversationId] = mutableListOf()
+
+                return syncedConversations[conversationId]!!
+            }
+
+            if(response != null)
+                response.messages.forEach { message ->
+                    val convId = message.getConversationID(monkeyId)
+                    val list = getMessageList(convId)
+                    list.add(message)
+            }
+        }
+
+        fun isNotEmpty() = notifications.isNotEmpty() || deletes.isNotEmpty() || syncedConversations.isNotEmpty()
+
+
     }
 
     companion object {

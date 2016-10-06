@@ -9,11 +9,15 @@ import com.activeandroid.query.Select;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
+import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by daniel on 4/26/16.
@@ -38,33 +42,45 @@ public class DatabaseHandler {
         new SaveModelTask().execute(messageItem);
     }
 
-    public static void saveMessageBatch(List<MOKMessage> messages, Context context,
+    public static void saveMessageBatch(HashMap<String, List<MOKMessage>> conversations, Context context,
                                         String userSession, Runnable runnable) {
 
         ActiveAndroid.beginTransaction();
         try {
-            Iterator<MOKMessage> iterator = messages.iterator();
-            while (iterator.hasNext()) {
-                MOKMessage message = iterator.next();
-                //Sometimes the acknowledge get lost for network reasons. So thanks to your own messages arrive in
-                //the sync response you can verify that the message is already sent using the old_id param.
-                boolean existOldMessage = false;
-                if(message.getProps()!=null && message.getProps().has("old_id")) {
-                    MessageItem oldMessage = getMessageById(message.getProps().get("old_id").getAsString());
-                    if(oldMessage!=null){
-                        //TODO NOTIFY SOMEHOW A ONACKNOWLEDGE RECEIVED
-                        existOldMessage = true;
+            Set<Map.Entry<String, List<MOKMessage>>> set = conversations.entrySet();
+            Iterator<Map.Entry<String, List<MOKMessage>>> setIterator = set.iterator();
+            while(setIterator.hasNext()) { //iterate every conversation
+
+                Map.Entry<String, List<MOKMessage>> entry = setIterator.next();
+                List<MOKMessage> messages = entry.getValue();
+                Iterator<MOKMessage> iterator = messages.iterator();
+
+                while (iterator.hasNext()) { //iterate every message
+                    MOKMessage message = iterator.next();
+                    //Sometimes the acknowledge get lost for network reasons. So thanks to your own messages arrive in
+                    //the sync response you can verify that the message is already sent using the old_id param.
+                    boolean existOldMessage = false;
+                    if(message.getProps()!=null && message.getProps().has("old_id")) {
+                        MessageItem oldMessage = getMessageById(message.getProps().get("old_id").getAsString());
+                        if(oldMessage!=null){
+                            //TODO NOTIFY SOMEHOW A ONACKNOWLEDGE RECEIVED
+                            existOldMessage = true;
+                        }
+                    }
+                    //We verify if message doesn't exist. If the message exists we remove it from the original
+                    //list to avoid sending to the UI.
+                    if(!existMessage(message.getMessage_id()) && !existOldMessage){
+                        MessageItem messageItem = createMessage(message, context, userSession, !message.isMyOwnMessage(userSession));
+                        messageItem.save();
+                    } else {
+                        iterator.remove();
+                        if(messages.isEmpty()) {
+                            setIterator.remove();
+                        }
                     }
                 }
-                //We verify if message doesn't exist. If the message exists we remove it from the original
-                //list to avoid sending to the UI.
-                if(!existMessage(message.getMessage_id()) && !existOldMessage){
-                    MessageItem messageItem = createMessage(message, context, userSession, !message.isMyOwnMessage(userSession));
-                    messageItem.save();
-                } else
-                    messages.remove(message);
-                //TODO VALIDATE IF CONVERSATION DOESN'T EXIST AND CREATE IT
             }
+
             ActiveAndroid.setTransactionSuccessful();
         }
         finally {
@@ -165,6 +181,10 @@ public class DatabaseHandler {
         }
     }
 
+    public static void updateConversations(HashMap<String, ConversationTransaction> map) {
+        new UpdateConversationsTask().execute(map);
+    }
+
     public static void markMessagesAsError(final ArrayList<MOKMessage> errorMessages) {
 
         ActiveAndroid.beginTransaction();
@@ -213,6 +233,7 @@ public class DatabaseHandler {
     }
 
     public static void saveConversations(ConversationItem[] conversations){
+        Thread.dumpStack();
         new SaveModelTask().execute(conversations);
     }
 
@@ -223,6 +244,7 @@ public class DatabaseHandler {
     public static void updateConversationWithSentMessage(ConversationItem conversation,
                 final String secondaryText, final MonkeyConversation.ConversationStatus status,
                                     final int unread){
+        Thread.dumpStack();
         conversation.setSecondaryText(secondaryText!=null?secondaryText:conversation.getSecondaryText());
         conversation.setStatus(status.ordinal());
         conversation.setTotalNewMessage(unread == 0 ? 0 : conversation.getTotalNewMessages()+unread);

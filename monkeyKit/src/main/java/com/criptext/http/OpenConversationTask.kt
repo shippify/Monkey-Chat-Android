@@ -184,11 +184,8 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
         fun attemptToDecrypt(message: MOKMessage, clientData: ClientData, aesutil: AESUtil,
                              existingKey: String): String? {
-            if(existingKey.isEmpty())
-                return null//invalid key
-
             //1st attempt to decrypt, if it works return
-            if (DecryptTask.decryptMessage(EncryptedMsg.fromSecret(message, existingKey))) {
+            if (existingKey.isNotEmpty() && DecryptTask.decryptMessage(EncryptedMsg.fromSecret(message, existingKey))) {
                 return existingKey
             } else {
                 val response = sendOpenConversationRequest(message.sid, clientData)

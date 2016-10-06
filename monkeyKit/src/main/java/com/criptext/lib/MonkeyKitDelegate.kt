@@ -5,8 +5,7 @@ import com.google.gson.JsonObject
 
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MOKUser;
-
-import java.util.ArrayList;
+import java.util.*
 
 interface MonkeyKitDelegate {
 
@@ -205,7 +204,7 @@ interface MonkeyKitDelegate {
      * guardarlos en la base de datos. La implementacion de este metodo debe de actualizar las conversaciones
      SyncComplete nuevos menLists
     */
-     fun onSyncComplete(messages: List<MOKMessage>, notifications: List<MOKNotification>, deletes: List<MOKDelete>)
+     fun onSyncComplete(messages: HashMap<String, MutableList<MOKMessage>>, notifications: List<MOKNotification>, deletes: List<MOKDelete>)
 
     /**
      * Al recibir una notificacion, MonkeyKit ejecuta este callback. La implementacion de este metodo
