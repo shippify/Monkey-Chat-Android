@@ -32,17 +32,23 @@ import com.criptext.monkeychatandroid.models.FindConversationTask;
 import com.criptext.monkeychatandroid.models.FindMessageTask;
 import com.criptext.monkeychatandroid.models.GetMessagePageTask;
 import com.criptext.monkeychatandroid.models.MessageItem;
+import com.criptext.monkeychatandroid.models.UserItem;
 import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
+import com.criptext.monkeykitui.MonkeyInfoFragment;
 import com.criptext.monkeykitui.conversation.ConversationsActivity;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
+import com.criptext.monkeykitui.info.InfoActivity;
 import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.GroupChat;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
+import com.criptext.monkeykitui.recycler.MonkeyItemTransaction;
+import com.criptext.monkeykitui.recycler.MonkeyUser;
 import com.criptext.monkeykitui.recycler.audio.DefaultVoiceNotePlayer;
 import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
+import com.criptext.monkeykitui.toolbar.ToolbarDelegate;
 import com.criptext.monkeykitui.util.MonkeyFragmentManager;
 import com.criptext.monkeykitui.util.Utils;
 import com.google.gson.JsonObject;
@@ -60,7 +66,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 
-public class MainActivity extends MKDelegateActivity implements ChatActivity, ConversationsActivity{
+public class MainActivity extends MKDelegateActivity implements ChatActivity, ConversationsActivity, InfoActivity, ToolbarDelegate{
 
     private static String DATA_FRAGMENT = "MainActivity.chatDataFragment";
     //Since this is the Chat activity, we need a RecyclerView and an adapter. Additionally we
@@ -69,9 +75,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     MonkeyChatFragment monkeyChatFragment;
     MonkeyConversationsFragment monkeyConversationsFragment;
     ConversationItem activeConversationItem = null;
+    MonkeyInfoFragment monkeyInfoFragment;
 
     HashMap<String, List<MonkeyItem>> messagesMap = new HashMap<>();
     Collection<MonkeyConversation> conversationsList = null;
+    Collection<MonkeyUser> usersList = null;
     ChatDataFragment dataFragment;
 
     static int CONV_PERPAGE = 20;
@@ -1021,22 +1029,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         MonkeyConversation.ConversationStatus status;
 
         if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationId)) {
-            monkeyChatFragment.removeMonkeyItem(messageId);
+            //monkeyChatFragment.removeMonkeyItem(messageId);
         }else{
             List<MonkeyItem> conversationMessages = messagesMap.get(conversationId);
             if(conversationMessages != null){
-                ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.
+                /*ConversationItem conversationItem = (ConversationItem) conversationsFragment.
                         findConversationById(conversationId);
                 if(conversationItem!=null && conversationItem.getTotalNewMessages() > 0) {
-                    if(conversationMessages.size() - MonkeyItem.Companion.findLastPositionById(
-                            messageId, conversationMessages) <= conversationItem.getTotalNewMessages()){
+                    if(conversationMessages.size() - MonkeyItem.Companion.findLastPositionById(messageId, conversationMessages) <= conversationItem.getTotalNewMessages()){
                         unreadCounter = conversationItem.getTotalNewMessages() - 1;
                     }
                 }
                 int position = MonkeyItem.Companion.findLastPositionById(messageId, conversationMessages);
                 if(position > -1){
                     conversationMessages.remove(position);
-                }
+                }*/
             }
         }
 
@@ -1299,5 +1306,30 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }else{
             DatabaseHandler.deleteMessage(item.getMessageId());
         }
+    }
+
+    @Override
+    public void onClickToolbar(@NotNull String monkeyID, @NotNull String name, @NotNull String lastSeen, @NotNull String avatarURL) {
+        MonkeyInfoFragment infoFragment = MonkeyInfoFragment.Companion.newInfoInstance();
+        monkeyFragmentManager.setInfoFragment(infoFragment);
+    }
+
+    @Override
+    public void setInfoFragment(@Nullable MonkeyInfoFragment infoFragment) {
+        monkeyInfoFragment = infoFragment;
+    }
+
+    @Override
+    public void requestUsers() {
+
+    }
+
+    @Nullable
+    @Override
+    public ArrayList<MonkeyUser> getInfo() {
+        ArrayList<MonkeyUser> userList = new ArrayList<>();
+        UserItem user1 = new UserItem("abc", "Pepelon", "admin", "", "offline");
+        userList.add(user1);
+        return userList;
     }
 }
