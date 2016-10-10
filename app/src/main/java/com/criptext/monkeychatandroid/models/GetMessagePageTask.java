@@ -32,12 +32,17 @@ public class GetMessagePageTask extends AsyncTask<Void, Void, List<MessageItem>>
     }
 
     @Override
+    protected void onCancelled() {
+        onQueryReturnedListener = null;
+    }
+
+    @Override
     protected void onPostExecute(List<MessageItem> messageItems) {
         if(onQueryReturnedListener != null)
             onQueryReturnedListener.onQueryReturned(messageItems);
     }
 
     public interface OnQueryReturnedListener {
-        public void onQueryReturned(List<MessageItem> messagePage);
+        void onQueryReturned(List<MessageItem> messagePage);
     }
 }

@@ -176,7 +176,7 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, syncResp: HttpSync.SyncData) {
         Log.d("SocketService", "start connection")
-        lastTimeSynced = syncResp.newTimestamp ?: lastTimeSynced
+        lastTimeSynced = Math.max(syncResp.newTimestamp, lastTimeSynced)
         clientData = cdata
         userManager = UserManager(this, aesUtil)
         groupManager = GroupManager(this, aesUtil)
@@ -191,7 +191,7 @@ abstract class MonkeyKitSocketService : Service() {
         status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
 
         if(syncResp.isNotEmpty()){
-            processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(syncResp.syncedConversations,
+            processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(syncResp.messages,
                     syncResp.notifications, syncResp.deletes))
         }
 
@@ -326,7 +326,8 @@ abstract class MonkeyKitSocketService : Service() {
             CBTypes.onSyncComplete -> {
                 val batch = info[0] as HashMap<String, MutableList<MOKMessage>>;
                 storeMessageBatch(batch, Runnable {
-                    delegate?.onSyncComplete(batch, info[1] as List<MOKNotification>, info[2] as List<MOKDelete>);
+                    delegate?.onSyncComplete(batch, info[1] as List<MOKNotification>,
+                            info[2] as HashMap<String, List<MOKDelete>>);
                     if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
                         ServiceTimeoutTask(this).execute()
                 });

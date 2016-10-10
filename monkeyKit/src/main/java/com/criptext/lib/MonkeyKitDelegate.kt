@@ -204,7 +204,8 @@ interface MonkeyKitDelegate {
      * guardarlos en la base de datos. La implementacion de este metodo debe de actualizar las conversaciones
      SyncComplete nuevos menLists
     */
-     fun onSyncComplete(messages: HashMap<String, MutableList<MOKMessage>>, notifications: List<MOKNotification>, deletes: List<MOKDelete>)
+     fun onSyncComplete(messages: HashMap<String, MutableList<MOKMessage>>,
+                        notifications: List<MOKNotification>, deletes: HashMap<String, List<MOKDelete>>)
 
     /**
      * Al recibir una notificacion, MonkeyKit ejecuta este callback. La implementacion de este metodo

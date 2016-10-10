@@ -30,6 +30,7 @@ import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.AsyncDBHandler;
 import com.criptext.monkeychatandroid.models.ConversationItem;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
+import com.criptext.monkeychatandroid.models.DeleteMessagesTask;
 import com.criptext.monkeychatandroid.models.FindConversationTask;
 import com.criptext.monkeychatandroid.models.FindMessageTask;
 import com.criptext.monkeychatandroid.models.GetMessagePageTask;
@@ -681,7 +682,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                                       final int messageType) {
 
         super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
-        Log.d("MainActivity", "On ACK Received read? " + read);
 
         asyncDBHandler.getMessageById(new FindMessageTask.OnQueryReturnedListener() {
             @Override
@@ -745,11 +745,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onSyncComplete(HashMap<String, List<MOKMessage>> conversationMessages,
-                               List<MOKNotification> notifications, List<MOKDelete> deletes) {
+                               List<MOKNotification> notifications, HashMap<String, List<MOKDelete>> deletes) {
         setStatusBarState(Utils.ConnectionStatus.connected);
-        Iterator<Map.Entry<String, List<MOKMessage>>> iterator = conversationMessages.entrySet().iterator();
-        HashMap<MonkeyConversation, ConversationTransaction> updates = new HashMap<>();
+        final HashMap<MonkeyConversation, ConversationTransaction> updates = new HashMap<>();
         HashMap<String, ConversationTransaction> dbUpdates = new HashMap<>();
+        Iterator<Map.Entry<String, List<MOKMessage>>> iterator = conversationMessages.entrySet().iterator();
+
         while(iterator.hasNext()) {
             Map.Entry<String, List<MOKMessage>> entry = iterator.next();
             String id = entry.getKey();
@@ -780,10 +781,24 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
         }
 
-        if(monkeyConversationsFragment != null)
-            monkeyConversationsFragment.updateConversations(updates.entrySet());
+        //First update DB with insertions
+        if(!dbUpdates.isEmpty())
+            DatabaseHandler.updateConversations(dbUpdates);
 
-        DatabaseHandler.updateConversations(dbUpdates);
+        //Then update DB with deletions
+        if(!deletes.isEmpty()) {
+            asyncDBHandler.deleteMessages(conversationMessages, deletes, new DeleteMessagesTask.OnQueryReturnedListener() {
+                @Override
+                public void onQueryReturned(HashMap<MonkeyConversation, ConversationTransaction> transactions) {
+                for(Map.Entry<MonkeyConversation, ConversationTransaction> entry : transactions.entrySet()) {
+                    updates.put(entry.getKey(), entry.getValue());
+                }
+                if(monkeyConversationsFragment != null)
+                    monkeyConversationsFragment.updateConversations(updates.entrySet());
+                }
+            });
+        } else if(monkeyConversationsFragment != null)
+            monkeyConversationsFragment.updateConversations(updates.entrySet());
 
     }
 
@@ -1042,7 +1057,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public  void onConnectionRefused(){
         setStatusBarState(Utils.ConnectionStatus.connected);
-        Log.d("MainActivity", "Connection Refused");
         Toast.makeText(this, "Login failed. Please check your Monkey Kit credentials", Toast.LENGTH_LONG).show();
     }
 

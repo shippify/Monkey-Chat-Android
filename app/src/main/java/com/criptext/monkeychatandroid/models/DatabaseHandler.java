@@ -1,6 +1,7 @@
 package com.criptext.monkeychatandroid.models;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.activeandroid.ActiveAndroid;
 import com.activeandroid.query.Delete;
@@ -11,6 +12,8 @@ import com.criptext.comunication.MessageTypes;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -233,7 +236,6 @@ public class DatabaseHandler {
     }
 
     public static void saveConversations(ConversationItem[] conversations){
-        Thread.dumpStack();
         new SaveModelTask().execute(conversations);
     }
 
@@ -244,7 +246,6 @@ public class DatabaseHandler {
     public static void updateConversationWithSentMessage(ConversationItem conversation,
                 final String secondaryText, final MonkeyConversation.ConversationStatus status,
                                     final int unread){
-        Thread.dumpStack();
         conversation.setSecondaryText(secondaryText!=null?secondaryText:conversation.getSecondaryText());
         conversation.setStatus(status.ordinal());
         conversation.setTotalNewMessage(unread == 0 ? 0 : conversation.getTotalNewMessages()+unread);
@@ -265,6 +266,54 @@ public class DatabaseHandler {
 
     public static void deleteConversation(String conversationId){
         new Delete().from(ConversationItem.class).where("idConv = ?", conversationId).execute();
+    }
+
+    public static String getSecondaryTextByMessageType(MonkeyItem monkeyItem){
+        if(monkeyItem == null)
+            return "Write to Contact";
+        switch (MonkeyItem.MonkeyItemType.values()[monkeyItem.getMessageType()]) {
+            case audio:
+                return "Audio";
+            case photo:
+                return "Photo";
+            default:
+                return monkeyItem.getMessageText();
+        }
+    }
+
+    public static ConversationTransaction newDeletedMsgsTransaction(final MessageItem newLastItem,
+                                                                    final int newMessagesChange) {
+        return new ConversationTransaction() {
+            @Override
+            public void updateConversation(@NotNull MonkeyConversation conversation) {
+                ConversationItem newConversationItem = (ConversationItem)conversation;
+                newConversationItem.setSecondaryText(getSecondaryTextByMessageType(newLastItem));
+                MonkeyConversation.ConversationStatus newStatus = MonkeyConversation.ConversationStatus.empty;
+                if(newLastItem != null) {
+                    if(newLastItem.isIncomingMessage())
+                        newStatus = MonkeyConversation.ConversationStatus.receivedMessage;
+                    else if (newLastItem.getMessageTimestampOrder() <= newConversationItem.lastRead
+                            && !newConversationItem.isGroup())
+                        newStatus = MonkeyConversation.ConversationStatus.sentMessageRead;
+                    else
+                        newStatus = MonkeyConversation.ConversationStatus.deliveredMessage;
+                }
+
+                Log.d("DeleteMessages", "add " + newConversationItem.getTotalNewMessages() + " + " +
+                    newMessagesChange);
+                newConversationItem.setTotalNewMessage(Math.max(0 , newConversationItem.getTotalNewMessages()
+                        + newMessagesChange));
+                newConversationItem.setStatus(newStatus.ordinal());
+                Log.d("DeleteMessages", "totalNew messages " + newConversationItem.getTotalNewMessages());
+
+                if(newLastItem != null) {
+                    long currentTimestamp = newLastItem.getMessageTimestampOrder();
+                    newConversationItem.setDatetime(currentTimestamp > -1 ? currentTimestamp
+                            : conversation.getDatetime());
+                }
+
+            }
+        };
     }
 
 }
