@@ -337,7 +337,8 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onSocketDisconnected()
             }
             CBTypes.onDeleteReceived -> {
-                delegate?.onDeleteRecieved(info[0] as String, info[1] as String, info[2] as String, info[3] as String)
+                lastTimeSynced = info[3].toString().toLong()
+                delegate?.onDeleteReceived(info[0] as String, info[1] as String, info[2] as String)
             }
             CBTypes.onUpdateUserData -> {
                 delegate?.onUpdateUserData(info[0] as String, info[1] as Exception?)
@@ -945,14 +946,17 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyId ID of the user or group
      * @param messageid ID of the message that you want to unsend
      */
-    fun unsendMessage(monkeyId: String, messageId: String) {
+    fun unsendMessage(senderId: String, recipientId: String, messageId: String) {
+        if(senderId != serviceClientData.monkeyId){
+            return;
+        }
 
         try {
             val args = JsonObject()
             val json = JsonObject()
 
             args.addProperty("id", messageId)
-            args.addProperty("rid", monkeyId)
+            args.addProperty("rid", recipientId)
             json.add("args", args)
             json.addProperty("cmd", MessageTypes.MOKProtocolDelete)
 

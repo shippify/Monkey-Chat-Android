@@ -178,7 +178,7 @@ interface MonkeyKitDelegate {
      * *
      * @param datetime datetime of the message
      */
-    fun onDeleteRecieved(messageId: String, senderId: String, recipientId: String, datetime: String)
+    fun onDeleteReceived(messageId: String, senderId: String, recipientId: String)
 
     /**
      * Cuando un contacto abre una conversacion con el usuario se ejecuta este callback. La implementacion

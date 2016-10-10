@@ -342,16 +342,25 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     /**
      * Update a status message. This is normally used after you send a message.
+     * @param oldId message old id
      * @param id message id
      * @param newStatus new status to change
      */
-    private void updateMessage(String id, MonkeyItem.DeliveryStatus newStatus) {
+
+    private void updateMessage(String id, String oldId, MonkeyItem.DeliveryStatus newStatus) {
         if (monkeyChatFragment != null) {
-            MessageItem monkeyItem = (MessageItem) monkeyChatFragment.findMonkeyItemById(id);
-            if (monkeyItem != null) {
-                monkeyItem.setStatus(newStatus.ordinal());
-                DatabaseHandler.updateMessageStatus(id, newStatus);
-                monkeyChatFragment.updateMessageDeliveryStatus(monkeyItem);
+            MessageItem message = (MessageItem) monkeyChatFragment.findMonkeyItemById(oldId != null ? oldId : id);
+            if (message != null) {
+                message.setStatus(newStatus.ordinal());
+                if(oldId != null){
+                    message.setOldMessageId(oldId);
+                    message.setMessageId(id);
+                    DatabaseHandler.updateMessageStatus(id, oldId, newStatus);
+
+                }else{
+                    DatabaseHandler.updateMessageStatus(id, null, newStatus);
+                }
+                monkeyChatFragment.updateMessageDeliveryStatus(message);
             }
         }
     }
@@ -362,7 +371,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 public MonkeyItem invoke(MonkeyItem monkeyItem) {
                     MessageItem message = (MessageItem) monkeyItem;
                     message.setStatus(newStatus.ordinal());
-                    DatabaseHandler.updateMessageStatus(id, newStatus);
+                    DatabaseHandler.updateMessageStatus(id, null, newStatus);
                     return message;
                 }
             };
@@ -382,6 +391,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
         }
     }
+
     /**
      * Update a conversation according to the params received.
      * @param conversationId conversation id to change
@@ -397,9 +407,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             public void updateConversation(@NotNull MonkeyConversation conversation) {
                 ConversationItem newConversationItem = (ConversationItem)conversation;
                 newConversationItem.setSecondaryText(secondaryText!=null?secondaryText:conversation.getSecondaryText());
-                if(status != MonkeyConversation.ConversationStatus.empty &&
-                        (conversation.getStatus() != MonkeyConversation.ConversationStatus.receivedMessage.ordinal()
-                        || status != MonkeyConversation.ConversationStatus.sentMessageRead)){
+                if(status != MonkeyConversation.ConversationStatus.empty){
                     newConversationItem.setStatus(status.ordinal());
                     newConversationItem.setTotalNewMessage(unread == 0 ? 0 : conversation.getTotalNewMessages()+unread);
                 }
@@ -435,6 +443,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
     }
 
+
     private void updateConversationBadge(String conversationId, int unread){
         if(monkeyConversationsFragment!=null) {
             final ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
@@ -446,9 +455,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     /**
-     * Search a conversation by its message id and update its last read status.
-     * @param convId ID of the conversation to update
-     * @param lastRead the new lastRead value.
+     * Search a conversation by its message id and update its status.
+       unsend working with messages
      */
     private void updateConversationLastRead(final String convId, final long lastRead){
         asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
@@ -532,8 +540,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * successfully delivered
      * @param oldId The old Id of the message.
      */
-    private void markMessageAsDelivered(String oldId){
-        updateMessage(oldId, MonkeyItem.DeliveryStatus.delivered);
+    private void markMessageAsDelivered(String oldId, String newId){
+        updateMessage(newId, oldId, MonkeyItem.DeliveryStatus.delivered);
     }
 
     /**
@@ -685,13 +693,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                                        String conversationId, boolean success) {
         //TODO use better search algorithm
         super.onFileDownloadFinished(fileMessageId, fileMessageTimestamp, conversationId, success);
-        updateMessage(fileMessageId,
+        updateMessage(fileMessageId, null,
                 success ? MonkeyItem.DeliveryStatus.delivered : MonkeyItem.DeliveryStatus.error);
     }
 
     @Override
     public void onAcknowledgeRecieved(@NotNull String senderId, @NotNull String recipientId,
-                          @NotNull String newId, final @NotNull String oldId, final boolean read,
+                          final @NotNull String newId, final @NotNull String oldId, final boolean read,
                                       final int messageType) {
 
         super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
@@ -701,8 +709,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             @Override
             public void onQueryReturned(MessageItem result) {
                 if(result != null){
-                    markMessageAsDelivered(oldId);
+                    markMessageAsDelivered(oldId, newId);
                     updateConversationByMessage(result, read);
+
                 } else if((messageType == Integer.parseInt(MessageTypes.MOKText)
                         || messageType == Integer.parseInt(MessageTypes.MOKFile))){
                     //If we use the same monkeyId for several devices (multisession) we receive an
@@ -924,7 +933,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onFileFailsUpload(MOKMessage message) {
         super.onFileFailsUpload(message);
-        updateMessage(message.getMessage_id(), MonkeyItem.DeliveryStatus.error);
+        updateMessage(message.getMessage_id(), null, MonkeyItem.DeliveryStatus.error);
     }
 
 
@@ -953,8 +962,45 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onDeleteRecieved(String messageId, String senderId, String recipientId, String datetime) {
-        //Server requested to delete a message, we could implement it here, but for now we wont
+    public void onDeleteReceived(String messageId, String senderId, String recipientId) {
+
+        String conversationId = senderId.equals(myMonkeyID) ? recipientId : senderId;
+        MessageItem message = DatabaseHandler.lastConversationMessage(conversationId);
+        int unreadCounter = 0;
+        ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
+        MonkeyConversation.ConversationStatus status;
+
+        if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationId)) {
+            monkeyChatFragment.removeMonkeyItem(messageId);
+        }else{
+            List<MonkeyItem> conversationMessages = messagesMap.get(conversationId);
+            if(conversationMessages != null){
+                if(conversationItem!=null && conversationItem.getTotalNewMessages() > 0) {
+                    if(conversationMessages.size() - MonkeyItem.Companion.findLastPositionById(messageId, conversationMessages) <= conversationItem.getTotalNewMessages()){
+                        unreadCounter = conversationItem.getTotalNewMessages() - 1;
+                    }
+                }
+
+                int position = MonkeyItem.Companion.findLastPositionById(messageId, conversationMessages);
+                if(position > -1){
+                    conversationMessages.remove(position);
+                }
+            }
+        }
+
+        if(message != null && message.getMessageId().equals(messageId)){
+            MessageItem lastMessage = DatabaseHandler.unsendMessage(messageId, conversationId);
+
+            status = lastMessage.getSenderId().equals(myMonkeyID) ? MonkeyConversation.ConversationStatus.deliveredMessage : MonkeyConversation.ConversationStatus.receivedMessage;
+            if(status.equals(MonkeyConversation.ConversationStatus.deliveredMessage) && lastMessage.getMessageTimestamp() <= conversationItem.lastRead){
+                status = MonkeyConversation.ConversationStatus.sentMessageRead;
+            }
+            updateConversation(lastMessage.getConversationId(), getSecondaryTextByMessageType(lastMessage), status, unreadCounter > 0 ? -1 : 0, lastMessage.getMessageTimestampOrder(), 0);
+            return;
+        }else if(unreadCounter != 0){
+            updateConversationBadge(conversationId, unreadCounter);
+        }
+        DatabaseHandler.deleteMessage(messageId);
     }
 
     @Override
@@ -1003,7 +1049,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onFileUploadRequested(@NotNull MonkeyItem item) {
         if(item.getDeliveryStatus() == MonkeyItem.DeliveryStatus.error) {
-            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
+            updateMessage(item.getMessageId(), null, MonkeyItem.DeliveryStatus.sending);
             if(monkeyChatFragment != null)
                 monkeyChatFragment.rebindMonkeyItem(item);
         }
@@ -1024,7 +1070,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             //If the message failed to download previously, mark it as sending and rebind.
             //Rebinding will update the UI to a loading view and call this method again to start
             //the download
-            updateMessage(item.getMessageId(), MonkeyItem.DeliveryStatus.sending);
+            updateMessage(item.getMessageId(), null, MonkeyItem.DeliveryStatus.sending);
             if(monkeyChatFragment != null)
                 monkeyChatFragment.rebindMonkeyItem(item);
         } else { //Not error status, download the file.
@@ -1190,6 +1236,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onMessageRemoved(@NotNull MonkeyItem item, boolean unsent) {
-        //TODO Remove message from DB and send unsend command if necessary
+
+        if(unsent){
+            unsendMessage(item.getSenderId(), ((MessageItem)item).getConversationId(), item.getMessageId());
+        }else{
+            DatabaseHandler.deleteMessage(item.getMessageId());
+        }
     }
 }
