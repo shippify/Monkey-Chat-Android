@@ -45,6 +45,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         }
 
     private fun getBatch(since: Long, qty: Int): SyncResponse {
+            Log.d("HttpSync", "get batch since $since")
             val parser = JsonParser()
             val request = Request.Builder()
                     .url(MonkeyKitSocketService.httpsURL + "/user/messages/" +
@@ -133,6 +134,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 	 * @param parser
 	 */
 	private fun processBatch(data: JsonObject): SyncResponse{
+		System.out.println("MOK PROTOCOL SYNC");
         val parser = JsonParser()
         val array = data.get("messages").asJsonArray;
         val messages: MutableList<MOKMessage> = mutableListOf()
@@ -148,7 +150,8 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             if (currentMessageType == MessageTypes.MOKText || currentMessageType == MessageTypes.MOKFile) {
                 processMessage(messages, currentMessage, currentMessageType, props, params)
             }
-            else if(currentMessageType == MessageTypes.MOKNotif){
+            else if(currentMessageType == MessageTypes.MOKNotif && params != null){
+                //params has to be non null, otherwise what's the point of the notification?
                 val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
                 notifications.add(MOKNotification(remote))
 
@@ -176,45 +179,32 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 
     class SyncData(monkeyId: String, response: SyncResponse?) {
         val notifications: List<MOKNotification>
-        val deletes: HashMap<String, MutableList<MOKDelete>>
-        val messages: HashMap<String, MutableList<MOKMessage>>
+        val deletes: List<MOKDelete>
+        val syncedConversations: HashMap<String, MutableList<MOKMessage>>
         var newTimestamp: Long
 
         init {
             notifications = response?.notifications ?: listOf()
-            deletes = hashMapOf()
-            messages = hashMapOf()
+            deletes = response?.deletes ?: listOf()
+            syncedConversations = hashMapOf()
             newTimestamp = response?.newTimestamp() ?: 0L
 
             fun getMessageList(conversationId: String): MutableList<MOKMessage>{
-                if(!messages.containsKey(conversationId))
-                    messages[conversationId] = mutableListOf()
+                if(!syncedConversations.containsKey(conversationId))
+                    syncedConversations[conversationId] = mutableListOf()
 
-                return messages[conversationId]!!
+                return syncedConversations[conversationId]!!
             }
 
-            fun getDeleteList(conversationId: String): MutableList<MOKDelete>{
-                if(!deletes.containsKey(conversationId))
-                    deletes[conversationId] = mutableListOf()
-
-                return deletes[conversationId]!!
-            }
-            if(response != null) {
+            if(response != null)
                 response.messages.forEach { message ->
                     val convId = message.getConversationID(monkeyId)
                     val list = getMessageList(convId)
                     list.add(message)
-                }
-                response.deletes.forEach { del ->
-                    val convId = del.getConversationId(monkeyId)
-                    val list = getDeleteList(convId)
-                    list.add(del)
-                }
             }
-
         }
 
-        fun isNotEmpty() = notifications.isNotEmpty() || deletes.isNotEmpty() || messages.isNotEmpty()
+        fun isNotEmpty() = notifications.isNotEmpty() || deletes.isNotEmpty() || syncedConversations.isNotEmpty()
 
 
     }

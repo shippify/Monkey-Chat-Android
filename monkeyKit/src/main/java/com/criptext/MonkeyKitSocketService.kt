@@ -191,7 +191,7 @@ abstract class MonkeyKitSocketService : Service() {
         status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
 
         if(syncResp.isNotEmpty()){
-            processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(syncResp.messages,
+            processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(syncResp.syncedConversations,
                     syncResp.notifications, syncResp.deletes))
         }
 
