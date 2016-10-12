@@ -35,6 +35,8 @@ public class ConversationItem extends Model implements MonkeyConversation{
     public int status;
     @Column(name = "lastRead")
     public long lastRead;
+    @Column(name = "lastOpen")
+    public long lastOpen;
 
     public ConversationItem(){
         super();
@@ -53,6 +55,7 @@ public class ConversationItem extends Model implements MonkeyConversation{
         this.avatarFilePath = avatarFilePath;
         this.status = status;
         lastRead = 0;
+        lastOpen = 0;
     }
 
     public ConversationItem(MonkeyConversation conversation){

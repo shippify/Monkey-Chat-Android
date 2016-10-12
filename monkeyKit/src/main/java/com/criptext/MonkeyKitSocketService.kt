@@ -191,7 +191,7 @@ abstract class MonkeyKitSocketService : Service() {
         status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
 
         if(syncResp.isNotEmpty()){
-            processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(syncResp.syncedConversations,
+            processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(syncResp.newMessages,
                     syncResp.notifications, syncResp.deletes))
         }
 
@@ -1100,6 +1100,8 @@ abstract class MonkeyKitSocketService : Service() {
      * @param runnable Este runnable debe ejecutarse despues de guardar el batch de mensajes
      */
     abstract fun storeMessageBatch(conversationMessages: HashMap<String, MutableList<MOKMessage>>, runnable: Runnable);
+
+    //abstract fun syncDatabase(syncData: HttpSync.SyncData, runnable: Runnable);
 
     /**
      * Loads all credentials needed to initialize the service. This method will be called in

@@ -627,24 +627,6 @@ public class AsyncConnSocket implements ComServerDelegate{
 	/****FUNCIONES DEL SOCKET*****/
 	/*****************************/
 
-	//TODO delete this
-	public void sendMessage(JSONObject params){
-		try{
-			if(socketMessageHandler!=null){
-				Message msg = socketMessageHandler.obtainMessage();
-				msg.obj =params.toString();
-				System.out.println("MONKEY - AsyncConnSocket - enviando mensaje");
-				socketMessageHandler.sendMessage(msg);
-			}
-			else {
-				System.out.println("MONKEY - AsyncConnSocket - socketMessageHandler es null");
-				fireInTheHole();
-			}
-		}catch(Exception e){
-			e.printStackTrace();
-		}
-	}
-
 	public void sendMessage(JsonObject params){
 		try{
 			if(socketMessageHandler!=null){

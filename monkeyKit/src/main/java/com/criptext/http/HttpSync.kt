@@ -137,9 +137,9 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 		System.out.println("MOK PROTOCOL SYNC");
         val parser = JsonParser()
         val array = data.get("messages").asJsonArray;
-        val messages: MutableList<MOKMessage> = mutableListOf()
-        val notifications: MutableList<MOKNotification> = mutableListOf()
-        val deletes: MutableList<MOKDelete> = mutableListOf()
+        val messages: MutableList<MOKMessage> = LinkedList()
+        val notifications: MutableList<MOKNotification> = LinkedList()
+        val deletes: MutableList<MOKDelete> = LinkedList()
 
        array.forEach { jsonMessage ->
             val currentMessage = jsonMessage.asJsonObject
@@ -179,32 +179,45 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 
     class SyncData(monkeyId: String, response: SyncResponse?) {
         val notifications: List<MOKNotification>
-        val deletes: List<MOKDelete>
-        val syncedConversations: HashMap<String, MutableList<MOKMessage>>
+        val deletes: HashMap<String, MutableList<MOKDelete>>
+        val newMessages: HashMap<String, MutableList<MOKMessage>>
         var newTimestamp: Long
 
         init {
             notifications = response?.notifications ?: listOf()
-            deletes = response?.deletes ?: listOf()
-            syncedConversations = hashMapOf()
+            deletes = hashMapOf()
+            newMessages = hashMapOf()
             newTimestamp = response?.newTimestamp() ?: 0L
 
             fun getMessageList(conversationId: String): MutableList<MOKMessage>{
-                if(!syncedConversations.containsKey(conversationId))
-                    syncedConversations[conversationId] = mutableListOf()
+                if(!newMessages.containsKey(conversationId))
+                    newMessages[conversationId] = LinkedList()
 
-                return syncedConversations[conversationId]!!
+                return newMessages[conversationId]!!
+            }
+            fun getDeleteList(conversationId: String): MutableList<MOKDelete>{
+                if(!deletes.containsKey(conversationId))
+                    deletes[conversationId] = LinkedList()
+
+                return deletes[conversationId]!!
             }
 
-            if(response != null)
+            if(response != null) {
                 response.messages.forEach { message ->
                     val convId = message.getConversationID(monkeyId)
                     val list = getMessageList(convId)
                     list.add(message)
+                }
+
+                response.deletes.forEach { del ->
+                    val convId = del.getConversationID(monkeyId)
+                    val list = getDeleteList(convId)
+                    list.add(del)
+                }
             }
         }
 
-        fun isNotEmpty() = notifications.isNotEmpty() || deletes.isNotEmpty() || syncedConversations.isNotEmpty()
+        fun isNotEmpty() = notifications.isNotEmpty() || deletes.isNotEmpty() || newMessages.isNotEmpty()
 
 
     }

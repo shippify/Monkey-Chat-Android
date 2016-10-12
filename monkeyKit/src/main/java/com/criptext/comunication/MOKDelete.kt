@@ -6,7 +6,7 @@ package com.criptext.comunication
 
 class MOKDelete(val messageId: String, val senderId: String, val receiverId: String, val timestamp: Long) {
 
-    fun getConversationId(myMonkeyId: String) =
+    fun getConversationID(myMonkeyId: String) =
             if (receiverId.startsWith("G:")) receiverId //message from group
                 else if(receiverId == myMonkeyId) senderId //message sent to user
                 else receiverId //message sent by user
