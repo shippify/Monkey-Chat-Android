@@ -2,7 +2,7 @@ package com.criptext.monkeychatandroid.models;
 
 import com.activeandroid.annotation.Column;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
-import com.criptext.monkeykitui.recycler.MonkeyUser;
+import com.criptext.monkeykitui.recycler.MonkeyInfo;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Created by hirobreak on 05/10/16.
  */
-public class UserItem implements MonkeyUser{
+public class UserItem implements MonkeyInfo {
     @Column(name = "idUser", unique = true)
     private String monkeyId;
     @Column(name = "name")
@@ -35,12 +35,12 @@ public class UserItem implements MonkeyUser{
         this.status = status;
     }
 
-    public UserItem(MonkeyUser user){
-        this.monkeyId = user.getMonkeyId();
-        this.name = user.getName();
-        this.rol = user.getRol();
+    public UserItem(String monkeyId, MonkeyInfo user){
+        this.monkeyId = monkeyId;
+        this.name = user.getTitle();
+        this.rol = user.getSubtitle();
         this.avatarFilePath = user.getAvatarUrl();
-        this.status = user.getConnectionStatus();
+        this.status = user.getSubtitle();
     }
 
     public void setId(String monkeyId) {
@@ -61,21 +61,8 @@ public class UserItem implements MonkeyUser{
         this.status = status;
     }
 
-    @NotNull
-    @Override
     public String getMonkeyId() {
         return monkeyId;
-    }
-
-    @NotNull
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public String getRol() {
-        return rol;
     }
 
     @Nullable
@@ -84,8 +71,21 @@ public class UserItem implements MonkeyUser{
         return avatarFilePath;
     }
 
+    @NotNull
     @Override
-    public String getConnectionStatus() {
+    public String getTitle() {
+        return name;
+    }
+
+    @NotNull
+    @Override
+    public String getSubtitle() {
         return status;
+    }
+
+    @NotNull
+    @Override
+    public String getRightTitle() {
+        return rol;
     }
 }

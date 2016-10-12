@@ -44,7 +44,6 @@ dependencies {
     compile 'com.google.android.gms:play-services-gcm:9.0.0'
     compile 'com.squareup.okhttp3:okhttp:3.3.1'
 
-
     compile 'com.android.support:appcompat-v7:22.1.0'
 }
 

@@ -43,9 +43,9 @@ import com.criptext.monkeykitui.info.InfoActivity;
 import com.criptext.monkeykitui.input.listeners.InputListener;
 import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.GroupChat;
+import com.criptext.monkeykitui.recycler.MonkeyInfo;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 import com.criptext.monkeykitui.recycler.MonkeyItemTransaction;
-import com.criptext.monkeykitui.recycler.MonkeyUser;
 import com.criptext.monkeykitui.recycler.audio.DefaultVoiceNotePlayer;
 import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
 import com.criptext.monkeykitui.toolbar.ToolbarDelegate;
@@ -79,7 +79,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     HashMap<String, List<MonkeyItem>> messagesMap = new HashMap<>();
     Collection<MonkeyConversation> conversationsList = null;
-    Collection<MonkeyUser> usersList = null;
+    Collection<MonkeyInfo> usersList = null;
     ChatDataFragment dataFragment;
 
     static int CONV_PERPAGE = 20;
@@ -1326,10 +1326,20 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Nullable
     @Override
-    public ArrayList<MonkeyUser> getInfo() {
-        ArrayList<MonkeyUser> userList = new ArrayList<>();
-        UserItem user1 = new UserItem("abc", "Pepelon", "admin", "", "offline");
-        userList.add(user1);
-        return userList;
+    public ArrayList<MonkeyInfo> getInfo() {
+        ArrayList<MonkeyInfo> infoList = new ArrayList<>();
+        HashMap<String, MOKUser> users = groupData.getUsers();
+        for (Object value : users.values()){
+            MOKUser user = (MOKUser)value;
+            UserItem user1 = new UserItem(user.getMonkeyId(), user.getInfo().get("name").getAsString() , "admin", user.getAvatarURL(), "offline");
+            infoList.add(user1);
+        }
+        return infoList;
+    }
+
+
+    @Override
+    public void onUserClick(@NotNull MonkeyInfo user) {
+
     }
 }
