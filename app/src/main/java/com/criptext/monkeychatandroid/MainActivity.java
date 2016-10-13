@@ -112,6 +112,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        conversationManager = new ConversationManager();
         getRetainedData();
         //First, initialize the constants from SharedPreferences.
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
@@ -135,8 +136,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         monkeyFragmentManager = new MonkeyFragmentManager(this);
         monkeyFragmentManager.setConversationsTitle(getResources().getString(R.string.app_name));
         monkeyFragmentManager.setContentLayout(savedInstanceState);
-
-        conversationManager = new ConversationManager();
 
         asyncDBHandler = new AsyncDBHandler();
     }
@@ -973,7 +972,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online) {
-        if(monkeyFragmentManager!=null) {
+        if(monkeyFragmentManager!=null && monkeyChatFragment!=null) {
             String subtitle = isOnline? "Online":"";
             long lastSeenValue = System.currentTimeMillis();
             boolean isGroupConversation = senderId.contains("G:");
@@ -982,7 +981,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     lastSeenValue = 0L;
                 else
                     lastSeenValue = Long.valueOf(lastSeen);
-                subtitle = "Last seen: "+Utils.Companion.getFormattedDay(lastSeenValue * 1000, this);
+                subtitle = "Last seen: "+Utils.Companion.getFormattedDate(lastSeenValue * 1000, this);
             }
             else if(isGroupConversation){
                 int membersOnline = members_online.split(",").length;

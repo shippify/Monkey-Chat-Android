@@ -84,8 +84,13 @@ public interface DarkStarListener {
      * @param reason
      */
     public void disconnected(boolean graceful, String reason);
-    
-    
+
+    /**
+     * Callback - called when server disconnect you by inactivity
+     *
+     */
+    public void disconnectedBySocket();
+
     //call-backs related to ClientChannel
 
     /**

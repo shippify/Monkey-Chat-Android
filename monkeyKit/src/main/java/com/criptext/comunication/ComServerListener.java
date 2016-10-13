@@ -29,6 +29,9 @@ public class ComServerListener implements DarkStarListener
 		//Log.d("ComServerListener - disconnected", "arg0:"+" arg1: "+"ComMessageProtocol.FAILLOGGINMSGDISCONECT: "+ComMessageProtocol.FAILLOGGINMSG);
 		this.proxy.handleEvent(ComMessageProtocol.FAILLOGGINMSGDISCONECT);	
 	}
+    public void disconnectedBySocket(){
+        this.proxy.disconnected();
+    }
 
 	public void joinedChannel(String arg0) {
 		//Log.d("ComServerListener - joinedChannel", "arg0: "+ arg0);

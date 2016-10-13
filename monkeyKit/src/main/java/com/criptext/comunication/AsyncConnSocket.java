@@ -616,11 +616,11 @@ public class AsyncConnSocket implements ComServerDelegate{
         msg.obj = remote;
         mainMessageHandler.sendMessage(msg);
 	}
-	@Override
+
+    @Override
 	public void disconnected(){
 		if(socketStatus != Status.desconectado && socketStatus != Status.reconectando)
 			initConnection();
-
 	}
 
 	/*****************************/
