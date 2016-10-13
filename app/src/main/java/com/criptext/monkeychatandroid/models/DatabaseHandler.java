@@ -1,6 +1,7 @@
 package com.criptext.monkeychatandroid.models;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.activeandroid.ActiveAndroid;
 import com.activeandroid.query.Delete;
@@ -9,10 +10,17 @@ import com.activeandroid.query.Select;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
+import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by daniel on 4/26/16.
@@ -37,32 +45,45 @@ public class DatabaseHandler {
         new SaveModelTask().execute(messageItem);
     }
 
-    public static void saveMessageBatch(ArrayList<MOKMessage> messages, Context context,
+    public static void saveMessageBatch(HashMap<String, List<MOKMessage>> conversations, Context context,
                                         String userSession, Runnable runnable) {
 
         ActiveAndroid.beginTransaction();
         try {
-            for(int i = messages.size() - 1; i > -1; i--){
-                MOKMessage message = messages.get(i);
-                //Sometimes the acknowledge get lost for network reasons. So thanks to your own messages arrive in
-                //the sync response you can verify that the message is already sent using the old_id param.
-                boolean existOldMessage = false;
-                if(message.getProps()!=null && message.getProps().has("old_id")) {
-                    MessageItem oldMessage = getMessageById(message.getProps().get("old_id").getAsString());
-                    if(oldMessage!=null){
-                        //TODO NOTIFY SOMEHOW A ONACKNOWLEDGE RECEIVED
-                        existOldMessage = true;
+            Set<Map.Entry<String, List<MOKMessage>>> set = conversations.entrySet();
+            Iterator<Map.Entry<String, List<MOKMessage>>> setIterator = set.iterator();
+            while(setIterator.hasNext()) { //iterate every conversation
+
+                Map.Entry<String, List<MOKMessage>> entry = setIterator.next();
+                List<MOKMessage> messages = entry.getValue();
+                Iterator<MOKMessage> iterator = messages.iterator();
+
+                while (iterator.hasNext()) { //iterate every message
+                    MOKMessage message = iterator.next();
+                    //Sometimes the acknowledge get lost for network reasons. So thanks to your own messages arrive in
+                    //the sync response you can verify that the message is already sent using the old_id param.
+                    boolean existOldMessage = false;
+                    if(message.getProps()!=null && message.getProps().has("old_id")) {
+                        MessageItem oldMessage = getMessageById(message.getProps().get("old_id").getAsString());
+                        if(oldMessage!=null){
+                            //TODO NOTIFY SOMEHOW A ONACKNOWLEDGE RECEIVED
+                            existOldMessage = true;
+                        }
+                    }
+                    //We verify if message doesn't exist. If the message exists we remove it from the original
+                    //list to avoid sending to the UI.
+                    if(!existMessage(message.getMessage_id()) && !existOldMessage){
+                        MessageItem messageItem = createMessage(message, context, userSession, !message.isMyOwnMessage(userSession));
+                        messageItem.save();
+                    } else {
+                        iterator.remove();
+                        if(messages.isEmpty()) {
+                            setIterator.remove();
+                        }
                     }
                 }
-                //We verify if message doesn't exist. If the message exists we remove it from the original
-                //list to avoid sending to the UI.
-                if(!existMessage(message.getMessage_id()) && !existOldMessage){
-                    MessageItem messageItem = createMessage(message, context, userSession, !message.isMyOwnMessage(userSession));
-                    messageItem.save();
-                } else
-                    messages.remove(i);
-                //TODO VALIDATE IF CONVERSATION DOESN'T EXIST AND CREATE IT
             }
+
             ActiveAndroid.setTransactionSuccessful();
         }
         finally {
@@ -163,6 +184,10 @@ public class DatabaseHandler {
         }
     }
 
+    public static void updateConversations(HashMap<String, ConversationTransaction> map) {
+        new UpdateConversationsTask().execute(map);
+    }
+
     public static void markMessagesAsError(final ArrayList<MOKMessage> errorMessages) {
 
         ActiveAndroid.beginTransaction();
@@ -241,6 +266,54 @@ public class DatabaseHandler {
 
     public static void deleteConversation(String conversationId){
         new Delete().from(ConversationItem.class).where("idConv = ?", conversationId).execute();
+    }
+
+    public static String getSecondaryTextByMessageType(MonkeyItem monkeyItem){
+        if(monkeyItem == null)
+            return "Write to Contact";
+        switch (MonkeyItem.MonkeyItemType.values()[monkeyItem.getMessageType()]) {
+            case audio:
+                return "Audio";
+            case photo:
+                return "Photo";
+            default:
+                return monkeyItem.getMessageText();
+        }
+    }
+
+    public static ConversationTransaction newDeletedMsgsTransaction(final MessageItem newLastItem,
+                                                                    final int newMessagesChange) {
+        return new ConversationTransaction() {
+            @Override
+            public void updateConversation(@NotNull MonkeyConversation conversation) {
+                ConversationItem newConversationItem = (ConversationItem)conversation;
+                newConversationItem.setSecondaryText(getSecondaryTextByMessageType(newLastItem));
+                MonkeyConversation.ConversationStatus newStatus = MonkeyConversation.ConversationStatus.empty;
+                if(newLastItem != null) {
+                    if(newLastItem.isIncomingMessage())
+                        newStatus = MonkeyConversation.ConversationStatus.receivedMessage;
+                    else if (newLastItem.getMessageTimestampOrder() <= newConversationItem.lastRead
+                            && !newConversationItem.isGroup())
+                        newStatus = MonkeyConversation.ConversationStatus.sentMessageRead;
+                    else
+                        newStatus = MonkeyConversation.ConversationStatus.deliveredMessage;
+                }
+
+                Log.d("DeleteMessages", "add " + newConversationItem.getTotalNewMessages() + " + " +
+                    newMessagesChange);
+                newConversationItem.setTotalNewMessage(Math.max(0 , newConversationItem.getTotalNewMessages()
+                        + newMessagesChange));
+                newConversationItem.setStatus(newStatus.ordinal());
+                Log.d("DeleteMessages", "totalNew messages " + newConversationItem.getTotalNewMessages());
+
+                if(newLastItem != null) {
+                    long currentTimestamp = newLastItem.getMessageTimestampOrder();
+                    newConversationItem.setDatetime(currentTimestamp > -1 ? currentTimestamp
+                            : conversation.getDatetime());
+                }
+
+            }
+        };
     }
 
 }

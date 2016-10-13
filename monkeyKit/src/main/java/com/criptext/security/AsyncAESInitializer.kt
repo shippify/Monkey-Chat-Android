@@ -48,21 +48,16 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
             if(!isSyncService) //get pending messages if this service does more than just sync
                 pendingMessages = PendingMessageStore.retrieve(appContextRef.get())
             //get the last sync timestamp from shared prefs
-            val lastSync = KeyStoreCriptext.getLastSync(appContextRef.get())
+            var lastSync = KeyStoreCriptext.getLastSync(appContextRef.get())
             //send sync
             val httpSync = HttpSync.newInstance(appContextRef.get(), cData)
             if(httpSync != null){
-                Log.d("SocketService", "get batch since $lastSync")
-                val batch = httpSync.getBatch(lastSync, 100)
-                Log.d("SocketService", "got batch size: ${batch.size}")
-                val last = if(batch.isNotEmpty()) batch.last() else null
-                if(last != null) //if sync successful update lastSync
-                    KeyStoreCriptext.setLastSync(appContextRef.get(), last.datetime.toLong())
-
-                return InitializerResult(pendingMessages, httpSync.aesUtil, batch, cData)
-
+                val response = httpSync.execute(lastSync, 50)
+                response.newTimestamp = Math.max(response.newTimestamp, lastSync)
+                return InitializerResult(pendingMessages, httpSync.aesUtil, response, cData)
             }
-            return InitializerResult(pendingMessages, null, listOf(), cData)
+            return InitializerResult(pendingMessages, null,
+                    HttpSync.SyncData(cData.monkeyId, null), cData)
     }
 
     override fun onPostExecute(result: InitializerResult?) {
@@ -70,11 +65,11 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
         val messages = result!!.pendingMessages
         if(messages != null && messages.isNotEmpty())
             service.addPendingMessages(messages)
-        service?.startSocketConnection(result.util!!, result.clientData, result.batch)
+        service?.startSocketConnection(result.util!!, result.clientData, result.syncResp)
     }
 
     data class InitializerResult(val pendingMessages: List<JsonObject>?, val util: AESUtil?,
-                                 val batch: List<MOKMessage>, val clientData: ClientData)
+                                 val syncResp: HttpSync.SyncData, val clientData: ClientData)
 
 
 }

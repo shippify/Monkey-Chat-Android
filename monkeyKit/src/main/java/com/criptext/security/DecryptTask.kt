@@ -8,6 +8,7 @@ import com.criptext.comunication.CBTypes
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
 import java.lang.ref.WeakReference
+import javax.crypto.BadPaddingException
 
 /**
  * Created by gesuwall on 6/6/16.
@@ -46,6 +47,9 @@ class DecryptTask(service: MonkeyKitSocketService): AsyncTask<EncryptedMsg, MOKM
                         message.msg = String(Base64.decode(message.msg.toByteArray(), Base64.NO_WRAP))
                 }
                 return true
+            } catch (ex: BadPaddingException){
+                Log.e("DecryptTask", "bad decrypt")
+                return false
             } catch (ex: Exception){
                 ex.printStackTrace()
                 return false

@@ -39,11 +39,12 @@ public class AQueryHttp {
     final AESUtil aesUtil;
     final AQuery aq;
     final BasicHandle handle;
+    final ClientData clientData;
 
 
     public AQueryHttp(MonkeyKitSocketService service, AESUtil aesUtil){
         serviceRef = new WeakReference(service);
-        ClientData clientData = service.getServiceClientData();
+        clientData = service.getServiceClientData();
         monkeyID = clientData.getMonkeyId();
         this.aesUtil = aesUtil;
         aq = new AQuery(service.getApplicationContext());

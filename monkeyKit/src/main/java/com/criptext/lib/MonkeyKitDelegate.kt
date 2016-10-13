@@ -1,14 +1,11 @@
 package com.criptext.lib
 
-import com.criptext.comunication.MOKConversation;
+import com.criptext.comunication.*
+import com.google.gson.JsonObject
+
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MOKUser;
-import com.google.gson.JsonObject;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.util.ArrayList;
+import java.util.*
 
 interface MonkeyKitDelegate {
 
@@ -205,10 +202,10 @@ interface MonkeyKitDelegate {
      * Despues de ejecutar un sync o un get, MonkeyKit recibe todos los mensajes que le debieron haber
      * llegado mientras estaba desconectado. En este callback se reciben todos esos mensajes tras
      * guardarlos en la base de datos. La implementacion de este metodo debe de actualizar las conversaciones
-     * que tienen nuevos mensajes
-     * @param messages La lista de mensajes recibidos.
-     */
-    fun onMessageBatchReady(messages: ArrayList<MOKMessage>)
+     SyncComplete nuevos menLists
+    */
+     fun onSyncComplete(messages: HashMap<String, MutableList<MOKMessage>>,
+                        notifications: List<MOKNotification>, deletes: HashMap<String, List<MOKDelete>>)
 
     /**
      * Al recibir una notificacion, MonkeyKit ejecuta este callback. La implementacion de este metodo

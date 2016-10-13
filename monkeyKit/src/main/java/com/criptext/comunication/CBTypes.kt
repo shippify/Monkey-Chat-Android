@@ -8,7 +8,7 @@ enum class CBTypes {
     onMessageReceived, onAcknowledgeReceived, onSocketConnected, onSocketDisconnected,
     onDeleteReceived, onCreateGroup, onRemoveGroupMember, onAddGroupMember, onGetUserInfo, onGetUsersInfo,
     onGetGroupInfo, onGetConversations, onDeleteConversation, onGetConversationMessages, onFileDownloadFinished,
-    onUpdateUserData, onUpdateGroupData, onContactOpenMyConversation, onNotificationReceived, onMessageBatchReady,
+    onUpdateUserData, onUpdateGroupData, onContactOpenMyConversation, onNotificationReceived, onSyncComplete,
     onMessageFailDecrypt, onGroupAdded, onGroupNewMember, onGroupRemovedMember, onGroupsRecover, onFileFailsUpload,
     onConversationOpenResponse, onConnectionRefused
 }

@@ -174,8 +174,9 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * This method gets called by the Async Intializer on its PostExecute method.
      */
-    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, batch: List<MOKMessage>) {
+    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, syncResp: HttpSync.SyncData) {
         Log.d("SocketService", "start connection")
+        lastTimeSynced = Math.max(syncResp.newTimestamp, lastTimeSynced)
         clientData = cdata
         userManager = UserManager(this, aesUtil)
         groupManager = GroupManager(this, aesUtil)
@@ -185,12 +186,17 @@ abstract class MonkeyKitSocketService : Service() {
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
                 IntentFilter(MonkeyFileService.DOWNLOAD_ACTION))
         this.aesutil = aesUtil
+
+        //At this point initialization is complete. We are ready to receive and send messages
+        status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
+
+        if(syncResp.isNotEmpty()){
+            processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(syncResp.newMessages,
+                    syncResp.notifications, syncResp.deletes))
+        }
+
         startSocketConnection()
         startConnectivityBroadcastReceiver() //start connectivity service after client data is initialized
-
-        if(batch.isNotEmpty()){
-            processMessageFromHandler(CBTypes.onMessageBatchReady, arrayOf(ArrayList(batch)))
-        }
     }
 
     fun startSocketConnection() {
@@ -317,14 +323,11 @@ abstract class MonkeyKitSocketService : Service() {
                     })
             }
 
-            CBTypes.onMessageBatchReady -> {
-                val batch = info[0] as ArrayList<MOKMessage>;
+            CBTypes.onSyncComplete -> {
+                val batch = info[0] as HashMap<String, MutableList<MOKMessage>>;
                 storeMessageBatch(batch, Runnable {
-                    //Message batch received and stored, update lastTimeSynced with with the timestamp
-                    //that the server gave to the last message
-                    if(batch.isNotEmpty())
-                        lastTimeSynced = batch.last().datetime.toLong();
-                    delegate?.onMessageBatchReady(batch);
+                    delegate?.onSyncComplete(batch, info[1] as List<MOKNotification>,
+                            info[2] as HashMap<String, List<MOKDelete>>);
                     if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
                         ServiceTimeoutTask(this).execute()
                 });
@@ -931,9 +934,9 @@ abstract class MonkeyKitSocketService : Service() {
 
             if (isSocketConnected()) {
                 sendJsonThroughSocket(json)
-            } else{
+            } /*else{
                 Thread.dumpStack()
-            }
+            }*/
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -1096,7 +1099,9 @@ abstract class MonkeyKitSocketService : Service() {
      * @param messages
      * @param runnable Este runnable debe ejecutarse despues de guardar el batch de mensajes
      */
-    abstract fun storeMessageBatch(messages: ArrayList<MOKMessage>, runnable: Runnable);
+    abstract fun storeMessageBatch(conversationMessages: HashMap<String, MutableList<MOKMessage>>, runnable: Runnable);
+
+    //abstract fun syncDatabase(syncData: HttpSync.SyncData, runnable: Runnable);
 
     /**
      * Loads all credentials needed to initialize the service. This method will be called in
@@ -1121,7 +1126,7 @@ abstract class MonkeyKitSocketService : Service() {
                 return Integer.parseInt(prefs!!.getString("sport","1139"))
             }
 
-        val httpsURL = "https://monkey.criptext.com"
+        val httpsURL = "https://secure.criptext.com"
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
         var status = ServiceStatus.dead
 

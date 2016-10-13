@@ -13,6 +13,7 @@ import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MOKUser;
 import com.criptext.comunication.MessageTypes;
+import com.criptext.lib.KeyStoreCriptext;
 import com.criptext.security.AESUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -305,9 +306,17 @@ public class UserManager extends AQueryHttp {
                                                 || currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0)) {
 
                                             remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
-                                            if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0)
-                                                remote = asyncConnSocket.getKeysAndDecryptMOKMessage(remote, false);
-                                            else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
+                                            if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0) {
+                                                String existingKey = KeyStoreCriptext.getString(serviceRef.get(), remote.getSid());
+                                                String validKey = OpenConversationTask.Companion.attemptToDecrypt(remote, clientData,
+                                                        aesUtil, existingKey);
+                                                if(validKey != null && !validKey.equals(existingKey))
+                                                    KeyStoreCriptext.putString(serviceRef.get(),
+                                                            remote.getSid(), validKey);
+                                                else if(validKey == null)
+                                                    remote = null;
+
+                                            } else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
                                                 if(remote.getProps().get("encoding").getAsString().equals("base64"))
                                                     remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
                                             }
