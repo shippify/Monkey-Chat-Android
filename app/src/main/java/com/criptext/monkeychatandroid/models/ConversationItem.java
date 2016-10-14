@@ -6,6 +6,7 @@ import com.activeandroid.Model;
 import com.activeandroid.annotation.Column;
 import com.activeandroid.annotation.Table;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
+import com.criptext.monkeykitui.recycler.MonkeyInfo;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,7 +16,7 @@ import org.jetbrains.annotations.Nullable;
  */
 
 @Table(name = "ConversationItem")
-public class ConversationItem extends Model implements MonkeyConversation{
+public class ConversationItem extends Model implements MonkeyConversation, MonkeyInfo{
 
     @Column(name = "idConv", unique = true)
     private String idConv;
@@ -39,6 +40,8 @@ public class ConversationItem extends Model implements MonkeyConversation{
     public long lastRead;
     @Column(name = "lastOpen")
     public long lastOpen;
+    @Column(name = "admins")
+    public String admins;
 
     public ConversationItem(){
         super();
@@ -55,12 +58,11 @@ public class ConversationItem extends Model implements MonkeyConversation{
         this.isGroup = isGroup;
         this.groupMembers = groupMembers;
         this.avatarFilePath = avatarFilePath;
-
         if(status != ConversationStatus.moreConversations.ordinal())
             this.status = status;
         else
             throw new IllegalArgumentException("ConversationItem should never have moreConversations status");
-
+        this.admins = "";
         lastRead = 0;
         lastOpen = 0;
     }
@@ -75,6 +77,7 @@ public class ConversationItem extends Model implements MonkeyConversation{
         this.isGroup = conversation.isGroup();
         this.groupMembers = conversation.getGroupMembers();
         this.avatarFilePath = conversation.getAvatarFilePath();
+        this.admins = conversation.getAdmins();
         this.status = conversation.getStatus();
         if(status == ConversationStatus.moreConversations.ordinal())
             throw new IllegalArgumentException("ConversationItem should never have moreConversations status");
@@ -116,6 +119,10 @@ public class ConversationItem extends Model implements MonkeyConversation{
         if(status == ConversationStatus.moreConversations.ordinal())
             throw new IllegalArgumentException("ConversationItem should never have moreConversations status");
         this.status = status;
+    }
+
+    public void setAdmins(String admins) {
+        this.admins = admins;
     }
 
     @NotNull
@@ -166,5 +173,33 @@ public class ConversationItem extends Model implements MonkeyConversation{
     @Override
     public int getStatus() {
         return status;
+    }
+
+    public String getAdmins() {
+        return admins;
+    }
+
+    @NotNull
+    @Override
+    public String getAvatarUrl() {
+        return avatarFilePath;
+    }
+
+    @NotNull
+    @Override
+    public String getTitle() {
+        return name;
+    }
+
+    @NotNull
+    @Override
+    public String getSubtitle() {
+        return secondaryText;
+    }
+
+    @NotNull
+    @Override
+    public String getRightTitle() {
+        return "";
     }
 }

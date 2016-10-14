@@ -866,6 +866,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onGetGroupInfo(@NotNull MOKConversation mokConversation, @Nullable Exception e) {
         if(e==null){
             String convName = "Unknown group";
+            String admins = "";
             JsonObject userInfo = mokConversation.getInfo();
             if(userInfo!=null && userInfo.has("name"))
                 convName = userInfo.get("name").getAsString();
@@ -873,6 +874,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     convName, System.currentTimeMillis(), "Write to this group",
                     1, true, mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
                     mokConversation.getAvatarURL(), MonkeyConversation.ConversationStatus.empty.ordinal());
+            if(userInfo!=null && userInfo.has("admin")) {
+                admins = userInfo.get("admin").getAsString();
+                conversationItem.setAdmins(admins);
+            }
             if(messagesMap!=null && messagesMap.get(mokConversation.getConversationId())!=null){
                 MonkeyItem monkeyItem = new LinkedList<>(messagesMap.get(mokConversation.getConversationId())).getLast();
                 boolean isMyOwnMessage = monkeyItem.getSenderId().equals(myMonkeyID);
@@ -924,7 +929,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onGetUsersInfo(@NotNull ArrayList<MOKUser> mokUsers, @Nullable Exception e) {
         if(e==null && groupData!=null && monkeyChatFragment!=null) {
             groupData.setMembers(monkeyChatFragment.getConversationId(), mokUsers);
+            groupData.setAdmins(DatabaseHandler.getConversationById(monkeyChatFragment.getConversationId()).getAdmins());
+            groupData.setInfoList(myMonkeyID);
             monkeyChatFragment.reloadAllMessages();
+            if(monkeyInfoFragment != null){
+                monkeyInfoFragment.setInfo(groupData.getInfoList());
+            }
         }
     }
 
@@ -939,6 +949,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         ArrayList<MonkeyConversation> monkeyConversations = new ArrayList<>();
         for(MOKConversation mokConversation : conversations){
             String convName = "Unknown";
+            String admins = null;
             String secondaryText = "Write to this conversation";
             if(mokConversation.isGroup())
                 secondaryText = "Write to this group";
@@ -950,7 +961,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     mokConversation.getLastMessage()!=null?getSecondaryTextByMOkMessage(mokConversation.getLastMessage()):secondaryText,
                     mokConversation.getUnread(), mokConversation.isGroup(), mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
                     mokConversation.getAvatarURL(), MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
-
+            if(convInfo!=null && convInfo.has("admin")) {
+                admins = convInfo.get("admin").getAsString();
+                conversationItem.setAdmins(admins);
+            }
             if(mokConversation.getUnread()>0) {
                 conversationItem.status = MonkeyConversation.ConversationStatus.receivedMessage.ordinal();
             }
@@ -995,6 +1009,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online) {
         if(monkeyFragmentManager!=null && monkeyChatFragment!=null) {
             String subtitle = isOnline? "Online":"";
+
             long lastSeenValue = System.currentTimeMillis();
             boolean isGroupConversation = senderId.contains("G:");
             if(!isOnline){
@@ -1005,8 +1020,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 subtitle = "Last seen: "+Utils.Companion.getFormattedDate(lastSeenValue * 1000, this);
             }
             else if(isGroupConversation){
+                groupData.setMembersOnline(members_online);
                 int membersOnline = members_online.split(",").length;
                 subtitle = membersOnline + " " + (membersOnline>1?"members online":"member online");
+                groupData.setInfoList(myMonkeyID);
+                if(monkeyInfoFragment != null){
+                    monkeyInfoFragment.setInfo(groupData.getInfoList());
+                }
             }
             monkeyFragmentManager.setSubtitle(subtitle);
 
@@ -1310,8 +1330,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onClickToolbar(@NotNull String monkeyID, @NotNull String name, @NotNull String lastSeen, @NotNull String avatarURL) {
-        MonkeyInfoFragment infoFragment = MonkeyInfoFragment.Companion.newInfoInstance();
-        monkeyFragmentManager.setInfoFragment(infoFragment);
+        if(monkeyInfoFragment == null){
+            MonkeyInfoFragment infoFragment = MonkeyInfoFragment.Companion.newInfoInstance(monkeyChatFragment.getConversationId().contains("G:"));
+            monkeyFragmentManager.setInfoFragment(infoFragment);
+        }
     }
 
     @Override
@@ -1327,14 +1349,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Nullable
     @Override
     public ArrayList<MonkeyInfo> getInfo() {
-        ArrayList<MonkeyInfo> infoList = new ArrayList<>();
-        HashMap<String, MOKUser> users = groupData.getUsers();
-        for (Object value : users.values()){
-            MOKUser user = (MOKUser)value;
-            UserItem user1 = new UserItem(user.getMonkeyId(), user.getInfo().get("name").getAsString() , "admin", user.getAvatarURL(), "offline");
-            infoList.add(user1);
+        if(monkeyChatFragment.getConversationId().contains("G:")){
+            return groupData.getInfoList();
         }
+        Iterator it = conversationsList.iterator();
+        ArrayList<MonkeyInfo> infoList = new ArrayList<>();
+
+        while(it.hasNext()){
+            ConversationItem conversation = (ConversationItem)it.next();
+            if(conversation.getConvId().contains("G:") && conversation.getGroupMembers().contains(myMonkeyID)){
+                infoList.add(conversation);
+            }
+        }
+
         return infoList;
+
     }
 
 

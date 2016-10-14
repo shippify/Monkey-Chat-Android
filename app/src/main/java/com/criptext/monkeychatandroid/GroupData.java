@@ -5,6 +5,9 @@ import android.graphics.Color;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKUser;
 import com.criptext.lib.MKDelegateActivity;
+import com.criptext.monkeychatandroid.models.ConversationItem;
+import com.criptext.monkeychatandroid.models.UserItem;
+import com.criptext.monkeykitui.recycler.MonkeyInfo;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -23,6 +26,9 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
     private String membersIds;
     private HashMap<String, MOKUser> mokUserHashMap;
     private HashMap<String, Integer> userIndexHashMap;
+    ArrayList<MonkeyInfo> infoList;
+    private String membersOnline;
+    private String admins;
     private boolean askingUsers = false;
     private List<Integer> colorsForUsersInGroup;
     private int MAX_PARTICIPANTS = 50;
@@ -34,6 +40,8 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         this.delegate = act;
         mokUserHashMap = new HashMap<>();
         userIndexHashMap = new HashMap<>();
+        infoList = new ArrayList<>();
+        membersOnline = "";
         initColorsForGroup();
         //TODO GET MEMBERS FROM DB
         for(String memberId: membersIds.split(",")){
@@ -71,6 +79,22 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         return mokUserHashMap;
     }
 
+    public void setMembersOnline(String membersOnline){
+        this.membersOnline = membersOnline;
+    }
+
+    public String getMembersOnline(){
+        return membersOnline;
+    }
+
+    public void setAdmins(String admins){
+        this.admins = admins;
+    }
+
+    public String getAdmins(){
+        return admins;
+    }
+
     @NotNull
     @Override
     public String getMemberName(@NotNull String monkeyId) {
@@ -92,6 +116,33 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
                 indiceColor = indiceColor - MAX_PARTICIPANTS;
         }
         return colorsForUsersInGroup.get(indiceColor);
+    }
+
+    public void setInfoList(String myMonkeyId){
+        infoList.clear();
+        HashMap<String, MOKUser> users = this.getUsers();
+
+        for (Object value : users.values()){
+            MOKUser user = (MOKUser)value;
+            String connection = "Offline";
+            String tag = "";
+            if(this.getAdmins() != null && this.getAdmins().contains(user.getMonkeyId())){
+                tag = "Admin";
+            }
+            if(this.getMembersOnline() != null && this.getMembersOnline().contains(user.getMonkeyId())){
+                connection = "Online";
+            }else if(myMonkeyId != null && myMonkeyId.equals(user.getMonkeyId())){
+                connection = "Online";
+            }
+            UserItem user1 = new UserItem(user.getMonkeyId(), user.getInfo().has("name") ? user.getInfo().get("name").getAsString() : "Unknown",
+                    tag, user.getAvatarURL(), connection);
+            infoList.add(user1);
+        }
+
+    }
+
+    public ArrayList<MonkeyInfo> getInfoList(){
+        return infoList;
     }
 
     private void initColorsForGroup(){
