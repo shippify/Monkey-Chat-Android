@@ -1,5 +1,7 @@
 package com.criptext.monkeychatandroid.models;
 
+import android.util.Log;
+
 import com.activeandroid.Model;
 import com.activeandroid.annotation.Column;
 import com.activeandroid.annotation.Table;
@@ -53,12 +55,18 @@ public class ConversationItem extends Model implements MonkeyConversation{
         this.isGroup = isGroup;
         this.groupMembers = groupMembers;
         this.avatarFilePath = avatarFilePath;
-        this.status = status;
+
+        if(status != ConversationStatus.moreConversations.ordinal())
+            this.status = status;
+        else
+            throw new IllegalArgumentException("ConversationItem should never have moreConversations status");
+
         lastRead = 0;
         lastOpen = 0;
     }
 
     public ConversationItem(MonkeyConversation conversation){
+        super();
         this.idConv = conversation.getConvId();
         this.name = conversation.getName();
         this.datetime = conversation.getDatetime();
@@ -68,6 +76,8 @@ public class ConversationItem extends Model implements MonkeyConversation{
         this.groupMembers = conversation.getGroupMembers();
         this.avatarFilePath = conversation.getAvatarFilePath();
         this.status = conversation.getStatus();
+        if(status == ConversationStatus.moreConversations.ordinal())
+            throw new IllegalArgumentException("ConversationItem should never have moreConversations status");
     }
 
     public void setId(String idConv) {
@@ -103,6 +113,8 @@ public class ConversationItem extends Model implements MonkeyConversation{
     }
 
     public void setStatus(int status) {
+        if(status == ConversationStatus.moreConversations.ordinal())
+            throw new IllegalArgumentException("ConversationItem should never have moreConversations status");
         this.status = status;
     }
 

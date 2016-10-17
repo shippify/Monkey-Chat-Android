@@ -174,9 +174,9 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * This method gets called by the Async Intializer on its PostExecute method.
      */
-    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, syncResp: HttpSync.SyncData) {
+    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, lastSync: Long) {
         Log.d("SocketService", "start connection")
-        lastTimeSynced = Math.max(syncResp.newTimestamp, lastTimeSynced)
+        lastTimeSynced = lastSync
         clientData = cdata
         userManager = UserManager(this, aesUtil)
         groupManager = GroupManager(this, aesUtil)
@@ -187,13 +187,6 @@ abstract class MonkeyKitSocketService : Service() {
                 IntentFilter(MonkeyFileService.DOWNLOAD_ACTION))
         this.aesutil = aesUtil
 
-        //At this point initialization is complete. We are ready to receive and send messages
-        status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
-
-        if(syncResp.isNotEmpty()){
-            processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(syncResp.newMessages,
-                    syncResp.notifications, syncResp.deletes))
-        }
 
         startSocketConnection()
         startConnectivityBroadcastReceiver() //start connectivity service after client data is initialized
@@ -202,9 +195,6 @@ abstract class MonkeyKitSocketService : Service() {
     fun startSocketConnection() {
         if(status == ServiceStatus.dead)
             return //status should be equal to initializing, if dead dont do anything
-
-        //At this point initialization is complete. We are ready to receive and send messages
-        status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
 
         asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
         asyncConnSocket.conectSocket()
@@ -287,7 +277,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun processMessageFromHandler(method:CBTypes, info:Array<Any>) {
-        if(status < ServiceStatus.running)
+        if(status < ServiceStatus.initializing)
             return //There's no point in doing anything with the delegates if the service is dead.
 
         when (method) {
@@ -302,7 +292,7 @@ abstract class MonkeyKitSocketService : Service() {
                 resendPendingMessages()
                 playPendingActions()
                 delegate?.onSocketConnected()
-                //sendSync(lastTimeSynced)
+                sendSync(lastTimeSynced, 50)
             }
             CBTypes.onMessageReceived -> {
                 val message = info[0] as MOKMessage
@@ -324,10 +314,11 @@ abstract class MonkeyKitSocketService : Service() {
             }
 
             CBTypes.onSyncComplete -> {
-                val batch = info[0] as HashMap<String, MutableList<MOKMessage>>;
-                storeMessageBatch(batch, Runnable {
-                    delegate?.onSyncComplete(batch, info[1] as List<MOKNotification>,
-                            info[2] as HashMap<String, List<MOKDelete>>);
+                val batch = info[0] as HttpSync.SyncData;
+                syncDatabase(batch, Runnable {
+                    //At this point initialization is complete. We are ready to receive and send messages
+                    status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
+                    delegate?.onSyncComplete(batch);
                     if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
                         ServiceTimeoutTask(this).execute()
                 });
@@ -556,6 +547,10 @@ abstract class MonkeyKitSocketService : Service() {
 
     private fun sendJsonThroughSocket(json: JsonObject) {
         asyncConnSocket.sendMessage(json);
+    }
+
+    fun sendSync(since: Long, qty: Int) {
+        HttpSyncTask(this, since, qty).execute()
     }
 
     /**
@@ -1101,7 +1096,7 @@ abstract class MonkeyKitSocketService : Service() {
      */
     abstract fun storeMessageBatch(conversationMessages: HashMap<String, MutableList<MOKMessage>>, runnable: Runnable);
 
-    //abstract fun syncDatabase(syncData: HttpSync.SyncData, runnable: Runnable);
+    abstract fun syncDatabase(syncData: HttpSync.SyncData, runnable: Runnable);
 
     /**
      * Loads all credentials needed to initialize the service. This method will be called in

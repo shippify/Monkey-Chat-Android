@@ -2,15 +2,9 @@ package com.criptext.monkeychatandroid.models;
 
 import android.os.AsyncTask;
 
-import com.criptext.comunication.MOKDelete;
-import com.criptext.comunication.MOKMessage;
-import com.criptext.monkeykitui.conversation.MonkeyConversation;
-import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
-
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ThreadFactory;
 
 /**
  * Created by gesuwall on 9/20/16.
@@ -44,6 +38,22 @@ public class AsyncDBHandler {
         newTask.execute(params);
     }
 
+    public void getConversationsById(final FindConversationsTask.OnQueryReturnedListener listener, String... params) {
+        final FindConversationsTask newTask = new FindConversationsTask();
+        pendingTasks.add(newTask);
+        FindConversationsTask.OnQueryReturnedListener trueListener = new FindConversationsTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(HashMap<String, ConversationItem> result) {
+                pendingTasks.remove(newTask);
+                if (listener != null) {
+                    listener.onQueryReturned(result);
+                }
+            }
+        };
+        newTask.onQueryReturnedListener = trueListener;
+        newTask.execute(params);
+    }
+
     public void getMessageById(final FindMessageTask.OnQueryReturnedListener listener, String... params) {
         final FindMessageTask newTask = new FindMessageTask();
         pendingTasks.add(newTask);
@@ -60,16 +70,16 @@ public class AsyncDBHandler {
         newTask.execute(params);
     }
 
-    public void deleteMessages(HashMap<String, List<MOKMessage>> newMessages, HashMap<String,
-            List<MOKDelete>> deletes, final DeleteMessagesTask.OnQueryReturnedListener listener) {
-        final DeleteMessagesTask newTask = new DeleteMessagesTask(newMessages, deletes);
+    public void getConversationPage(final GetConversationPageTask.OnQueryReturnedListener listener,
+                                    int rowsPerPage, int pageNumber) {
+        final GetConversationPageTask newTask = new GetConversationPageTask(rowsPerPage, pageNumber);
         pendingTasks.add(newTask);
-        DeleteMessagesTask.OnQueryReturnedListener trueListener = new DeleteMessagesTask.OnQueryReturnedListener() {
+        GetConversationPageTask.OnQueryReturnedListener trueListener = new GetConversationPageTask.OnQueryReturnedListener() {
             @Override
-            public void onQueryReturned(HashMap<MonkeyConversation, ConversationTransaction> transactions) {
+            public void onQueryReturned(List<ConversationItem> conversations) {
                 pendingTasks.remove(newTask);
                 if (listener != null) {
-                    listener.onQueryReturned(transactions);
+                    listener.onQueryReturned(conversations);
                 }
             }
         };
@@ -78,9 +88,9 @@ public class AsyncDBHandler {
     }
 
     public void getMessagePage(final GetMessagePageTask.OnQueryReturnedListener listener,
-                               String myMonkeyId, String conversationId, int rowsPerPage, int pageNumber){
-        final GetMessagePageTask newTask = new GetMessagePageTask(myMonkeyId, conversationId,
-                rowsPerPage, pageNumber);
+                               String conversationId, int rowsPerPage, int pageOffset){
+        final GetMessagePageTask newTask = new GetMessagePageTask(conversationId,
+                rowsPerPage, pageOffset);
         pendingTasks.add(newTask);
         GetMessagePageTask.OnQueryReturnedListener trueListener = new GetMessagePageTask.OnQueryReturnedListener() {
             @Override
