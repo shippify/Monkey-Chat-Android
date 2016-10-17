@@ -125,6 +125,10 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
         this.admins = admins;
     }
 
+    public String getAdmins() {
+        return admins;
+    }
+
     @NotNull
     @Override
     public String getConvId() {
@@ -173,10 +177,6 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
     @Override
     public int getStatus() {
         return status;
-    }
-
-    public String getAdmins() {
-        return admins;
     }
 
     @NotNull

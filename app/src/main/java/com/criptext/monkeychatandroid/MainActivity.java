@@ -119,7 +119,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         getRetainedData();
         //First, initialize the constants from SharedPreferences.
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
@@ -1043,18 +1042,22 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         String conversationId = senderId.equals(myMonkeyID) ? recipientId : senderId;
         MessageItem message = DatabaseHandler.lastConversationMessage(conversationId);
+        MonkeyConversation.ConversationStatus status;
         int unreadCounter = 0;
 
         MonkeyConversationsFragment conversationsFragment = conversationManager.fragment;
-        MonkeyConversation.ConversationStatus status;
+        ConversationItem conversationItem = (ConversationItem) conversationsFragment.findConversationById(conversationId);
+
+        if(conversationItem == null){
+            return;
+        }
+
 
         if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationId)) {
-            //monkeyChatFragment.removeMonkeyItem(messageId);
+            monkeyChatFragment.removeMonkeyItem(messageId);
         }else{
             List<MonkeyItem> conversationMessages = messagesMap.get(conversationId);
             if(conversationMessages != null){
-                /*ConversationItem conversationItem = (ConversationItem) conversationsFragment.
-                        findConversationById(conversationId);
                 if(conversationItem!=null && conversationItem.getTotalNewMessages() > 0) {
                     if(conversationMessages.size() - MonkeyItem.Companion.findLastPositionById(messageId, conversationMessages) <= conversationItem.getTotalNewMessages()){
                         unreadCounter = conversationItem.getTotalNewMessages() - 1;
@@ -1063,16 +1066,23 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 int position = MonkeyItem.Companion.findLastPositionById(messageId, conversationMessages);
                 if(position > -1){
                     conversationMessages.remove(position);
-                }*/
+                }
             }
         }
 
         if(message != null && message.getMessageId().equals(messageId)){
             MessageItem lastMessage = DatabaseHandler.unsendMessage(messageId, conversationId);
-            /* THIS IS WRONG
+
+            if(lastMessage == null){
+                updateConversation(conversationItem.getConvId(), conversationItem.getConvId().contains("G:") ? "Write to this Group" : "Write to this Conversation",
+                        MonkeyConversation.ConversationStatus.receivedMessage, 0, conversationItem.getDatetime(), 0);
+                DatabaseHandler.deleteMessage(messageId);
+                return;
+            }
+
             status = lastMessage.isIncomingMessage() ?
                     MonkeyConversation.ConversationStatus.receivedMessage:
-            MonkeyConversation.ConversationStatus.deliveredMessage;
+                MonkeyConversation.ConversationStatus.deliveredMessage;
 
             if(status.equals(MonkeyConversation.ConversationStatus.deliveredMessage) &&
                     lastMessage.getMessageTimestamp() <= conversationItem.lastRead){
@@ -1080,7 +1090,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
             updateConversation(lastMessage.getConversationId(), getSecondaryTextByMessageType(lastMessage),
                     status, unreadCounter > 0 ? -1 : 0, lastMessage.getMessageTimestampOrder(), 0);
-                    */
+
             return;
         }else if(unreadCounter != 0){
             updateConversationBadge(conversationId, unreadCounter);
