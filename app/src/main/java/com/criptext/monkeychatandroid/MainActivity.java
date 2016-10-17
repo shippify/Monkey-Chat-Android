@@ -1045,8 +1045,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         MonkeyConversation.ConversationStatus status;
         int unreadCounter = 0;
 
-        MonkeyConversationsFragment conversationsFragment = conversationManager.fragment;
-        ConversationItem conversationItem = (ConversationItem) conversationsFragment.findConversationById(conversationId);
+        ConversationItem conversationItem = (ConversationItem) monkeyConversationsFragment.findConversationById(conversationId);
 
         if(conversationItem == null){
             return;
@@ -1088,7 +1087,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     lastMessage.getMessageTimestamp() <= conversationItem.lastRead){
                 status = MonkeyConversation.ConversationStatus.sentMessageRead;
             }
-            updateConversation(lastMessage.getConversationId(), getSecondaryTextByMessageType(lastMessage),
+            updateConversation(lastMessage.getConversationId(), MessageItem.getSecondaryTextByMessageType(lastMessage),
                     status, unreadCounter > 0 ? -1 : 0, lastMessage.getMessageTimestampOrder(), 0);
 
             return;
