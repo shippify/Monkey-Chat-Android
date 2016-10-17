@@ -112,7 +112,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        conversationManager = new ConversationManager();
         getRetainedData();
         //First, initialize the constants from SharedPreferences.
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
