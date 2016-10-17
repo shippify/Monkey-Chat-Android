@@ -1,12 +1,15 @@
 package com.criptext.monkeychatandroid;
 
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 
 import com.criptext.ClientData;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKMessage;
+import com.criptext.http.HttpSync;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
+import com.criptext.monkeychatandroid.models.SyncDatabaseTask;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -22,10 +25,9 @@ public class MyServiceClass extends MonkeyKitSocketService{
 
     @Override
     public void storeReceivedMessage(final MOKMessage message, final Runnable runnable) {
-
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        DatabaseHandler.saveIncomingMessage(DatabaseHandler.createMessage(message, this,
-                prefs.getString(MonkeyChat.MONKEY_ID, ""), true), runnable);
+        DatabaseHandler.saveIncomingMessage(DatabaseHandler.createMessage(message, getCacheDir().toString(),
+                prefs.getString(MonkeyChat.MONKEY_ID, "")), runnable);
 
     }
 
@@ -34,6 +36,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         DatabaseHandler.saveMessageBatch(messages, this, prefs.getString(MonkeyChat.MONKEY_ID, ""), runnable);
     }
+
 
     @NotNull
     @Override
@@ -56,5 +59,13 @@ public class MyServiceClass extends MonkeyKitSocketService{
     @Override
     public Class<?> getUploadServiceClass() {
         return MyFileUploadService.class;
+    }
+
+    @Override
+    public void syncDatabase(@NotNull HttpSync.SyncData syncData, @NotNull Runnable runnable) {
+        SyncDatabaseTask syncTask = new SyncDatabaseTask(syncData, runnable, clientData.getMonkeyId(),
+                getCacheDir().toString());
+        syncTask.execute();
+
     }
 }

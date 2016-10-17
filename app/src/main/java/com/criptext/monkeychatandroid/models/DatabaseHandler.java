@@ -73,7 +73,7 @@ public class DatabaseHandler {
                     //We verify if message doesn't exist. If the message exists we remove it from the original
                     //list to avoid sending to the UI.
                     if(!existMessage(message.getMessage_id()) && !existOldMessage){
-                        MessageItem messageItem = createMessage(message, context, userSession, !message.isMyOwnMessage(userSession));
+                        MessageItem messageItem = null;
                         messageItem.save();
                     } else {
                         iterator.remove();
@@ -111,10 +111,10 @@ public class DatabaseHandler {
     }
 
     public static boolean existMessage(String id) {
-        return new Select().from(MessageItem.class).where("messageId = ?", id).executeSingle() != null;
+        return getMessageById(id) != null;
     }
 
-    public static MessageItem createMessage(MOKMessage message, Context context, String myMonkeyId, boolean isIncoming){
+    public static MessageItem createMessage(MOKMessage message, String pathToMessagesDir, String myMonkeyId){
 
         MonkeyItem.MonkeyItemType type = MonkeyItem.MonkeyItemType.text;
         if (message.isMediaType()) {
@@ -128,6 +128,7 @@ public class DatabaseHandler {
             }
         }
 
+        boolean isIncoming = !message.isMyOwnMessage(myMonkeyId);
         MessageItem item = new MessageItem(message.getSenderId(), message.getConversationID(myMonkeyId),
                 message.getMessage_id(), message.getMsg(), Long.parseLong(message.getDatetime()),
                 message.getDatetimeorder(), isIncoming, type);
@@ -147,25 +148,33 @@ public class DatabaseHandler {
                 if(message.getParams().has("length"))
                     item.setAudioDuration(message.getParams().get("length").getAsLong());
                 if(!item.getMessageText().contains("/"))
-                    item.setMessageContent(context.getCacheDir()+"/"+message.getMsg());
+                    item.setMessageContent(pathToMessagesDir + "/" + message.getMsg());
                 break;
             case photo:
                 if(!item.getMessageText().contains("/"))
-                    item.setMessageContent(context.getCacheDir()+"/"+message.getMsg());
+                    item.setMessageContent(pathToMessagesDir + "/" + message.getMsg());
                 break;
         }
 
         return item;
     }
 
-    public static List<MessageItem> getMessages(String myMonkeyId, String conversationId, int rowsPerPage, int pageNumber){
+    public static List<MessageItem> getMessages(String conversationId, int rowsPerPage, int pageOffset){
             return new Select()
                     .from(MessageItem.class)
                     .where("conversationId = ?", conversationId)
                     .limit(rowsPerPage)
-                    .offset(pageNumber * rowsPerPage)
+                    .offset(pageOffset)
                     .orderBy("timestampOrder DESC")
                     .execute();
+    }
+
+    public static MessageItem getLastMessage(String conversationId) {
+        return new Select()
+                .from(MessageItem.class)
+                .where("conversationId = ?", conversationId)
+                .orderBy("timestampOrder DESC")
+                .executeSingle();
     }
 
     public static void deleteAll(){
@@ -243,6 +252,16 @@ public class DatabaseHandler {
         return new Select().from(ConversationItem.class).where("idConv = ?", id).executeSingle();
     }
 
+    public static HashMap<String, ConversationItem> getConversationsById(String... ids){
+        HashMap<String, ConversationItem> result = new HashMap<>();
+        for(String id : ids) {
+            ConversationItem conversation = getConversationById(id);
+            if(conversation != null)
+                result.put(id, conversation);
+        }
+        return result;
+    }
+
     public static void updateConversationWithSentMessage(ConversationItem conversation,
                 final String secondaryText, final MonkeyConversation.ConversationStatus status,
                                     final int unread){
@@ -257,6 +276,45 @@ public class DatabaseHandler {
 
     public static void updateConversation(ConversationItem conversation){
         new SaveModelTask().execute(conversation);
+    }
+
+
+    public static void syncConversation(String id){
+        ConversationItem conversation = getConversationById(id);
+        if(conversation != null) {
+            List<MessageItem> unreadMessages = new Select().from(MessageItem.class)
+                    .where("conversationId = ?", id)
+                    .where("isIncoming = ?", true)
+                    .where("timestampOrder > ?", conversation.lastOpen).execute();
+            int unreadMessageCount = unreadMessages.size();
+            conversation.setTotalNewMessage(unreadMessageCount);
+            MessageItem lastMessage;
+            if(unreadMessageCount > 0) {
+                lastMessage = unreadMessages.get(unreadMessageCount - 1);
+            } else {
+                lastMessage = DatabaseHandler.getLastMessage(id);
+            }
+
+            int newStatus = MonkeyConversation.ConversationStatus.empty.ordinal();
+            if(lastMessage == null) {
+                String secondaryText = "Write to this conversation";
+                if(conversation.isGroup())
+                    secondaryText = "Write to this group";
+                conversation.setSecondaryText(secondaryText);
+            } else {
+                conversation.setSecondaryText(MessageItem.getSecondaryTextByMessageType(lastMessage));
+                conversation.setDatetime(lastMessage.getMessageTimestampOrder());
+
+                if (lastMessage.isIncomingMessage())
+                    newStatus = MonkeyConversation.ConversationStatus.receivedMessage.ordinal();
+                else if (lastMessage.getMessageTimestampOrder() <= conversation.lastRead)
+                    newStatus = MonkeyConversation.ConversationStatus.sentMessageRead.ordinal();
+                else
+                    newStatus = MonkeyConversation.ConversationStatus.deliveredMessage.ordinal();
+            }
+            conversation.setStatus(newStatus);
+            conversation.save();
+        }
     }
 
     public static void updateConversationNewMessagesCount(ConversationItem conversationItem, int newMessages){
@@ -281,36 +339,15 @@ public class DatabaseHandler {
         }
     }
 
-    public static ConversationTransaction newDeletedMsgsTransaction(final MessageItem newLastItem,
-                                                                    final int newMessagesChange) {
+    public static ConversationTransaction newCopyTransaction(final ConversationItem itemToCopy) {
         return new ConversationTransaction() {
             @Override
             public void updateConversation(@NotNull MonkeyConversation conversation) {
                 ConversationItem newConversationItem = (ConversationItem)conversation;
-                newConversationItem.setSecondaryText(getSecondaryTextByMessageType(newLastItem));
-                MonkeyConversation.ConversationStatus newStatus = MonkeyConversation.ConversationStatus.empty;
-                if(newLastItem != null) {
-                    if(newLastItem.isIncomingMessage())
-                        newStatus = MonkeyConversation.ConversationStatus.receivedMessage;
-                    else if (newLastItem.getMessageTimestampOrder() <= newConversationItem.lastRead
-                            && !newConversationItem.isGroup())
-                        newStatus = MonkeyConversation.ConversationStatus.sentMessageRead;
-                    else
-                        newStatus = MonkeyConversation.ConversationStatus.deliveredMessage;
-                }
-
-                Log.d("DeleteMessages", "add " + newConversationItem.getTotalNewMessages() + " + " +
-                    newMessagesChange);
-                newConversationItem.setTotalNewMessage(Math.max(0 , newConversationItem.getTotalNewMessages()
-                        + newMessagesChange));
-                newConversationItem.setStatus(newStatus.ordinal());
-                Log.d("DeleteMessages", "totalNew messages " + newConversationItem.getTotalNewMessages());
-
-                if(newLastItem != null) {
-                    long currentTimestamp = newLastItem.getMessageTimestampOrder();
-                    newConversationItem.setDatetime(currentTimestamp > -1 ? currentTimestamp
-                            : conversation.getDatetime());
-                }
+                newConversationItem.setDatetime(itemToCopy.getDatetime());
+                newConversationItem.setSecondaryText(itemToCopy.getSecondaryText());
+                newConversationItem.setTotalNewMessage(itemToCopy.getTotalNewMessages());
+                newConversationItem.setStatus(itemToCopy.getStatus());
 
             }
         };

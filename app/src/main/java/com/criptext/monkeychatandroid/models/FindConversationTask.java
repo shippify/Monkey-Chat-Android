@@ -26,6 +26,11 @@ public class FindConversationTask extends AsyncTask<String, Void, ConversationIt
     }
 
     @Override
+    protected void onCancelled() {
+        onQueryReturnedListener = null;
+    }
+
+    @Override
     protected void onPostExecute(ConversationItem conversationItem) {
         if(onQueryReturnedListener != null)
             onQueryReturnedListener.onQueryReturned(conversationItem);

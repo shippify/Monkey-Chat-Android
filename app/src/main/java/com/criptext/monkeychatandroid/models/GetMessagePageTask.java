@@ -8,18 +8,16 @@ import java.util.List;
  * Created by gesuwall on 9/20/16.
  */
 public class GetMessagePageTask extends AsyncTask<Void, Void, List<MessageItem>>{
-    private String myMonkeyId;
     private String conversationId;
     private int rowsPerPage;
-    private int pageNumber;
+    private int pageOffset;
 
     public OnQueryReturnedListener onQueryReturnedListener = null;
 
-    public GetMessagePageTask(String myMonkeyId, String conversationId, int rowsPerPage, int pageNumber){
-        this.myMonkeyId = myMonkeyId;
+    public GetMessagePageTask(String conversationId, int rowsPerPage, int pageOffset){
         this.conversationId = conversationId;
         this.rowsPerPage = rowsPerPage;
-        this.pageNumber = pageNumber;
+        this.pageOffset = pageOffset;
     }
     @Override
     protected List<MessageItem> doInBackground(Void... params) {
@@ -28,7 +26,7 @@ public class GetMessagePageTask extends AsyncTask<Void, Void, List<MessageItem>>
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        return DatabaseHandler.getMessages(myMonkeyId, conversationId, rowsPerPage, pageNumber);
+        return DatabaseHandler.getMessages(conversationId, rowsPerPage, pageOffset);
     }
 
     @Override

@@ -198,4 +198,15 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
         else
             return 0;
     }
+
+    public static String getSecondaryTextByMessageType(MonkeyItem monkeyItem){
+        switch (MonkeyItem.MonkeyItemType.values()[monkeyItem.getMessageType()]) {
+            case audio:
+                return "Audio";
+            case photo:
+                return "Photo";
+            default:
+                return monkeyItem.getMessageText();
+        }
+    }
 }

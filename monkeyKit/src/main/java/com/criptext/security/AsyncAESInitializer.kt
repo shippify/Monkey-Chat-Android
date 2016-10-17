@@ -50,14 +50,8 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
             //get the last sync timestamp from shared prefs
             var lastSync = KeyStoreCriptext.getLastSync(appContextRef.get())
             //send sync
-            val httpSync = HttpSync.newInstance(appContextRef.get(), cData)
-            if(httpSync != null){
-                val response = httpSync.execute(lastSync, 50)
-                response.newTimestamp = Math.max(response.newTimestamp, lastSync)
-                return InitializerResult(pendingMessages, httpSync.aesUtil, response, cData)
-            }
-            return InitializerResult(pendingMessages, null,
-                    HttpSync.SyncData(cData.monkeyId, null), cData)
+            return InitializerResult(pendingMessages, AESUtil(appContextRef.get(), clientData.monkeyId),
+                    lastSync, cData)
     }
 
     override fun onPostExecute(result: InitializerResult?) {
@@ -65,11 +59,11 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
         val messages = result!!.pendingMessages
         if(messages != null && messages.isNotEmpty())
             service.addPendingMessages(messages)
-        service?.startSocketConnection(result.util!!, result.clientData, result.syncResp)
+        service?.startSocketConnection(result.util!!, result.clientData, result.lastSync)
     }
 
     data class InitializerResult(val pendingMessages: List<JsonObject>?, val util: AESUtil?,
-                                 val syncResp: HttpSync.SyncData, val clientData: ClientData)
+                                 val lastSync: Long, val clientData: ClientData)
 
 
 }
