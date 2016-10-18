@@ -800,7 +800,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             DatabaseHandler.updateConversation(activeConversationItem);
             if(monkeyConversationsFragment != null)
                 monkeyConversationsFragment.updateConversation(activeConversationItem);
-        } else throw new IllegalStateException("Tried to update the lastOpen of a non-active conversation");
+        } else {
+            //throw new IllegalStateException("Tried to update the lastOpen of a non-active conversation");
+            IllegalStateException exception = new IllegalStateException("Tried to update the lastOpen of a non-active conversation");
+            exception.printStackTrace();
+        }
     }
 
     @Override
@@ -828,6 +832,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(activeConversationNeedsUpdate)
             syncChatFragment(!deletesMap.containsKey(activeConversationId),
                     newMessagesMap.get(activeConversationId).size());
+
     }
 
     @Override
@@ -1011,14 +1016,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
             long lastSeenValue = System.currentTimeMillis();
             boolean isGroupConversation = senderId.contains("G:");
-            if(!isOnline){
-                if(lastSeen.isEmpty())
-                    lastSeenValue = 0L;
-                else
-                    lastSeenValue = Long.valueOf(lastSeen);
-                subtitle = "Last seen: "+Utils.Companion.getFormattedDate(lastSeenValue * 1000, this);
-            }
-            else if(isGroupConversation){
+            if(isGroupConversation){
                 groupData.setMembersOnline(members_online);
                 int membersOnline = members_online.split(",").length;
                 subtitle = membersOnline + " " + (membersOnline>1?"members online":"member online");
@@ -1026,6 +1024,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 if(monkeyInfoFragment != null){
                     monkeyInfoFragment.setInfo(groupData.getInfoList());
                 }
+            }
+            else if(!isOnline){
+                if(lastSeen.isEmpty())
+                    lastSeenValue = 0L;
+                else
+                    lastSeenValue = Long.valueOf(lastSeen);
+                subtitle = "Last seen: "+Utils.Companion.getFormattedDate(lastSeenValue * 1000, this);
             }
             monkeyFragmentManager.setSubtitle(subtitle);
 

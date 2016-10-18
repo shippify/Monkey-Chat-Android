@@ -91,6 +91,10 @@
             android:name="AA_MODELS"
             android:value="com.criptext.monkeychatandroid.models.MessageItem, com.criptext.monkeychatandroid.models.ConversationItem" />
 
+        <meta-data
+            android:name="io.fabric.ApiKey"
+            android:value="3b4ddc55293ff0e9bf22a8927dc076a5ac0b17ec" />
     </application>
 
+    <uses-permission android:name="android.permission.INTERNET" />
 </manifest>
