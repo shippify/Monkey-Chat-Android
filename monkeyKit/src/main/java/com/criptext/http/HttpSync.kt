@@ -169,7 +169,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
                 val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, false);
                 deletes.add(MOKDelete(remote))
             }
-            else throw IllegalArgumentException("HttpSync response included a JSON item that is neither Message, Notification, nor Delete")
+            //else throw IllegalArgumentException("HttpSync response included a JSON item that is neither Message, Notification, nor Delete")
         }
 
         return SyncResponse(messages, notifications, deletes);

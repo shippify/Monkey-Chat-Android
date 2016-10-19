@@ -1209,6 +1209,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         monkeyChatFragment = chatFragment;
     }
 
+    @Override
+    public void deleteChatFragment(@Nullable MonkeyChatFragment chatFragment) {
+        if(monkeyChatFragment != null && monkeyChatFragment == chatFragment ){
+            monkeyChatFragment = null;
+        }
+    }
+
     @NotNull
     @Override
     public List<MonkeyItem> getInitialMessages(String conversationId) {
@@ -1344,9 +1351,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onClickToolbar(@NotNull String monkeyID, @NotNull String name, @NotNull String lastSeen, @NotNull String avatarURL) {
+    public void onClickToolbar(@NotNull String monkeyID, @NotNull String name, @NotNull String lastSeen, @NotNull String avatarURL){
         if(monkeyInfoFragment == null){
-            MonkeyInfoFragment infoFragment = MonkeyInfoFragment.Companion.newInfoInstance(monkeyChatFragment.getConversationId().contains("G:"));
+            MonkeyInfoFragment infoFragment = MonkeyInfoFragment.Companion.newInfoInstance(monkeyChatFragment.getConversationId(), monkeyChatFragment.getConversationId().contains("G:"));
             monkeyFragmentManager.setInfoFragment(infoFragment);
         }
     }
@@ -1363,7 +1370,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Nullable
     @Override
-    public ArrayList<MonkeyInfo> getInfo() {
+    public ArrayList<MonkeyInfo> getInfo(String conversationId) {
         if(monkeyChatFragment.getConversationId().contains("G:")){
             return groupData.getInfoList();
         }
@@ -1372,7 +1379,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         while(it.hasNext()){
             ConversationItem conversation = (ConversationItem)it.next();
-            if(conversation.getConvId().contains("G:") && conversation.getGroupMembers().contains(myMonkeyID)){
+            if(conversation.getConvId().contains("G:") && conversation.getGroupMembers().contains(myMonkeyID) && conversation.getGroupMembers().contains(conversationId)){
                 infoList.add(conversation);
             }
         }
@@ -1381,9 +1388,86 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     }
 
+    @Override
+    public void onInfoItemClick(@NotNull MonkeyInfo infoItem) {
+        if(infoItem.getInfoId().contains("G:")){
+            activeConversationItem = (ConversationItem) infoItem;
+            final ConversationItem conversation = (ConversationItem) infoItem;
+            List<MonkeyItem> messages = messagesMap.get(conversation.getConvId());
+            if(messages!=null && !messages.isEmpty()){
+                startChatFromInfo(conversation, false);
+            }else{
+                //Get initial messages from DB
+                asyncDBHandler.getMessagePage(new GetMessagePageTask.OnQueryReturnedListener() {
+                    @Override
+                    public void onQueryReturned(List<MessageItem> messageItems) {
+                        messagesMap.put(conversation.getConvId(), new ArrayList<MonkeyItem>(messageItems));
+                        startChatFromInfo(conversation, false);
+                    }
+                }, conversation.getConvId(), MESS_PERPAGE, 0);
+            }
+        }else{
+            ArrayList<MonkeyConversation> conversations = new ArrayList<>(conversationsList);
+            ConversationItem conversation2 = null;
+            for(MonkeyConversation conv : conversations) {
+                if(conv.getConvId().equals(infoItem.getInfoId())) {
+                    conversation2 = (ConversationItem)conv;
+                    break;
+                }
+            }
+            if(conversation2 == null){
+                //return;
+                ConversationItem conversationItem = new ConversationItem(infoItem.getInfoId(),
+                        infoItem.getTitle(), System.currentTimeMillis(), "Write to this Conversation",
+                        0, false, "", infoItem.getAvatarUrl(), MonkeyConversation.ConversationStatus.empty.ordinal());
+                conversationsList.add(conversationItem);
+                startChatFromInfo(conversationItem, true);
+                DatabaseHandler.saveConversations(new ConversationItem[]{conversationItem});
+                return;
+            }
+            final ConversationItem conversation3 = conversation2;
+            List<MonkeyItem> messages = messagesMap.get(conversation2.getConvId());
+            if(messages!=null && !messages.isEmpty()){
+                startChatFromInfo(conversation2, false);
+            }else{
+                //Get initial messages from DB
+                asyncDBHandler.getMessagePage(new GetMessagePageTask.OnQueryReturnedListener() {
+                    @Override
+                    public void onQueryReturned(List<MessageItem> messageItems) {
+                        messagesMap.put(conversation3.getConvId(), new ArrayList<MonkeyItem>(messageItems));
+                        startChatFromInfo(conversation3, false);
+                    }
+                }, conversation2.getConvId(), MESS_PERPAGE, 0);
+            }
+
+
+        }
+    }
+
+    public void startChatFromInfo(ConversationItem chat, boolean hasReachedEnd){
+        MonkeyChatFragment fragment = chat.isGroup() ?
+                MonkeyChatFragment.Companion.newGroupInstance(chat.getConvId(), chat.getName(),
+                        chat.getAvatarFilePath(), hasReachedEnd, chat.lastRead, chat.getGroupMembers()) :
+                MonkeyChatFragment.Companion.newInstance(chat.getConvId(), chat.getName(),
+                        chat.getAvatarFilePath(), hasReachedEnd, chat.lastRead);
+
+        activeConversationItem = chat;
+        monkeyFragmentManager.setChatFragment(monkeyInfoFragment ,fragment, initInputListener(), voiceNotePlayer);
+        monkeyInfoFragment = null;
+    }
 
     @Override
-    public void onUserClick(@NotNull MonkeyInfo user) {
+    public void onExitGroup(@NotNull String conversationId) {
 
+        removeGroupMember(conversationId, myMonkeyID);
+        DatabaseHandler.deleteConversation(conversationId);
+        Iterator<MonkeyConversation> it = conversationsList.iterator();
+        while (it.hasNext()) {
+            if (it.next().getConvId().equals(conversationId)) {
+                it.remove();
+                break;
+            }
+        }
+        monkeyFragmentManager.popStack(2);
     }
 }

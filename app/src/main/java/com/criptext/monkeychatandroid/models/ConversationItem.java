@@ -202,4 +202,10 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
     public String getRightTitle() {
         return "";
     }
+
+    @NotNull
+    @Override
+    public String getInfoId() {
+        return idConv;
+    }
 }
