@@ -7,9 +7,9 @@ import com.google.gson.JsonObject
  */
 
 class MOKNotification(val id: String, val senderId: String, val receiverId: String,
-                      val params: JsonObject, val timestamp: Long) {
+                      val params: JsonObject, val props: JsonObject, val timestamp: Long) {
 
     constructor(remote: MOKMessage): this(remote.message_id, remote.sid, remote.rid,
-            remote.params!!, remote.datetime.toLong())
+            remote.params!!, remote.props!!, remote.datetime.toLong())
 }
 

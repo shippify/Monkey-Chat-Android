@@ -282,6 +282,7 @@ public class DatabaseHandler {
     public static void syncConversation(String id){
         ConversationItem conversation = getConversationById(id);
         if(conversation != null) {
+            /*TODO don't calcuate the totalNewMessages value counting the unread messages in the local DB */
             List<MessageItem> unreadMessages = new Select().from(MessageItem.class)
                     .where("conversationId = ?", id)
                     .where("isIncoming = ?", true)

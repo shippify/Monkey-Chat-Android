@@ -41,7 +41,7 @@ import java.lang.ref.WeakReference;
  * key the onSessionOK callback is executed.
  * In the onSessionOK callback your app should persist the user's MonkeyID. This finishes preparatios
  * for messaging.
- * Created by gesuwall on 2/10/16.
+ * Created by Gabriel on 2/10/16.
  */
 public class MonkeyInit {
 
@@ -187,8 +187,10 @@ public class MonkeyInit {
         prefs.edit().putString("sport", finalResult.getString("sport")).apply();
 
         final String keys = finalResult.getString("keys");
+        final long lastSync = finalResult.getLong("last_time_synced");
         String decriptedKey = rsaUtil.desencrypt(keys);
         KeyStoreCriptext.putString(ctxRef.get() ,monkeyId, decriptedKey);
+        KeyStoreCriptext.setLastSync(ctxRef.get() , lastSync);
 
         try {
             aesUtil = new AESUtil(ctxRef.get(), monkeyId);

@@ -48,10 +48,11 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
             if(!isSyncService) //get pending messages if this service does more than just sync
                 pendingMessages = PendingMessageStore.retrieve(appContextRef.get())
             //get the last sync timestamp from shared prefs
-            var lastSync = KeyStoreCriptext.getLastSync(appContextRef.get())
+            val lastSync = KeyStoreCriptext.getLastSync(appContextRef.get())
+            val hasSyncedBefore = KeyStoreCriptext.hasSyncedBefore(appContextRef.get())
             //send sync
             return InitializerResult(pendingMessages, AESUtil(appContextRef.get(), clientData.monkeyId),
-                    lastSync, cData)
+                    hasSyncedBefore, lastSync, cData)
     }
 
     override fun onPostExecute(result: InitializerResult?) {
@@ -59,11 +60,14 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
         val messages = result!!.pendingMessages
         if(messages != null && messages.isNotEmpty())
             service.addPendingMessages(messages)
-        service?.startSocketConnection(result.util!!, result.clientData, result.lastSync)
+        if(result.hasSyncedBefore)
+            service?.startSocketConnection(result.util!!, result.clientData, result.lastSync)
+        else
+            service?.startFirstSocketConnection(result.util!!, result.clientData, result.lastSync)
     }
 
     data class InitializerResult(val pendingMessages: List<JsonObject>?, val util: AESUtil?,
-                                 val lastSync: Long, val clientData: ClientData)
+                                 val hasSyncedBefore: Boolean, val lastSync: Long, val clientData: ClientData)
 
 
 }
