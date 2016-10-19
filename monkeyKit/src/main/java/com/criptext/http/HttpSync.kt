@@ -1,7 +1,6 @@
 package com.criptext.http
 
 import android.content.Context
-import android.os.Message
 import android.util.Base64
 import android.util.Log
 import com.criptext.ClientData
@@ -9,8 +8,6 @@ import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.*
 import com.criptext.lib.KeyStoreCriptext
 import com.criptext.security.AESUtil
-import com.google.gson.JsonArray
-import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import okhttp3.OkHttpClient
@@ -31,10 +28,13 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
     set(value) {
       field = if(value > 60) initialTimeout else value
     }
+
     init {
         contextRef = WeakReference(ctx)
         keyMap = HashMap()
     }
+
+    val isFirstTime: Boolean by lazy { !KeyStoreCriptext.hasSyncedBefore(contextRef.get()) }
 
     private fun executeHttp(http: OkHttpClient, request: Request): Response? =
         try {
@@ -72,6 +72,10 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
                     batch += getBatch(newSinceValue, Math.min(remaining, qty))
                 }
                 body.close()
+
+                if (isFirstTime)
+                    KeyStoreCriptext.setFirstSyncSuccess(contextRef.get())
+
                 return batch
             } else {
                 Log.e("HttpSync", response.body().string())
@@ -152,11 +156,12 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 
             val currentMessageType = currentMessage.get("type").asString
             if (currentMessageType == MessageTypes.MOKText || currentMessageType == MessageTypes.MOKFile) {
-                val msgTime = processMessage(messages, currentMessage, currentMessageType, props, params)
+                processMessage(messages, currentMessage, currentMessageType, props, params)
             }
-            else if(currentMessageType == MessageTypes.MOKNotif && params != null){
+            else if(currentMessageType == MessageTypes.MOKNotif){
                 //params has to be non null, otherwise what's the point of the notification?
-                val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
+                val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage,
+                        params ?: JsonObject(), props, true);
                 notifications.add(MOKNotification(remote))
 
             }
@@ -173,11 +178,9 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
     data class SyncResponse(val messages: List<MOKMessage>, val notifications: List<MOKNotification>,
                             val deletes: List<MOKDelete>) {
 
-        fun addAll(resp: SyncResponse) = SyncResponse(messages + resp.messages,
-                notifications + resp.notifications, deletes + resp.deletes)
-
         operator fun plus(resp: SyncResponse) = SyncResponse(messages + resp.messages,
                 notifications + resp.notifications, deletes + resp.deletes)
+
         fun isNotEmpty() = messages.isNotEmpty() || notifications.isNotEmpty() ||  deletes.isNotEmpty()
 
         fun newTimestamp() = messages.lastOrNull()?.datetime?.toLong() ?: notifications.lastOrNull()?.timestamp

@@ -39,6 +39,18 @@ public class UserManager extends AQueryHttp {
         super(service, aesUtil);
     }
 
+    private MOKMessage decryptMessage(MOKMessage remote) {
+        String existingKey = KeyStoreCriptext.getString(serviceRef.get(), remote.getSid());
+        String validKey = OpenConversationTask.Companion.attemptToDecrypt(remote, clientData,
+                aesUtil, existingKey);
+        if(validKey != null && !validKey.equals(existingKey))
+            KeyStoreCriptext.putString(serviceRef.get(),
+                    remote.getSid(), validKey);
+        else if(validKey == null)
+            remote = null;
+        return remote;
+    }
+
     public void updateUserData(final String monkeyId, JSONObject info){
 
         try {
@@ -153,7 +165,7 @@ public class UserManager extends AQueryHttp {
         }
     }
 
-    public void getConversations(String monkeyid, int qty, long timestamp, final AsyncConnSocket asyncConnSocket){
+    public void getConversations(String monkeyid, int qty, long timestamp){
 
         String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/conversations";
 
@@ -170,87 +182,91 @@ public class UserManager extends AQueryHttp {
                 @Override
                 public void callback(String url, final JSONObject response, AjaxStatus status) {
 
-                    final MonkeyKitSocketService service = serviceRef.get();
-                    if (service == null)
+                    if (serviceRef.get() == null)
                         return;
 
                     if (response != null)
+                        new AsyncTask<Object, String, Exception>(){
 
-                            new AsyncTask<Object, String, Exception>(){
+                            List<MOKConversation> conversationList = new ArrayList<MOKConversation>();
 
-                                List<MOKConversation> conversationList = new ArrayList<MOKConversation>();
+                            @Override
+                            protected Exception doInBackground(Object... p) {
 
-                                @Override
-                                protected Exception doInBackground(Object... p) {
+                                try {
+                                    JsonParser parser = new JsonParser();
+                                    JsonObject props = new JsonObject(), params = new JsonObject();
+                                    JSONArray jsonArrayConversations = response.getJSONObject("data").getJSONArray("conversations");
+                                    JsonArray array = (JsonArray) parser.parse(jsonArrayConversations.toString());
+                                    for (int i = 0; i < array.size(); i++) {
+                                        JsonObject currentConv = null;
+                                        JsonObject currentMessage = null;
+                                        MOKMessage remote = null;
+                                        try {
+                                            JsonElement jsonMessage = array.get(i);
+                                            currentConv = jsonMessage.getAsJsonObject();
+                                            currentMessage = currentConv.getAsJsonObject("last_message");
+                                            //init params props
+                                            if (currentMessage.has("params") && !currentMessage.get("params").isJsonNull() && !parser.parse(currentMessage.get("params").getAsString()).isJsonNull())
+                                                if (parser.parse(currentMessage.get("params").getAsString()) instanceof JsonObject)
+                                                    params = (JsonObject) parser.parse(currentMessage.get("params").getAsString());
+                                            if (currentMessage.has("props") && !currentMessage.get("props").isJsonNull() && !parser.parse(currentMessage.get("props").getAsString()).isJsonNull())
+                                                props = (JsonObject) parser.parse(currentMessage.get("props").getAsString());
 
-                                    try {
-                                        JsonParser parser = new JsonParser();
-                                        JsonObject props = new JsonObject(), params = new JsonObject();
-                                        JSONArray jsonArrayConversations = response.getJSONObject("data").getJSONArray("conversations");
-                                        JsonArray array = (JsonArray) parser.parse(jsonArrayConversations.toString());
-                                        for (int i = 0; i < array.size(); i++) {
-                                            JsonObject currentConv = null;
-                                            JsonObject currentMessage = null;
-                                            MOKMessage remote = null;
-                                            try {
-                                                JsonElement jsonMessage = array.get(i);
-                                                currentConv = jsonMessage.getAsJsonObject();
-                                                currentMessage = currentConv.getAsJsonObject("last_message");
-                                                //init params props
-                                                if (currentMessage.has("params") && !currentMessage.get("params").isJsonNull() && !parser.parse(currentMessage.get("params").getAsString()).isJsonNull())
-                                                    if (parser.parse(currentMessage.get("params").getAsString()) instanceof JsonObject)
-                                                        params = (JsonObject) parser.parse(currentMessage.get("params").getAsString());
-                                                if (currentMessage.has("props") && !currentMessage.get("props").isJsonNull() && !parser.parse(currentMessage.get("props").getAsString()).isJsonNull())
-                                                    props = (JsonObject) parser.parse(currentMessage.get("props").getAsString());
+                                            if (currentMessage.has("type") && (currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKText) == 0
+                                                    || currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0)) {
 
-                                                if (currentMessage.has("type") && (currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKText) == 0
-                                                        || currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0)) {
-
-                                                    remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
-                                                    if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0)
-                                                        remote = asyncConnSocket.getKeysAndDecryptMOKMessage(remote, false);
-                                                    else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
-                                                        if (remote.getProps().get("encoding").getAsString().equals("base64"))
-                                                            remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
-                                                    }
+                                                remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
+                                                if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0) {
+                                                    remote = decryptMessage(remote);
+                                                } else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
+                                                    if (remote.getProps().get("encoding").getAsString().equals("base64"))
+                                                        remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
                                                 }
-
-                                                JsonArray jsonArray = currentConv.has("members") ? currentConv.get("members").getAsJsonArray() : new JsonArray();
-                                                ArrayList<String> arrayList = new ArrayList<String>();
-                                                for(int j = 0; j<jsonArray.size(); j++){
-                                                    arrayList.add(jsonArray.get(j).getAsString());
-                                                }
-                                                conversationList.add(new MOKConversation(currentConv.get("id").getAsString(),
-                                                        currentConv.get("info").getAsJsonObject(),
-                                                        arrayList.toArray(new String[arrayList.size()]),
-                                                        remote, currentConv.get("last_seen").getAsLong()*1000, currentConv.get("unread").getAsInt(),
-                                                        currentConv.has("last_modified") ? (long)currentConv.get("last_modified").getAsDouble()*1000 : 0));
-
-                                            } catch (IllegalArgumentException ex) {
-                                                Log.e("MonkeyKit", "Error fetching conversation: " +
-                                                        ex.getMessage());
-                                            } catch (Exception ex) {
-                                                ex.printStackTrace();
                                             }
+
+                                            JsonArray jsonArray = currentConv.has("members") ? currentConv.get("members").getAsJsonArray() : new JsonArray();
+                                            ArrayList<String> arrayList = new ArrayList<String>();
+                                            for(int j = 0; j<jsonArray.size(); j++){
+                                                arrayList.add(jsonArray.get(j).getAsString());
+                                            }
+                                            conversationList.add(new MOKConversation(currentConv.get("id").getAsString(),
+                                                    currentConv.get("info").getAsJsonObject(),
+                                                    arrayList.toArray(new String[arrayList.size()]),
+                                                    remote, currentConv.get("last_seen").getAsLong()*1000, currentConv.get("unread").getAsInt(),
+                                                    currentConv.has("last_modified") ? (long)currentConv.get("last_modified").getAsDouble()*1000 : 0));
+
+                                        } catch (IllegalArgumentException ex) {
+                                            Log.e("MonkeyKit", "Error fetching conversation: " +
+                                                    ex.getMessage());
+                                        } catch (Exception ex) {
+                                            ex.printStackTrace();
                                         }
-                                    } catch (JSONException e) {
-                                        e.printStackTrace();
-                                        return e;
                                     }
-
-                                    return null;
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                    return e;
                                 }
 
-                                @Override
-                                protected void onPostExecute(Exception e) {
+                                return null;
+                            }
+
+                            @Override
+                            protected void onPostExecute(Exception e) {
+                                MonkeyKitSocketService service = serviceRef.get();
+                                if (service != null)
                                     service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
-                                            conversationList, e});
-                                }
+                                        conversationList, e});
+                            }
 
-                            }.execute("");
-                    else
-                        service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{new ArrayList<MOKConversation>(),
-                                new Exception("Error code:" + status.getCode() + " -  Error msg:" + status.getMessage())});
+                        }.execute("");
+                    else {
+                        MonkeyKitSocketService service = serviceRef.get();
+                        if (service != null)
+                            service.processMessageFromHandler(CBTypes.onGetConversations,
+                                    new Object[]{new ArrayList<MOKConversation>(), new Exception(
+                                    "Error code:" + status.getCode() + " -  Error msg:" + status.getMessage())});
+                    }
                 }
             });
         }
@@ -307,14 +323,7 @@ public class UserManager extends AQueryHttp {
 
                                             remote = asyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
                                             if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0) {
-                                                String existingKey = KeyStoreCriptext.getString(serviceRef.get(), remote.getSid());
-                                                String validKey = OpenConversationTask.Companion.attemptToDecrypt(remote, clientData,
-                                                        aesUtil, existingKey);
-                                                if(validKey != null && !validKey.equals(existingKey))
-                                                    KeyStoreCriptext.putString(serviceRef.get(),
-                                                            remote.getSid(), validKey);
-                                                else if(validKey == null)
-                                                    remote = null;
+                                                remote = decryptMessage(remote);
 
                                             } else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
                                                 if(remote.getProps().get("encoding").getAsString().equals("base64"))

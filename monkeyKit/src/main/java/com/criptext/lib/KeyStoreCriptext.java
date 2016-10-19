@@ -62,7 +62,7 @@ public class KeyStoreCriptext {
 
 
     private static final String LAST_SYNC_KEY = "MonkeyKit.lastSync";
-    private static final String USER_MK_ID_KEY = "MonkeyKit.userMonkey";
+    private static final String HAS_SYNCED_BEFORE = "MonkeyKit.hasSynced";
 
     public static void setLastSync(Context ctx, Long value)
     {
@@ -70,23 +70,26 @@ public class KeyStoreCriptext {
         prefs.edit().putLong(LAST_SYNC_KEY, value).apply();
     }
 
+
+    public static void setFirstSyncSuccess(Context ctx)
+    {
+        if(ctx != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
+            prefs.edit().putBoolean(HAS_SYNCED_BEFORE, true).commit();
+        }
+    }
+
     public static Long getLastSync(Context ctx)
     {
         if(ctx == null) return 0L;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        return prefs.getLong(LAST_SYNC_KEY, 0);
+        return prefs.getLong(LAST_SYNC_KEY, -1);
     }
 
-    public static void setUserMonkeyId(Context ctx, String value)
+    public static boolean hasSyncedBefore(Context ctx)
     {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        prefs.edit().putString(USER_MK_ID_KEY, value).apply();
-    }
-
-    public static String getUserMonkeyId(Context ctx)
-    {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        return prefs.getString(LAST_SYNC_KEY, "");
+        return prefs.getBoolean(HAS_SYNCED_BEFORE, false);
     }
 
 }

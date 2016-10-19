@@ -171,11 +171,7 @@ abstract class MonkeyKitSocketService : Service() {
         super.onRebind(intent)
     }
 
-    /**
-     * This method gets called by the Async Intializer on its PostExecute method.
-     */
-    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, lastSync: Long) {
-        Log.d("SocketService", "start connection")
+    fun initialize(aesUtil: AESUtil, cdata: ClientData, lastSync: Long) {
         lastTimeSynced = lastSync
         clientData = cdata
         userManager = UserManager(this, aesUtil)
@@ -186,20 +182,27 @@ abstract class MonkeyKitSocketService : Service() {
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
                 IntentFilter(MonkeyFileService.DOWNLOAD_ACTION))
         this.aesutil = aesUtil
+    }
 
-
+    fun startFirstSocketConnection(aesUtil: AESUtil, cdata: ClientData, lastSync: Long) {
+        initialize(aesUtil, cdata, lastSync)
+        //since this is the first time we are connecting, let's get all conversations before syncing
+        userManager!!.getConversations(clientData.monkeyId, 30, 0)
+    }
+    /**
+     * This method gets called by the Async Intializer on its PostExecute method.
+     */
+    fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, lastSync: Long) {
+        initialize(aesUtil, cdata, lastSync)
         startSocketConnection()
-        startConnectivityBroadcastReceiver() //start connectivity service after client data is initialized
     }
 
     fun startSocketConnection() {
         if(status == ServiceStatus.dead)
             return //status should be equal to initializing, if dead dont do anything
-
+        startConnectivityBroadcastReceiver() //start connectivity service after client data is initialized
         asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
         asyncConnSocket.conectSocket()
-
-
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
@@ -368,7 +371,11 @@ abstract class MonkeyKitSocketService : Service() {
                 delegate?.onGetGroupInfo( info[0] as MOKConversation, info[1] as Exception?)
             }
             CBTypes.onGetConversations -> {
-                delegate?.onGetConversations(info[0] as ArrayList<MOKConversation>, info[1] as Exception?)
+                val d = delegate?.onGetConversations(info[0] as ArrayList<MOKConversation>, info[1] as Exception?)
+                if (status == ServiceStatus.initializing) {
+                    //this is the first time service starts, so after adding all conversations, connect the socket
+                    startSocketConnection()
+                }
             }
             CBTypes.onDeleteConversation -> {
                 delegate?.onDeleteConversation(info[0] as String, info[1] as Exception?)
@@ -707,12 +714,8 @@ abstract class MonkeyKitSocketService : Service() {
      * Get all conversation of a user using the monkey ID.
      */
     fun getAllConversations(quantity: Int, fromTimestamp: Long){
-        if(status == ServiceStatus.initializing) {
-            pendingActions.add(Runnable {
-                getAllConversations(quantity, fromTimestamp)
-            })
-        } else
-           userManager.getConversations(clientData.monkeyId, quantity, fromTimestamp, asyncConnSocket)
+        if(status != ServiceStatus.initializing)
+           userManager.getConversations(clientData.monkeyId, quantity, fromTimestamp)
     }
 
     /**
