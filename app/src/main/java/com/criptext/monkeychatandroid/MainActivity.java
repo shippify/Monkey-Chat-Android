@@ -828,10 +828,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             messagesMap.remove(convId);
         }
 
+        final List<MOKMessage> activeConversationMessages = newMessagesMap.get(activeConversationId);
         syncConversationsFragment(conversationsToUpdate);
-        if(activeConversationNeedsUpdate)
+        if(activeConversationNeedsUpdate && activeConversationMessages != null)
             syncChatFragment(!deletesMap.containsKey(activeConversationId),
-                    newMessagesMap.get(activeConversationId).size());
+                    activeConversationMessages.size());
 
     }
 
