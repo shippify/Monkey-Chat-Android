@@ -21,7 +21,22 @@ public class AsyncDBHandler {
            task.cancel(true);
         }
     }
-
+    public void storeNewConversation(final StoreNewConversationTask.OnQueryReturnedListener listener,
+                                     ConversationItem params){
+        final StoreNewConversationTask newTask = new StoreNewConversationTask();
+        pendingTasks.add(newTask);
+        StoreNewConversationTask.OnQueryReturnedListener trueListener = new StoreNewConversationTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(ConversationItem result) {
+                pendingTasks.remove(newTask);
+                if(listener != null){
+                    listener.onQueryReturned(result);
+                }
+            }
+        };
+        newTask.onQueryReturnedListener = trueListener;
+        newTask.execute(params);
+    }
     public void getConversationById(final FindConversationTask.OnQueryReturnedListener listener, String... params){
         final FindConversationTask newTask = new FindConversationTask();
         pendingTasks.add(newTask);
