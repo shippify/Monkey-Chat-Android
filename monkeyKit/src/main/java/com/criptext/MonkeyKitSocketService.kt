@@ -322,6 +322,9 @@ abstract class MonkeyKitSocketService : Service() {
                     //At this point initialization is complete. We are ready to receive and send messages
                     status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
                     delegate?.onSyncComplete(batch);
+                    //since status could have changed from initializing to bound, or running, let's play pending actions.
+                    //this is needed for uploading photos.
+                    playPendingActions()
                     if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
                         ServiceTimeoutTask(this).execute()
                 });
