@@ -88,4 +88,10 @@ public class UserItem implements MonkeyInfo {
     public String getRightTitle() {
         return rol;
     }
+
+    @NotNull
+    @Override
+    public String getInfoId() {
+        return monkeyId;
+    }
 }
