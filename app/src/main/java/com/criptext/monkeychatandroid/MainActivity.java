@@ -1408,14 +1408,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
         }else{
             ArrayList<MonkeyConversation> conversations = new ArrayList<>(conversationsList);
-            ConversationItem conversation2 = null;
+            ConversationItem conversationUser = null;
             for(MonkeyConversation conv : conversations) {
                 if(conv.getConvId().equals(infoItem.getInfoId())) {
-                    conversation2 = (ConversationItem)conv;
+                    conversationUser = (ConversationItem)conv;
                     break;
                 }
             }
-            if(conversation2 == null){
+            if(conversationUser == null){
                 //return;
                 ConversationItem conversationItem = new ConversationItem(infoItem.getInfoId(),
                         infoItem.getTitle(), System.currentTimeMillis(), "Write to this Conversation",
@@ -1425,19 +1425,19 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 DatabaseHandler.saveConversations(new ConversationItem[]{conversationItem});
                 return;
             }
-            final ConversationItem conversation3 = conversation2;
-            List<MonkeyItem> messages = messagesMap.get(conversation2.getConvId());
+            final ConversationItem conversationUserCopy = conversationUser;
+            List<MonkeyItem> messages = messagesMap.get(conversationUser.getConvId());
             if(messages!=null && !messages.isEmpty()){
-                startChatFromInfo(conversation2, false);
+                startChatFromInfo(conversationUser, false);
             }else{
                 //Get initial messages from DB
                 asyncDBHandler.getMessagePage(new GetMessagePageTask.OnQueryReturnedListener() {
                     @Override
                     public void onQueryReturned(List<MessageItem> messageItems) {
-                        messagesMap.put(conversation3.getConvId(), new ArrayList<MonkeyItem>(messageItems));
-                        startChatFromInfo(conversation3, false);
+                        messagesMap.put(conversationUserCopy.getConvId(), new ArrayList<MonkeyItem>(messageItems));
+                        startChatFromInfo(conversationUserCopy, false);
                     }
-                }, conversation2.getConvId(), MESS_PERPAGE, 0);
+                }, conversationUser.getConvId(), MESS_PERPAGE, 0);
             }
 
 
@@ -1452,7 +1452,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         chat.getAvatarFilePath(), hasReachedEnd, chat.lastRead);
 
         activeConversationItem = chat;
-        monkeyFragmentManager.setChatFragment(monkeyInfoFragment ,fragment, initInputListener(), voiceNotePlayer);
+        monkeyFragmentManager.setChatFragmentFromInfo(fragment, initInputListener(), voiceNotePlayer);
         monkeyInfoFragment = null;
     }
 
