@@ -238,6 +238,9 @@ abstract class MonkeyKitSocketService : Service() {
             //Log.d("serviceOnDestroy", "save messages")
             val task = PendingMessageStore.AsyncStoreTask(this, pendingMessages.toList())
             task.execute()
+        }else{
+            val task = PendingMessageStore.AsyncCleanTask(this)
+            task.execute()
         }
         //unregister file broadcast receivers
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
