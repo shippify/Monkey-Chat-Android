@@ -278,15 +278,20 @@ public class DatabaseHandler {
         new SaveModelTask().execute(conversation);
     }
 
+    public static List<MessageItem> getAllMessagesSince(String conversationId, long since) {
+        Log.d("allMessagesSince", "" + since);
+        return new Select().from(MessageItem.class)
+                    .where("conversationId = ?", conversationId)
+                    .where("isIncoming = ?", true)
+                    .where("timestampOrder > ?", since).execute();
+    }
+
 
     public static void syncConversation(String id){
         ConversationItem conversation = getConversationById(id);
         if(conversation != null) {
             /*TODO don't calcuate the totalNewMessages value counting the unread messages in the local DB */
-            List<MessageItem> unreadMessages = new Select().from(MessageItem.class)
-                    .where("conversationId = ?", id)
-                    .where("isIncoming = ?", true)
-                    .where("timestampOrder > ?", conversation.lastOpen).execute();
+            List<MessageItem> unreadMessages = getAllMessagesSince(conversation.getConvId(), conversation.lastOpen);
             int unreadMessageCount = unreadMessages.size();
             conversation.setTotalNewMessage(unreadMessageCount);
             MessageItem lastMessage;
@@ -327,9 +332,9 @@ public class DatabaseHandler {
         new Delete().from(ConversationItem.class).where("idConv = ?", conversationId).execute();
     }
 
-    public static String getSecondaryTextByMessageType(MonkeyItem monkeyItem){
+    public static String getSecondaryTextByMessageType(MonkeyItem monkeyItem, boolean isGroup){
         if(monkeyItem == null)
-            return "Write to Contact";
+            return isGroup ? "Write to group" : "Write to contact";
         switch (MonkeyItem.MonkeyItemType.values()[monkeyItem.getMessageType()]) {
             case audio:
                 return "Audio";

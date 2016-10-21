@@ -32,6 +32,7 @@ import com.criptext.monkeychatandroid.models.FindConversationTask;
 import com.criptext.monkeychatandroid.models.FindMessageTask;
 import com.criptext.monkeychatandroid.models.GetMessagePageTask;
 import com.criptext.monkeychatandroid.models.MessageItem;
+import com.criptext.monkeychatandroid.models.StoreNewConversationTask;
 import com.criptext.monkeychatandroid.models.UserItem;
 import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
@@ -287,8 +288,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 //Now that the message was sent, create a MessageItem using the MOKMessage that MonkeyKit
                 //created. This MessageItem will be added to MonkeyAdapter so that it can be shown in
                 //the screen.
+                //USE THE DATETIMEORDER FROM MOKMESSAGE, NOT THE ONE FROM MONKEYITEM
                 MessageItem newItem = new MessageItem(myMonkeyID, myFriendID, mokMessage.getMessage_id(),
-                        item.getMessageText(), item.getMessageTimestamp(), item.getMessageTimestampOrder(), item.isIncomingMessage(),
+                        item.getMessageText(), item.getMessageTimestamp(), mokMessage.getDatetimeorder(), item.isIncomingMessage(),
                         MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
                 newItem.setParams(params.toString());
                 newItem.setProps(mokMessage.getProps().toString());
@@ -535,9 +537,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     /**
      * Updates a sent message and updates de UI so that the user can see that it has been
      * successfully delivered
-     * @param oldId The old Id of the message.
+     * @param oldId The old Id of the message, set locally.
+     * @param newId The new id of the message, set by the server.
+     * @param read true if the message was delivered and read
      */
-    private void markMessageAsDelivered(String oldId, String newId){
+    private void markMessageAsDelivered(String oldId, String newId, boolean read){
         updateMessage(newId, oldId, MonkeyItem.DeliveryStatus.delivered);
     }
 
@@ -670,17 +674,20 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onAcknowledgeRecieved(@NotNull String senderId, @NotNull String recipientId,
-                          final @NotNull String newId, final @NotNull String oldId, final boolean read,
+    public void onAcknowledgeRecieved(@NotNull final String senderId, @NotNull final String recipientId,
+                                      final @NotNull String newId, final @NotNull String oldId, final boolean read,
                                       final int messageType) {
-
+        //Always call super so that MKDelegate knows that it should not attempt to retry this message anymore
         super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
 
         asyncDBHandler.getMessageById(new FindMessageTask.OnQueryReturnedListener() {
             @Override
             public void onQueryReturned(MessageItem result) {
                 if(result != null){
-                    markMessageAsDelivered(oldId, newId);
+                    if(!read)
+                        markMessageAsDelivered(oldId, newId, read);
+                    else if(getActiveConversation() != null && senderId.equals(getActiveConversation()))
+                        monkeyChatFragment.setLastRead(result.getMessageTimestampOrder());
                     updateConversationByMessage(result, read);
 
                 } else if((messageType == Integer.parseInt(MessageTypes.MOKText)
@@ -793,13 +800,31 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
     }
 
-    public void updateConversationLastOpen(String conversationId, long lastOpen) {
+    /**
+     * Updates the conversation that user may have closed. This updates the lastOpen, secondaryText
+     * and totalNewMessages, so that when the user goes back to the conversation list, he/she sees
+     * up-to-date data.
+     * @param conversationId ID of the conversation to update
+     * @param lastOpen timestamp with the last time conversation was open. should be the datetime of last message
+     * @param lastMessageText the secondary text to put in the conversation
+     */
+    public void updateClosedConversation(String conversationId, final long lastOpen, final String lastMessageText) {
         if(activeConversationItem != null && activeConversationItem.getConvId().equals((conversationId))) {
-            activeConversationItem.lastOpen = lastOpen;
-            activeConversationItem.setTotalNewMessage(0);
+            ConversationTransaction t = new ConversationTransaction() {
+                @Override
+                public void updateConversation(@NotNull MonkeyConversation conversation) {
+                    ConversationItem conversationItem = (ConversationItem) conversation;
+                    conversationItem.lastOpen = lastOpen;
+                    activeConversationItem.setTotalNewMessage(0);
+                    activeConversationItem.setSecondaryText(lastMessageText);
+                }
+            };
+            //Apply transaction on the DB
+            t.updateConversation(activeConversationItem);
             DatabaseHandler.updateConversation(activeConversationItem);
+            //Apply the same transaction on the UI
             if(monkeyConversationsFragment != null)
-                monkeyConversationsFragment.updateConversation(activeConversationItem);
+                monkeyConversationsFragment.updateConversation(activeConversationItem, t);
         } else {
             //throw new IllegalStateException("Tried to update the lastOpen of a non-active conversation");
             IllegalStateException exception = new IllegalStateException("Tried to update the lastOpen of a non-active conversation");
@@ -883,20 +908,16 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 admins = userInfo.get("admin").getAsString();
                 conversationItem.setAdmins(admins);
             }
-            if(messagesMap!=null && messagesMap.get(mokConversation.getConversationId())!=null){
-                MonkeyItem monkeyItem = new LinkedList<>(messagesMap.get(mokConversation.getConversationId())).getLast();
-                boolean isMyOwnMessage = monkeyItem.getSenderId().equals(myMonkeyID);
-                conversationItem.setSecondaryText(MessageItem.getSecondaryTextByMessageType(monkeyItem));
-                conversationItem.setDatetime(monkeyItem.getMessageTimestampOrder());
-                conversationItem.setTotalNewMessage(isMyOwnMessage? 0 : 1);
-                conversationItem.setStatus(isMyOwnMessage? MonkeyConversation.ConversationStatus.receivedMessage.ordinal():
-                        MonkeyConversation.ConversationStatus.deliveredMessage.ordinal());
-                messagesMap.get(mokConversation.getConversationId()).clear();
-                conversationItem.save();
-            }
-            if(monkeyConversationsFragment != null) {
-                monkeyConversationsFragment.addNewConversation(conversationItem, true);
-            }
+
+            asyncDBHandler.storeNewConversation(new StoreNewConversationTask.OnQueryReturnedListener() {
+                @Override
+                public void onQueryReturned(ConversationItem result) {
+                    if(monkeyConversationsFragment != null) {
+                        monkeyConversationsFragment.addNewConversation(result, true);
+                    }
+                }
+            }, conversationItem);
+
         }
     }
 
@@ -911,21 +932,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             ConversationItem conversationItem = new ConversationItem(mokUser.getMonkeyId(),
                     convName, System.currentTimeMillis(), "Write to this contact",
                     1, false, "", mokUser.getAvatarURL(), MonkeyConversation.ConversationStatus.empty.ordinal());
-            if(messagesMap!=null && messagesMap.get(mokUser.getMonkeyId())!=null){
-                MonkeyItem monkeyItem = new LinkedList<>(messagesMap.get(mokUser.getMonkeyId())).getLast();
-                conversationItem.setSecondaryText(MessageItem.getSecondaryTextByMessageType(monkeyItem));
-                conversationItem.setDatetime(monkeyItem.getMessageTimestampOrder());
-                conversationItem.setTotalNewMessage(mokUser.getMonkeyId().equals(myMonkeyID)? 0 : 1);
-                conversationItem.setStatus(mokUser.getMonkeyId().equals(myMonkeyID)?
-                        MonkeyConversation.ConversationStatus.deliveredMessage.ordinal():
-                        MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
-                messagesMap.get(mokUser.getMonkeyId()).clear();
-                conversationItem.save();
-            }
-
-            if(monkeyConversationsFragment != null) {
-                monkeyConversationsFragment.addNewConversation(conversationItem, true);
-            }
+            asyncDBHandler.storeNewConversation(new StoreNewConversationTask.OnQueryReturnedListener() {
+                @Override
+                public void onQueryReturned(ConversationItem result) {
+                    if(monkeyConversationsFragment != null) {
+                        monkeyConversationsFragment.addNewConversation(result, true);
+                    }
+                }
+            }, conversationItem);
         }
 
     }
@@ -1241,9 +1255,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(!messages.isEmpty()) {
             long lastOpenValue = 0L;
             MonkeyItem lastItem = messages.get(messages.size() - 1);
-            if (lastItem != null)
-                lastOpenValue = lastItem.getMessageTimestampOrder();
-                updateConversationLastOpen(conversationId, lastOpenValue);
+            lastOpenValue = lastItem.getMessageTimestampOrder();
+            //We don;t actually know if the conversation is a group but it's not important here.
+            updateClosedConversation(conversationId, lastOpenValue,
+                    DatabaseHandler.getSecondaryTextByMessageType(lastItem, false));
         }
 
     }
