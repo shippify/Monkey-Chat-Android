@@ -75,6 +75,10 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         }
     }
 
+    public void removeMember(String monkeyId){
+        mokUserHashMap.remove(monkeyId);
+    }
+
     public HashMap<String, MOKUser> getUsers(){
         return mokUserHashMap;
     }

@@ -101,6 +101,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     private String myMonkeyID;
     /**
+     * Name of the current user. This is stored in Shared Preferences, so we use this
+     * property to cache it so that we don't have to read from disk every time we need it.
+     */
+    private String myName;
+    /**
      * Monkey ID of the user that we are going to talk with.
      */
     private String myFriendID;
@@ -124,6 +129,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         //First, initialize the constants from SharedPreferences.
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
+        myName = prefs.getString(MonkeyChat.FULLNAME, null);
         Log.d("MonkeyId", myMonkeyID);
 
         //Check play services. if available try to register with GCM so that we get Push notifications
@@ -273,15 +279,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         params.addProperty("length",""+item.getAudioDuration()/1000);
 
                         mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
-                                MessageTypes.FileTypes.Audio, params, new PushMessage("You have a new message from the sample app"), true);
+                                MessageTypes.FileTypes.Audio, params, new PushMessage(myName + " sent you an audio"), true);
                         break;
                     case photo:
                         mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
-                                MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage("You have a new message from the sample app"), true);
+                                MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage(myName + " sent you a photo"), true);
                         break;
                     default:
                         mokMessage = persistMessageAndSend(item.getMessageText(), myMonkeyID,
-                                myFriendID, params, new PushMessage("You have a new message from the sample app"), true);
+                                myFriendID, params, new PushMessage(myName + " sent you a message"), true);
                         break;
                 }
 
@@ -878,7 +884,22 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onGroupRemovedMember(String groupid, String removed_member) {
-
+        Log.d("TEST", "REMOVE MEMBER");
+        if(groupData!=null && groupData.getConversationId().equals(groupid)){
+            groupData.removeMember(removed_member);
+            groupData.setInfoList(myMonkeyID);
+        }
+        if(monkeyInfoFragment!=null && monkeyChatFragment!=null){
+            if(monkeyChatFragment.getConversationId().equals(groupid)){
+                monkeyInfoFragment.removeMember(removed_member);
+            }
+        }
+        int convPosition = getConversationFromList(groupid, (ArrayList<MonkeyConversation>) conversationsList);
+        if(convPosition > -1){
+            ConversationItem conversation = (ConversationItem) ((ArrayList<MonkeyConversation>) conversationsList).get(convPosition);
+            conversation.removeMember(removed_member);
+            DatabaseHandler.updateConversation(conversation);
+        }
     }
 
     @Override
@@ -1484,5 +1505,18 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
         }
         monkeyFragmentManager.popStack(2);
+    }
+
+    public int getConversationFromList(String conversationId, ArrayList<MonkeyConversation> conversations){
+        Iterator<MonkeyConversation> it = conversations.iterator();
+        int i = 0;
+        while(it.hasNext()){
+            if(it.next().getConvId().equals(conversationId)){
+                return i;
+            }
+            i++;
+        }
+
+        return -1;
     }
 }

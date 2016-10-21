@@ -6,6 +6,7 @@ import com.activeandroid.ActiveAndroid;
 import com.criptext.comunication.MOKDelete;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.http.HttpSync;
+import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -38,8 +39,12 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
         while (iterator.hasNext()) {
             MOKMessage newMessage = iterator.next();
             if(!DatabaseHandler.existMessage(newMessage.getMessage_id())) {
-                MessageItem newItem = DatabaseHandler.createMessage(newMessage, pathToMessages, monkeyId);
-                newItem.save();
+                if(DatabaseHandler.existMessage(newMessage.getOldId())){
+                    DatabaseHandler.updateMessageStatus(newMessage.getMessage_id(), newMessage.getOldId(), MonkeyItem.DeliveryStatus.delivered);
+                }else {
+                    MessageItem newItem = DatabaseHandler.createMessage(newMessage, pathToMessages, monkeyId);
+                    newItem.save();
+                }
             } else iterator.remove();
         }
     }
