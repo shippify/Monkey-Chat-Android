@@ -107,6 +107,9 @@ public class DatabaseHandler {
     }
 
     public static MessageItem getMessageById(String id) {
+        if(id == null){
+            return null;
+        }
         return new Select().from(MessageItem.class).where("messageId = ?", id).executeSingle();
     }
 
@@ -183,6 +186,7 @@ public class DatabaseHandler {
 
     public static void updateMessageStatus(String messageId, String OldMessageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
         MessageItem result = getMessageById(OldMessageId != null ? OldMessageId : messageId);
+        MessageItem result2 = getMessageById(messageId);
         if (result != null) {
             result.setStatus(outgoingMessageStatus.ordinal());
             if(OldMessageId != null){
