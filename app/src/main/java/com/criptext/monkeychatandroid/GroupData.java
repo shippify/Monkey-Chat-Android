@@ -13,6 +13,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
@@ -76,7 +78,23 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
     }
 
     public void removeMember(String monkeyId){
+        membersIds = membersIds.replace(monkeyId, "");
+        membersIds = membersIds.replace(",,", ",");
+        if (membersIds.endsWith(",")) {
+            membersIds = membersIds.substring(0, membersIds.length()-1);
+        }
         mokUserHashMap.remove(monkeyId);
+    }
+
+    public void addMember(String memberId){
+        if(membersIds.contains(memberId)){
+            return;
+        }
+        if(membersIds.length() <= 0){
+            membersIds = memberId;
+        }else{
+            membersIds = membersIds.concat("," + memberId);
+        }
     }
 
     public HashMap<String, MOKUser> getUsers(){
@@ -122,6 +140,10 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         return colorsForUsersInGroup.get(indiceColor);
     }
 
+    public String getMembersIds(){
+        return membersIds;
+    }
+
     public void setInfoList(String myMonkeyId){
         infoList.clear();
         HashMap<String, MOKUser> users = this.getUsers();
@@ -142,7 +164,12 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
                     tag, user.getAvatarURL(), connection);
             infoList.add(user1);
         }
-
+        Collections.sort(infoList, new Comparator<MonkeyInfo>() {
+            @Override
+            public int compare(MonkeyInfo lhs, MonkeyInfo rhs) {
+                return lhs.getTitle().compareTo(rhs.getTitle());
+            }
+        });
     }
 
     public ArrayList<MonkeyInfo> getInfoList(){

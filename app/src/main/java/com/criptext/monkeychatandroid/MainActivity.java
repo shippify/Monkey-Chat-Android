@@ -17,6 +17,7 @@ import com.criptext.ClientData;
 import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKDelete;
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MOKNotification;
 import com.criptext.comunication.MOKUser;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.comunication.PushMessage;
@@ -60,6 +61,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Iterator;
@@ -865,6 +867,26 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             syncChatFragment(!deletesMap.containsKey(activeConversationId),
                     activeConversationMessages.size());
 
+        final List<MOKNotification> notifications = syncData.getNotifications();
+        Iterator<MOKNotification> notificationIterator = notifications.iterator();
+        while (notificationIterator.hasNext()) {
+            MOKNotification not = notificationIterator.next();
+            if (not.getProps().has("monkey_action")) {
+                int type = not.getProps().get("monkey_action").getAsInt();
+                try {
+                    switch (type) {
+                        case com.criptext.comunication.MessageTypes.MOKGroupNewMember:
+                            onGroupNewMember(not.getReceiverId(), not.getProps().get("new_member").getAsString());
+                            break;
+                        case com.criptext.comunication.MessageTypes.MOKGroupRemoveMember:
+                            onGroupRemovedMember(not.getReceiverId(), not.getSenderId());
+                            break;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     @Override
@@ -880,11 +902,27 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onGroupNewMember(String groupid, String new_member) {
 
+        if(groupData!=null && groupData.getConversationId().equals(groupid)){
+            groupData.addMember(new_member);
+            getUsersInfo(groupData.getMembersIds());
+        }
+        ConversationItem conversation = DatabaseHandler.getConversationById(groupid);
+        if(conversation != null){
+            conversation.addMember(new_member);
+            DatabaseHandler.updateConversation(conversation);
+            if(monkeyConversationsFragment != null){
+                monkeyConversationsFragment.updateConversation(conversation);
+            }
+        }
+        int convPosition = getConversationFromList(groupid, (ArrayList<MonkeyConversation>) conversationsList);
+        if(convPosition > -1){
+            ((ArrayList<MonkeyConversation>) conversationsList).set(convPosition, conversation);
+        }
     }
 
     @Override
     public void onGroupRemovedMember(String groupid, String removed_member) {
-        Log.d("TEST", "REMOVE MEMBER");
+
         if(groupData!=null && groupData.getConversationId().equals(groupid)){
             groupData.removeMember(removed_member);
             groupData.setInfoList(myMonkeyID);
@@ -894,11 +932,17 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 monkeyInfoFragment.removeMember(removed_member);
             }
         }
-        int convPosition = getConversationFromList(groupid, (ArrayList<MonkeyConversation>) conversationsList);
-        if(convPosition > -1){
-            ConversationItem conversation = (ConversationItem) ((ArrayList<MonkeyConversation>) conversationsList).get(convPosition);
+        ConversationItem conversation = DatabaseHandler.getConversationById(groupid);
+        if(conversation != null){
             conversation.removeMember(removed_member);
             DatabaseHandler.updateConversation(conversation);
+            if(monkeyConversationsFragment != null){
+                monkeyConversationsFragment.updateConversation(conversation);
+            }
+        }
+        int convPosition = getConversationFromList(groupid, (ArrayList<MonkeyConversation>) conversationsList);
+        if(convPosition > -1){
+            ((ArrayList<MonkeyConversation>) conversationsList).set(convPosition, conversation);
         }
     }
 
@@ -1054,8 +1098,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             boolean isGroupConversation = senderId.contains("G:");
             if(isGroupConversation){
                 groupData.setMembersOnline(members_online);
-                int membersOnline = members_online.split(",").length;
-                subtitle = membersOnline + " " + (membersOnline>1?"members online":"member online");
+                int membersOnline = members_online != null ? members_online.split(",").length : 0;
+                if(membersOnline > 0) {
+                    subtitle = membersOnline + " " + (membersOnline > 1 ? "members online" : "member online");
+                }
                 groupData.setInfoList(myMonkeyID);
                 if(monkeyInfoFragment != null){
                     monkeyInfoFragment.setInfo(groupData.getInfoList());
@@ -1068,7 +1114,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     lastSeenValue = Long.valueOf(lastSeen);
                 subtitle = "Last seen: "+Utils.Companion.getFormattedDate(lastSeenValue * 1000, this);
             }
-            monkeyFragmentManager.setSubtitle(subtitle);
+            if(!subtitle.isEmpty()) {
+                monkeyFragmentManager.setSubtitle(subtitle);
+            }
 
             if(!isGroupConversation && monkeyChatFragment!=null &&
                     monkeyChatFragment.getConversationId().equals(senderId)) {
@@ -1152,7 +1200,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onNotificationReceived(String messageId, String senderId, String recipientId, JsonObject params, String datetime) {   }
+    public void onNotificationReceived(String messageId, String senderId, String recipientId, JsonObject params, String datetime) {
+
+    }
 
     @NotNull
     @Override
@@ -1420,6 +1470,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
         }
 
+        Collections.sort(infoList, new Comparator<MonkeyInfo>() {
+            @Override
+            public int compare(MonkeyInfo lhs, MonkeyInfo rhs) {
+                return lhs.getTitle().compareTo(rhs.getTitle());
+            }
+        });
+
         return infoList;
 
     }
@@ -1508,6 +1565,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     public int getConversationFromList(String conversationId, ArrayList<MonkeyConversation> conversations){
+        if(conversations == null){
+            return -1;
+        }
+
         Iterator<MonkeyConversation> it = conversations.iterator();
         int i = 0;
         while(it.hasNext()){
@@ -1518,5 +1579,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
 
         return -1;
+    }
+
+    @Override
+    public void removeMember(@NotNull String monkeyId) {
+        if(monkeyChatFragment != null) {
+            removeGroupMember(monkeyChatFragment.getConversationId(), monkeyId);
+        }
     }
 }
