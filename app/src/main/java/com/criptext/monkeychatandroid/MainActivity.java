@@ -695,7 +695,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     //If we use the same monkeyId for several devices (multisession) we receive an
                     // acknowledge for each message sent. So to validate if we have the message
                     // sent, we can send a sync message.
-                    //sendSync();
+                    sendSync();
                 }
             }
         }, oldId, newId);

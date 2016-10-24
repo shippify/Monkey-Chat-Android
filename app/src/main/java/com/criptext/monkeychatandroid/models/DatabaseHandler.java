@@ -286,20 +286,12 @@ public class DatabaseHandler {
                     .where("timestampOrder > ?", since).execute();
     }
 
-
-    public static void syncConversation(String id){
-        ConversationItem conversation = getConversationById(id);
-        if(conversation != null) {
-            /*TODO don't calcuate the totalNewMessages value counting the unread messages in the local DB */
+    public static void syncConversation(ConversationItem conversation) {
+        /*TODO don't calcuate the totalNewMessages value counting the unread messages in the local DB */
             List<MessageItem> unreadMessages = getAllMessagesSince(conversation.getConvId(), conversation.lastOpen);
             int unreadMessageCount = unreadMessages.size();
             conversation.setTotalNewMessage(unreadMessageCount);
-            MessageItem lastMessage;
-            if(unreadMessageCount > 0) {
-                lastMessage = unreadMessages.get(unreadMessageCount - 1);
-            } else {
-                lastMessage = DatabaseHandler.getLastMessage(id);
-            }
+            MessageItem lastMessage = DatabaseHandler.getLastMessage(conversation.getConvId());
 
             int newStatus = MonkeyConversation.ConversationStatus.empty.ordinal();
             if(lastMessage == null) {
@@ -320,6 +312,12 @@ public class DatabaseHandler {
             }
             conversation.setStatus(newStatus);
             conversation.save();
+    }
+
+    public static void syncConversation(String id){
+        ConversationItem conversation = getConversationById(id);
+        if(conversation != null) {
+            syncConversation(conversation);
         }
     }
 

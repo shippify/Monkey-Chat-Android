@@ -188,12 +188,26 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 
     }
 
-    class SyncData(monkeyId: String, response: SyncResponse?) {
+    class SyncData(val monkeyId: String, response: SyncResponse?) {
         val notifications: List<MOKNotification>
         val deletes: HashMap<String, MutableList<MOKDelete>>
         val newMessages: HashMap<String, MutableList<MOKMessage>>
         val conversationsToUpdate: LinkedHashSet<String>
         var newTimestamp: Long
+
+        private fun getMessageList(conversationId: String): MutableList<MOKMessage>{
+            if(!newMessages.containsKey(conversationId))
+                newMessages[conversationId] = LinkedList()
+
+            return newMessages[conversationId]!!
+        }
+
+        private fun getDeleteList(conversationId: String): MutableList<MOKDelete>{
+            if(!deletes.containsKey(conversationId))
+                deletes[conversationId] = LinkedList()
+
+            return deletes[conversationId]!!
+        }
 
         init {
             notifications = response?.notifications ?: listOf()
@@ -202,18 +216,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             conversationsToUpdate = LinkedHashSet()
             newTimestamp = response?.newTimestamp() ?: 0L
 
-            fun getMessageList(conversationId: String): MutableList<MOKMessage>{
-                if(!newMessages.containsKey(conversationId))
-                    newMessages[conversationId] = LinkedList()
 
-                return newMessages[conversationId]!!
-            }
-            fun getDeleteList(conversationId: String): MutableList<MOKDelete>{
-                if(!deletes.containsKey(conversationId))
-                    deletes[conversationId] = LinkedList()
-
-                return deletes[conversationId]!!
-            }
 
             if(response != null) {
                 response.messages.forEach { message ->
@@ -234,6 +237,14 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 
         fun isNotEmpty() = notifications.isNotEmpty() || deletes.isNotEmpty() || newMessages.isNotEmpty()
 
+        fun addMessage(message: MOKMessage) = {
+            val list = getMessageList(message.getConversationID(monkeyId))
+            list.add(message)
+        }
+
+        fun addMessages(messages: List<MOKMessage>) {
+            messages.forEach { m -> addMessage(m) }
+        }
 
     }
 

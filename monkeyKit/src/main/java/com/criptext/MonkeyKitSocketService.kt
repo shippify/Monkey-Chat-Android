@@ -10,7 +10,6 @@ import android.preference.PreferenceManager
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Base64
 import android.util.Log
-import android.webkit.MimeTypeMap
 import com.criptext.comunication.*
 import com.criptext.database.CriptextDBHandler
 import com.criptext.http.*
@@ -19,7 +18,6 @@ import com.criptext.security.AESUtil
 import com.criptext.security.AsyncAESInitializer
 import com.criptext.security.RandomStringBuilder
 import com.google.gson.JsonObject
-import org.apache.commons.io.FilenameUtils
 import org.apache.http.client.ClientProtocolException
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.params.BasicHttpParams
@@ -95,9 +93,14 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * List of messages that have not been successfully delivered yet
      */
-    private val pendingMessages: MutableList<JsonObject> = mutableListOf();
+    private val pendingMessages: LinkedList<JsonObject> = LinkedList();
 
-    private val pendingActions: MutableList<Runnable> = mutableListOf();
+    /**
+     * List of actions to execute after socket is connected and sync is complete.
+     */
+    private val pendingActions: LinkedList<Runnable> = LinkedList();
+
+    private val messagesReceivedDuringSync: LinkedList<MOKMessage> = LinkedList();
 
     var broadcastReceiver: BroadcastReceiver? = null
 
@@ -267,6 +270,12 @@ abstract class MonkeyKitSocketService : Service() {
         }
 
     }
+
+    private fun addMessagesToSyncResponse(response: HttpSync.SyncData){
+        response.addMessages(messagesReceivedDuringSync)
+        messagesReceivedDuringSync.clear()
+    }
+
     private fun playPendingActions(){
         val totalActions = pendingActions.size
         for (i in 1..totalActions){
@@ -299,35 +308,42 @@ abstract class MonkeyKitSocketService : Service() {
             }
             CBTypes.onMessageReceived -> {
                 val message = info[0] as MOKMessage
-                val tipo = CriptextDBHandler.getMonkeyActionType(message);
-                if(tipo == MessageTypes.blMessageAudio ||
-                    tipo == MessageTypes.blMessagePhoto ||
-                    tipo == MessageTypes.blMessageDocument ||
-                    tipo == MessageTypes.blMessageScreenCapture ||
-                    tipo == MessageTypes.blMessageShareAFriend ||
-                    tipo == MessageTypes.blMessageDefault)
-                    storeReceivedMessage(message, Runnable {
-                        //Message received and stored, update lastTimeSynced with with the timestamp
-                        //that the server gave the message
-                        lastTimeSynced = message.datetime.toLong();
-                        delegate?.onMessageReceived(message)
-                        if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
-                            ServiceTimeoutTask(this).execute()
-                    })
+                if(status == ServiceStatus.initializing)
+                    messagesReceivedDuringSync.add(message)
+                else {
+                    val tipo = CriptextDBHandler.getMonkeyActionType(message);
+                    if (tipo == MessageTypes.blMessageAudio ||
+                            tipo == MessageTypes.blMessagePhoto ||
+                            tipo == MessageTypes.blMessageDocument ||
+                            tipo == MessageTypes.blMessageScreenCapture ||
+                            tipo == MessageTypes.blMessageShareAFriend ||
+                            tipo == MessageTypes.blMessageDefault)
+                        storeReceivedMessage(message, Runnable {
+                            //Message received and stored, update lastTimeSynced with with the timestamp
+                            //that the server gave the message
+                            lastTimeSynced = message.datetime.toLong();
+                            delegate?.onMessageReceived(message)
+                            if (startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
+                                ServiceTimeoutTask(this).execute()
+                        })
+                }
             }
 
             CBTypes.onSyncComplete -> {
                 val batch = info[0] as HttpSync.SyncData;
+                status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
+                //add messages that were received while syncing
+                addMessagesToSyncResponse(batch)
+
                 syncDatabase(batch, Runnable {
                     //At this point initialization is complete. We are ready to receive and send messages
-                    status = if(delegate != null) ServiceStatus.bound else ServiceStatus.running
-                    delegate?.onSyncComplete(batch);
+                    delegate?.onSyncComplete(batch)
                     //since status could have changed from initializing to bound, or running, let's play pending actions.
                     //this is needed for uploading photos.
                     playPendingActions()
                     if(startedManually && delegate == null)  //if service started manually, stop it manually with a timeout task
                         ServiceTimeoutTask(this).execute()
-                });
+                })
             }
 
             CBTypes.onSocketDisconnected -> {
@@ -560,8 +576,15 @@ abstract class MonkeyKitSocketService : Service() {
         asyncConnSocket.sendMessage(json);
     }
 
-    fun sendSync(since: Long, qty: Int) {
+    private fun sendSync(since: Long, qty: Int) {
         HttpSyncTask(this, since, qty).execute()
+    }
+
+    public fun sendSync() {
+        if(status != ServiceStatus.initializing) {
+            status = ServiceStatus.initializing
+            HttpSyncTask(this, lastTimeSynced, 50).execute()
+        }
     }
 
     /**

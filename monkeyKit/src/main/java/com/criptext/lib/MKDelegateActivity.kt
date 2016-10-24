@@ -424,16 +424,16 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
 
     /**
-     * request all the messages sent to the current user synce the last time it was synced. When
+     * request all the messages sent to the current user since the last time it was synced. When
      * the messages are successfully received. the onMessageBatchReady() callback is executed
      *
      * The sync operation is done automatically every time the socket connects to the network. in
      * most cases there is no need for you to call this method manually.
      */
-    /*fun sendSync(){
+    fun sendSync(){
         val socketService = service
-        socketService?.sendSync(socketService.lastTimeSynced)
-    }*/
+        socketService?.sendSync()
+    }
 
     /**
      * Set your status to online or offline depending of the boolean received.

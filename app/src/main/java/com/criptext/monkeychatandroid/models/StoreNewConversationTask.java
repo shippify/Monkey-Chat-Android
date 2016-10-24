@@ -32,14 +32,7 @@ public class StoreNewConversationTask extends AsyncTask<ConversationItem, Void, 
         ConversationItem conv = params[0];
         ActiveAndroid.beginTransaction();
         try {
-            List<MessageItem> messages = DatabaseHandler.getAllMessagesSince(conv.getConvId(), conv.lastOpen);
-            conv.setTotalNewMessage(messages.size());
-            if (!messages.isEmpty()) {
-                MessageItem lastMessage = messages.get(messages.size() - 1);
-                conv.setSecondaryText(DatabaseHandler.getSecondaryTextByMessageType(lastMessage, conv.isGroup()));
-                conv.setStatus(MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
-            }
-            conv.save();
+            DatabaseHandler.syncConversation(conv);
             ActiveAndroid.setTransactionSuccessful();
             return conv;
         } finally {
