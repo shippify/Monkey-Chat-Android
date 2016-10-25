@@ -129,6 +129,25 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
         return admins;
     }
 
+    public void removeMember(String memberId){
+        groupMembers = groupMembers.replace(memberId, "");
+        groupMembers = groupMembers.replace(",,", ",");
+        if (groupMembers.endsWith(",")) {
+            groupMembers = groupMembers.substring(0, groupMembers.length()-1);
+        }
+    }
+
+    public void addMember(String memberId){
+        if(groupMembers.contains(memberId)){
+            return;
+        }
+        if(groupMembers.length() <= 0){
+            groupMembers = memberId;
+        }else{
+            groupMembers = groupMembers.concat("," + memberId);
+        }
+    }
+
     @NotNull
     @Override
     public String getConvId() {

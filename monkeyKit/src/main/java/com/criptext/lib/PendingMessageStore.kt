@@ -60,6 +60,10 @@ class PendingMessageStore {
                 }
             }
         }
+
+        fun clean(context: Context){
+            context.deleteFile(filename)
+        }
     }
 
     class AsyncStoreTask(var ctx: Context?, var messages: List<JsonObject>): AsyncTask<Void, Void, Int>(){
@@ -68,6 +72,14 @@ class PendingMessageStore {
             ctx = null
             return 0
         }
-
     }
+
+    class AsyncCleanTask(var ctx: Context?): AsyncTask<Void, Void, Int>(){
+        override fun doInBackground(vararg p0: Void?): Int {
+            clean(ctx!!)
+            ctx = null
+            return 0
+        }
+    }
+
 }
