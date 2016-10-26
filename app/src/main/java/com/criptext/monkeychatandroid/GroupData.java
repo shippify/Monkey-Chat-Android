@@ -148,8 +148,11 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         infoList.clear();
         HashMap<String, MOKUser> users = this.getUsers();
 
-        for (Object value : users.values()){
-            MOKUser user = (MOKUser)value;
+        for (MOKUser value : users.values()){
+            if(value.getMonkeyId() == null || value.getMonkeyId().isEmpty()){
+                continue;
+            }
+            MOKUser user = value;
             String connection = "Offline";
             String tag = "";
             if(this.getAdmins() != null && this.getAdmins().contains(user.getMonkeyId())){
@@ -167,7 +170,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         Collections.sort(infoList, new Comparator<MonkeyInfo>() {
             @Override
             public int compare(MonkeyInfo lhs, MonkeyInfo rhs) {
-                return lhs.getTitle().compareTo(rhs.getTitle());
+                return lhs.getTitle().toLowerCase().compareTo(rhs.getTitle().toLowerCase());
             }
         });
     }
