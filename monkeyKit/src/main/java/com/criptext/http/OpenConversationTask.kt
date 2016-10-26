@@ -48,26 +48,32 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
         val aesData = getAESData(clientData.monkeyId)
         if(isCancelled || aesData == null)
-            return null;
+            return OpenConvData(null, null, "", conversationId)
 
         val aesutil = AESUtil(aesData)
 
-        if(undecrypted==null) {
-            //there is no pending message to decrypt, we are only interested in the keys
+        if(response != null) {
 
-            //This encrypted key has the other user's key and IV separated by ':', but we can't use it
-            // yet, it is encypted
-            val data = response.getAsJsonObject("data")
-            val encryptedKey = data.get("convKey").asString
-            return OpenConvData(null, null, aesutil.decrypt(encryptedKey), conversationId)
-        }
+            if(undecrypted==null) {
+                //there is no pending message to decrypt, we are only interested in the keys
 
-        //decrypt the pending message
-        return attemptToDecryptWithOpenResponse(
-                openConversationResponse = response,
-                aesutil = aesutil,
-                pendingMessage = undecrypted,
-                clientData = clientData)
+                //This encrypted key has the other user's key and IV separated by ':', but we can't use it
+                // yet, it is encypted
+                val data = response.getAsJsonObject("data")
+                val encryptedKey = data.get("convKey").asString
+                return OpenConvData(null, null, aesutil.decrypt(encryptedKey), conversationId)
+            }
+
+            //decrypt the pending message
+            return attemptToDecryptWithOpenResponse(
+                    openConversationResponse = response,
+                    aesutil = aesutil,
+                    pendingMessage = undecrypted,
+                    clientData = clientData)
+        } else //server failed to handle new keys, discard the message.
+            return OpenConvData(null, messageFailDecrypted = undecrypted,
+                validKey = KeyStoreCriptext.getString(serviceRef.get(), conversationId),
+                conversationId = conversationId)
     }
 
     override fun onPostExecute(openconvData: OpenConvData?) {
@@ -98,7 +104,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
         fun authorizedHttpClient(clientData: ClientData) = authorizedHttpClient(clientData, 20)
 
-        fun sendOpenConversationRequest(user_to: String, clientData: ClientData): JsonObject {
+        fun sendOpenConversationRequest(user_to: String, clientData: ClientData): JsonObject? {
 
             val http = authorizedHttpClient(clientData)
 
@@ -115,9 +121,15 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
                     .post(body).build()
 
 
-            val response = http.newCall(request).execute().body().string();
-            val parser = JsonParser()
-            return parser.parse(response).asJsonObject
+            val response = http.newCall(request).execute()
+            if (response.isSuccessful) {
+                val body = response.body().string();
+                val parser = JsonParser()
+                return parser.parse(body).asJsonObject
+            } else {
+                Log.e("sendOpenConversation", response.body().string())
+                return null
+            }
 
         }
 
@@ -190,14 +202,16 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
             } else {
                 val response = sendOpenConversationRequest(message.sid, clientData)
                 //retry to decrypt the pending message with the key from response
-                val convData =  attemptToDecryptWithOpenResponse(
-                        openConversationResponse = response, aesutil = aesutil,
-                        pendingMessage = message, clientData = clientData)
+                if (response != null) {
+                    val convData = attemptToDecryptWithOpenResponse(
+                            openConversationResponse = response, aesutil = aesutil,
+                            pendingMessage = message, clientData = clientData)
 
-                if(convData?.messageOkDecrypted != null)
-                    return convData!!.validKey
-                else return null
+                    if (convData?.messageOkDecrypted != null)
+                        return convData!!.validKey
+                }
 
+                return null
             }
         }
     }

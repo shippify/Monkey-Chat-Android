@@ -7,6 +7,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
@@ -549,9 +550,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     /**
      * adds a message to the adapter so that it can be displayed in the RecyclerView.
-     * @param message
+     * @param message a received message
      */
-    private void processNewMessage(MOKMessage message){
+    private MessageItem processNewMessage(MOKMessage message) {
         String conversationID = message.getConversationID(myMonkeyID);
         MessageItem newItem = DatabaseHandler.createMessage(message, this.getCacheDir().toString(), myMonkeyID);
         if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationID)) {
@@ -570,6 +571,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 monkeyConversationsFragment.findConversationById(conversationID)==null){
             getConversationInfo(conversationID);
         }
+        return newItem;
     }
 
     /**
@@ -609,20 +611,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(monkeyChatFragment != null) {
             monkeyChatFragment.addOldMessages(new ArrayList<MonkeyItem>(messageItems), messages.size() == 0);
         }
-    }
-
-
-    private String getSecondaryTextByMOkMessage(MOKMessage message){
-        if (message.getProps()!=null && message.getProps().has("file_type")) {
-            if(Integer.parseInt(message.getProps().get("file_type").getAsString())==1)
-                return "Audio";
-            else if(Integer.parseInt(message.getProps().get("file_type").getAsString())==3)
-                return "Photo";
-            else
-                return message.getMsg();
-        }
-        else
-            return message.getMsg();
     }
 
     @Override
@@ -737,12 +725,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onMessageReceived(@NonNull MOKMessage message) {
-        processNewMessage(message);
-        boolean isMyOwnMsg = message.getSid().equals(myMonkeyID);
-        updateConversation(message.getConversationID(myMonkeyID), getSecondaryTextByMOkMessage(message),
+        MessageItem newItem = processNewMessage(message);
+        boolean isMyOwnMsg = newItem.isIncomingMessage();
+        updateConversation(newItem.getConversationId(),
+                DatabaseHandler.getSecondaryTextByMessageType(newItem, false),
                 isMyOwnMsg? MonkeyConversation.ConversationStatus.deliveredMessage:
-                        MonkeyConversation.ConversationStatus.receivedMessage, isMyOwnMsg? 0 : 1, message.getDatetimeorder(), 0L);
-
+                        MonkeyConversation.ConversationStatus.receivedMessage,
+                isMyOwnMsg? 0 : 1,
+                message.getDatetimeorder(), 0L);
     }
 
     private void syncConversationsFragment(final LinkedHashSet<String> conversationsToUpdate) {
@@ -1034,11 +1024,17 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             JsonObject convInfo = mokConversation.getInfo();
             if(convInfo!=null && convInfo.has("name"))
                 convName = convInfo.get("name").getAsString();
+            MessageItem lastItem = null;
+            if(mokConversation.getLastMessage() != null)
+            lastItem = DatabaseHandler.createMessage(mokConversation.getLastMessage(),
+                    "" + getCacheDir().getAbsolutePath(), myMonkeyID);
             ConversationItem conversationItem = new ConversationItem(mokConversation.getConversationId(),
                     convName, mokConversation.getLastModified(),
-                    mokConversation.getLastMessage()!=null?getSecondaryTextByMOkMessage(mokConversation.getLastMessage()):secondaryText,
-                    mokConversation.getUnread(), mokConversation.isGroup(), mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
-                    mokConversation.getAvatarURL(), MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
+                    DatabaseHandler.getSecondaryTextByMessageType(lastItem, mokConversation.isGroup()),
+                    mokConversation.getUnread(),
+                    mokConversation.isGroup(), mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
+                    mokConversation.getAvatarURL(),
+                    MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
             if(convInfo!=null && convInfo.has("admin")) {
                 admins = convInfo.get("admin").getAsString();
                 conversationItem.setAdmins(admins);
