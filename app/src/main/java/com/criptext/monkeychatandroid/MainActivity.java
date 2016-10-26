@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuInflater;
 import android.widget.Toast;
 
@@ -229,9 +230,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public boolean onCreateOptionsMenu(android.view.Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu_conversations, menu);
-
         return true;
     }
 
@@ -240,15 +238,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         switch (item.getItemId()) {
             case android.R.id.home:
                 onBackPressed();
-                break;
-            case R.id.action_deleteall:
-                DatabaseHandler.deleteAll();
-                if(monkeyChatFragment != null) monkeyChatFragment.clearMessages();
-                break;
+                return true;
             default:
                 break;
         }
-        return true;
+        return false;
     }
 
     /***
@@ -1586,5 +1580,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(monkeyChatFragment != null) {
             removeGroupMember(monkeyChatFragment.getConversationId(), monkeyId);
         }
+    }
+
+    @Override
+    public void deleteAllMessages(@NotNull String conversationId) {
+        DatabaseHandler.deleteAll(conversationId);
+        if(monkeyChatFragment != null) monkeyChatFragment.clearMessages();
     }
 }

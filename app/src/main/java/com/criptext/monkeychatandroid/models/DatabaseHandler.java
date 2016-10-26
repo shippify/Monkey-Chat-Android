@@ -180,8 +180,8 @@ public class DatabaseHandler {
                 .executeSingle();
     }
 
-    public static void deleteAll(){
-        new Delete().from(MessageItem.class).execute();
+    public static void deleteAll(@NotNull String conversationId){
+        new Delete().from(MessageItem.class).where("conversationId = ?", conversationId).execute();
     }
 
     public static void updateMessageStatus(String messageId, String OldMessageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
