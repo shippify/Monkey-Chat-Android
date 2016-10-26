@@ -727,7 +727,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onMessageReceived(@NonNull MOKMessage message) {
         MessageItem newItem = processNewMessage(message);
-        boolean isMyOwnMsg = newItem.isIncomingMessage();
+        boolean isMyOwnMsg = !newItem.isIncomingMessage();
         updateConversation(newItem.getConversationId(),
                 DatabaseHandler.getSecondaryTextByMessageType(newItem, false),
                 isMyOwnMsg? MonkeyConversation.ConversationStatus.deliveredMessage:
