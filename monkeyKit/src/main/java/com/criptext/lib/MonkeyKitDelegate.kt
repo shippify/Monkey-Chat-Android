@@ -164,7 +164,7 @@ interface MonkeyKitDelegate {
      * *
      * @param lastOpenMe timestamp of the last time the conversation open my conversation
      */
-    fun onConversationOpenResponse(senderId: String, isOnline: Boolean?, lastSeen: String?, lastOpenMe: String?, members_online: String?)
+    fun onConversationOpenResponse(senderId: String, isOnline: Boolean?, lastSeen: String?, lastOpenMe: String?, members_online: String)
 
     /**
      * When a message is deleted from the server, MonkeyKit receive a notification.

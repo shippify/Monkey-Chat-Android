@@ -301,7 +301,7 @@ abstract class MonkeyKitSocketService : Service() {
                         , info[3] as String, info[4] as Boolean, info[5] as Int)
             }
             CBTypes.onConversationOpenResponse -> {
-                delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean?, info[2] as String?, info[3] as String?, info[4] as String?)
+                delegate?.onConversationOpenResponse(info[0] as String, info[1] as Boolean?, info[2] as String?, info[3] as String?, info[4] as String)
             }
             CBTypes.onSocketConnected -> {
                 resendPendingMessages()

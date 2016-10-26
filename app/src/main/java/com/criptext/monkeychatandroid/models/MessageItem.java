@@ -188,6 +188,10 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
         return oldMessageId;
     }
 
+    public boolean isGroupMessage() {
+        return getSenderId().startsWith("G:");
+    }
+
     @Override
     public int compareTo(@NonNull MessageItem another) {
         long stamp1 = getMessageTimestampOrder(), stamp2 = another.getMessageTimestampOrder();

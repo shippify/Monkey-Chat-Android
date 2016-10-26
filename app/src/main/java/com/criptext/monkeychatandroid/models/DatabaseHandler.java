@@ -12,6 +12,7 @@ import com.criptext.comunication.MessageTypes;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
+import com.criptext.monkeykitui.util.Utils;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -339,7 +340,7 @@ public class DatabaseHandler {
             return isGroup ? "Write to group" : "Write to contact";
         switch (MonkeyItem.MonkeyItemType.values()[monkeyItem.getMessageType()]) {
             case audio:
-                return "Audio";
+                return "Audio " + Utils.Companion.getAudioTimeFormattedText(monkeyItem.getAudioDuration());
             case photo:
                 return "Photo";
             default:
