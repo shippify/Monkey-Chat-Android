@@ -152,11 +152,11 @@ public class DatabaseHandler {
                 if(message.getParams().has("length"))
                     item.setAudioDuration(message.getParams().get("length").getAsLong());
                 if(!item.getMessageText().contains("/"))
-                    item.setMessageContent(pathToMessagesDir + "/" + message.getMsg());
+                    item.setMessageContent(pathToMessagesDir + "/photos/" + message.getMsg());
                 break;
             case photo:
                 if(!item.getMessageText().contains("/"))
-                    item.setMessageContent(pathToMessagesDir + "/" + message.getMsg());
+                    item.setMessageContent(pathToMessagesDir + "/voice notes/" + message.getMsg());
                 break;
         }
 
