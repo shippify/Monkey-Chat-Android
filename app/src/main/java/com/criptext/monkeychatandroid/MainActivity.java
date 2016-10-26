@@ -693,6 +693,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onCreateGroup(String groupMembers, String groupName, String groupID, Exception e) {
+        Log.d("TEST", "group create");
         if(e==null){
             ConversationItem conversationItem = new ConversationItem(groupID,
                     groupName, System.currentTimeMillis(), "Write to this group",
@@ -705,12 +706,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onAddGroupMember(@Nullable String groupID, @Nullable String members, @Nullable Exception e) {
-
+        Log.d("TEST", "group add");
     }
 
     @Override
     public void onRemoveGroupMember(@Nullable String groupID, @Nullable String members, @Nullable Exception e) {
-
+        Log.d("TEST", "remove member");
     }
 
     @Override
@@ -880,7 +881,19 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onGroupAdded(String groupid, String members, JsonObject info) {
-
+        Log.d("TEST", "ADDING NEW GROUP");
+        ConversationItem conversation = DatabaseHandler.getConversationById(groupid);
+        if(conversation == null) {
+            conversation = new ConversationItem(groupid, info.has("name") ? info.get("name").getAsString() : "Uknown Group", System.currentTimeMillis(),
+                    "Write to this group", 0, true, members, info.has("avatar") ? info.get("avatar").getAsString() : "", MonkeyConversation.ConversationStatus.empty.ordinal());
+            DatabaseHandler.saveConversations(new ConversationItem[]{conversation});
+            if (monkeyConversationsFragment != null) {
+                monkeyConversationsFragment.addNewConversation(conversation, true);
+            }
+            if (conversationsList != null) {
+                conversationsList.add(conversation);
+            }
+        }
     }
 
     @Override
@@ -1463,7 +1476,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         Collections.sort(infoList, new Comparator<MonkeyInfo>() {
             @Override
             public int compare(MonkeyInfo lhs, MonkeyInfo rhs) {
-                return lhs.getTitle().compareTo(rhs.getTitle());
+                return lhs.getTitle().toLowerCase().compareTo(rhs.getTitle().toLowerCase());
             }
         });
 
