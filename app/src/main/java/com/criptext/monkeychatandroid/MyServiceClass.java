@@ -13,6 +13,7 @@ import com.criptext.monkeychatandroid.models.SyncDatabaseTask;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,21 +23,20 @@ import java.util.List;
  */
 
 public class MyServiceClass extends MonkeyKitSocketService{
+    private File _downloadDir;
 
+    private File getDownloadDir() {
+        if(_downloadDir == null)
+            _downloadDir = MonkeyChat.getDownloadDir(this);
+        return _downloadDir;
+    }
     @Override
     public void storeReceivedMessage(final MOKMessage message, final Runnable runnable) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        DatabaseHandler.saveIncomingMessage(DatabaseHandler.createMessage(message, getCacheDir().toString(),
+        DatabaseHandler.saveIncomingMessage(DatabaseHandler.createMessage(message, getDownloadDir().getAbsolutePath(),
                 prefs.getString(MonkeyChat.MONKEY_ID, "")), runnable);
 
     }
-
-    @Override
-    public void storeMessageBatch(HashMap<String, List<MOKMessage>> messages, final Runnable runnable) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        DatabaseHandler.saveMessageBatch(messages, this, prefs.getString(MonkeyChat.MONKEY_ID, ""), runnable);
-    }
-
 
     @NotNull
     @Override
@@ -64,7 +64,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
     @Override
     public void syncDatabase(@NotNull HttpSync.SyncData syncData, @NotNull Runnable runnable) {
         SyncDatabaseTask syncTask = new SyncDatabaseTask(syncData, runnable, clientData.getMonkeyId(),
-                getCacheDir().toString());
+                getDownloadDir().getAbsolutePath());
         syncTask.execute();
 
     }
