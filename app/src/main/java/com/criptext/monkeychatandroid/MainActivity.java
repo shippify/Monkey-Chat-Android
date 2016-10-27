@@ -478,13 +478,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         unsend working with messages
      */
     private void updateConversationLastRead(final String convId, final long lastRead){
-        Log.d("MainActivity", "updateConversation last read");
         asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
             @Override
             public void onQueryReturned(ConversationItem result) {
                 if(result != null){
-
-                    Log.d("MainActivity", "updateConversation last read found " + result.getSecondaryText() + " " + result.getTotalNewMessages());
                     ConversationTransaction transaction = new ConversationTransaction() {
                         @Override
                         public void updateConversation(MonkeyConversation monkeyConversation) {
@@ -531,7 +528,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         transaction.updateConversation(result);
 
                     DatabaseHandler.updateConversationWithSentMessage(result,
-                            MessageItem.getSecondaryTextByMessageType(message),
+                            DatabaseHandler.getSecondaryTextByMessageType(message, result.isGroup()),
                             read ? MonkeyConversation.ConversationStatus.sentMessageRead
                                     : MonkeyConversation.ConversationStatus.deliveredMessage, 0);
                 }
@@ -1201,7 +1198,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     lastMessage.getMessageTimestamp() <= conversationItem.lastRead){
                 status = MonkeyConversation.ConversationStatus.sentMessageRead;
             }
-            updateConversation(lastMessage.getConversationId(), MessageItem.getSecondaryTextByMessageType(lastMessage),
+            updateConversation(lastMessage.getConversationId(), DatabaseHandler.getSecondaryTextByMessageType(lastMessage, conversationItem.isGroup()),
                     status, unreadCounter > 0 ? -1 : 0, lastMessage.getMessageTimestampOrder(), 0);
 
             return;
