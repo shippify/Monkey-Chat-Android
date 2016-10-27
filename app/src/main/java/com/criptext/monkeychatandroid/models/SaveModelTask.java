@@ -14,10 +14,8 @@ class SaveModelTask extends AsyncTask<Model, Integer, Integer> {
 
     @Override
     protected Integer doInBackground(Model... params) {
-        boolean shouldUseTransaction = params.length > 1;
+        ActiveAndroid.beginTransaction();
         try {
-            if (shouldUseTransaction)
-                ActiveAndroid.beginTransaction();
 
             for (Model model : params) {
                 try {
@@ -27,13 +25,9 @@ class SaveModelTask extends AsyncTask<Model, Integer, Integer> {
                 }
             }
 
-            if (shouldUseTransaction) {
-                ActiveAndroid.setTransactionSuccessful();
-            }
+            ActiveAndroid.setTransactionSuccessful();
         } finally {
-            if(shouldUseTransaction) {
-                ActiveAndroid.endTransaction();
-            }
+            ActiveAndroid.endTransaction();
         }
         return 1;
     }

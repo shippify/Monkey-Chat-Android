@@ -478,11 +478,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         unsend working with messages
      */
     private void updateConversationLastRead(final String convId, final long lastRead){
+        Log.d("MainActivity", "updateConversation last read");
         asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
             @Override
             public void onQueryReturned(ConversationItem result) {
                 if(result != null){
 
+                    Log.d("MainActivity", "updateConversation last read found " + result.getSecondaryText() + " " + result.getTotalNewMessages());
                     ConversationTransaction transaction = new ConversationTransaction() {
                         @Override
                         public void updateConversation(MonkeyConversation monkeyConversation) {
@@ -817,14 +819,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     public void updateClosedConversation(String conversationId, final long lastOpen, final String lastMessageText) {
         if(activeConversationItem != null && activeConversationItem.getConvId().equals((conversationId))) {
-            Log.d("MainActivity", "updateClosedConversation");
             ConversationTransaction t = new ConversationTransaction() {
                 @Override
                 public void updateConversation(@NotNull MonkeyConversation conversation) {
                     ConversationItem conversationItem = (ConversationItem) conversation;
                     conversationItem.lastOpen = lastOpen;
-                    activeConversationItem.setTotalNewMessage(0);
-                    activeConversationItem.setSecondaryText(lastMessageText);
+                    conversationItem.setTotalNewMessage(0);
+                    conversationItem.setSecondaryText(lastMessageText);
                 }
             };
             //Apply transaction on the DB
@@ -1434,7 +1435,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 getConversationsFromServer(CONV_PERPAGE, 0);
             else {
                 MonkeyConversation conversation = monkeyConversationsFragment.getLastConversation();
-                Log.d("MainActivity", "getmore conversations" +(conversation.getDatetime() / 1000));
                 getConversationsFromServer(CONV_PERPAGE, conversation.getDatetime() / 1000);
             }
         }
