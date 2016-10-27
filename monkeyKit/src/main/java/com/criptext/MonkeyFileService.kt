@@ -115,6 +115,8 @@ abstract class MonkeyFileService: IntentService(TAG){
                 val claveArray = claves.split(":")
                 //Log.d("MonkeyFileService", "keys for ${mokDownload.sid}: ${claveArray[0]}")
                 resultBytes = aesUtil!!.decryptWithCustomKeyAndIV(downloadBytes, claveArray[0], claveArray[1])
+                if(resultBytes == null)
+                    return null
                 if(props.get("device").asString == "web"){
                     var utf8str = resultBytes.toString(charset("utf8"))
                     utf8str = utf8str.substring(utf8str.indexOf(",") + 1, utf8str.length);
