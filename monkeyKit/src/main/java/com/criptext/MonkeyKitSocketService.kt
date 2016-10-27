@@ -1120,15 +1120,6 @@ abstract class MonkeyKitSocketService : Service() {
      */
     abstract fun storeReceivedMessage(message: MOKMessage, runnable: Runnable)
 
-    /**
-     * Guarda un grupo de mensajes de MonkeyKit que se recibieron despues de un sync en la base de datos.
-     * Es sumamente importante implementar esto de forma asincrona porque potencialmente, podrian
-     * llegar cientos de mensajes, haciendo la operacion sumamente costosa.
-     * @param messages
-     * @param runnable Este runnable debe ejecutarse despues de guardar el batch de mensajes
-     */
-    abstract fun storeMessageBatch(conversationMessages: HashMap<String, MutableList<MOKMessage>>, runnable: Runnable);
-
     abstract fun syncDatabase(syncData: HttpSync.SyncData, runnable: Runnable);
 
     /**

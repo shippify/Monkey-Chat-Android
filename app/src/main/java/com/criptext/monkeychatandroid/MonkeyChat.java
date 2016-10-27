@@ -1,6 +1,11 @@
 package com.criptext.monkeychatandroid;
 
+import android.content.Context;
+import android.os.Environment;
+
 import com.crashlytics.android.Crashlytics;
+
+import java.io.File;
 
 import io.fabric.sdk.android.Fabric;
 
@@ -36,6 +41,17 @@ public class MonkeyChat extends com.activeandroid.app.Application{
     public static String PHOTOS_DIR = "photos";
     public static String VOICENOTES_DIR = "voice notes";
 
+
+    public static File getDownloadDir(Context ctx) {
+        File downloadDir = new File(Environment.getExternalStorageDirectory(),
+                ctx.getResources().getString(R.string.app_name));
+        downloadDir.mkdirs();
+        File subdir = new File(downloadDir, MonkeyChat.PHOTOS_DIR);
+        subdir.mkdir();
+        subdir = new File(downloadDir, MonkeyChat.VOICENOTES_DIR);
+        subdir.mkdir();
+        return downloadDir;
+    }
     @Override
     public void onCreate() {
         super.onCreate();

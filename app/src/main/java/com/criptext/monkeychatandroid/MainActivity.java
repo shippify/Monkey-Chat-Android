@@ -139,7 +139,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
         myName = prefs.getString(MonkeyChat.FULLNAME, null);
         //Log.d("MonkeyId", myMonkeyID);
-        initDownloadDir();
+        downloadDir = MonkeyChat.getDownloadDir(this);
 
         //Check play services. if available try to register with GCM so that we get Push notifications
         if(MonkeyRegistrationService.Companion.checkPlayServices(this))
@@ -319,15 +319,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         };
     }
 
-    private void initDownloadDir() {
-        downloadDir = new File(Environment.getExternalStorageDirectory(),
-                getResources().getString(R.string.app_name));
-        downloadDir.mkdirs();
-        File subdir = new File(downloadDir, MonkeyChat.PHOTOS_DIR);
-        subdir.mkdir();
-        subdir = new File(downloadDir, MonkeyChat.VOICENOTES_DIR);
-        subdir.mkdir();
-    }
     /**
      * Add messages retrieved from DB to the messages list
      * @param oldMessages list of messages
