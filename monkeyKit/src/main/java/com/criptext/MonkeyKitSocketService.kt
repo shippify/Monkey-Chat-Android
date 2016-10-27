@@ -1138,7 +1138,6 @@ abstract class MonkeyKitSocketService : Service() {
     abstract fun loadClientData(): ClientData
 
     companion object {
-
         val transitionMessagesPrefs = "MonkeyKit.transitionMessages";
         val lastSyncPrefs = "MonkeyKit.lastSyncTime";
         val lastSyncKey = "MonkeyKit.lastSyncKey";

@@ -7,6 +7,7 @@ import android.os.IBinder
 import android.util.Log
 import android.webkit.MimeTypeMap
 import com.criptext.MonkeyKitSocketService
+import com.criptext.comunication.MOKConversation
 import com.criptext.comunication.MOKMessage
 import com.criptext.comunication.MessageTypes
 import com.criptext.comunication.PushMessage
@@ -30,6 +31,10 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     val pendingFiles = HashMap<String, DelegateMOKMessage>();
     private val pendingDownloads = HashMap<String, DownloadMessage>();
 
+
+    private var lastMoreMessagesRequest: MoreDataRequest? = null
+
+    private var lastMoreConversationsRequest: MoreDataRequest? = null
     /**
      * sets the currently active conversation id. When a non null value is set. it sends an "openConversation"
      * to the server. When a null value is set, a "closeConversation" message is sent to the server
@@ -482,8 +487,13 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      */
     fun getConversationsFromServer(quantity: Int, fromTimestamp: Long){
         val socketService = service
-        Log.d("SocketService","status: ${MonkeyKitSocketService.status}")
-        socketService?.getAllConversations(quantity, fromTimestamp)
+        //don't accept repeated requests
+        if(lastMoreConversationsRequest == null || lastMoreConversationsRequest!!.expired ||
+                lastMoreConversationsRequest!!.acknowledged && fromTimestamp != lastMoreConversationsRequest!!.timestamp) {
+            lastMoreConversationsRequest = MoreDataRequest(fromTimestamp)
+            Log.d("MKDelegateActivity", "get conversations from server")
+            socketService?.getAllConversations(quantity, fromTimestamp)
+        }
     }
 
     /**
@@ -536,9 +546,29 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         socketService?.unsendMessage(senderId, recipientId, messageId)
     }
 
+    override fun onGetConversations(conversations: ArrayList<MOKConversation>, e: Exception?) {
+        if(e != null) //Something went wrong, invalidate last request
+            lastMoreConversationsRequest = null
+        else //request successful. don't accept anymore requests like this
+            lastMoreConversationsRequest!!.acknowledged = true
+    }
+
     private data class DownloadMessage(val fileMessageId: String, val filepath: String,
                                        val props: JsonObject)
+
+    class MoreDataRequest(val key: Long) {
+        var acknowledged = false
+        val timestamp: Long
+        init {
+            timestamp = System.currentTimeMillis()
+        }
+
+        val expired: Boolean
+        get() = !acknowledged && (System.currentTimeMillis() - timestamp > dataRequestTimeout)
+    }
+
     companion object{
         val  CONNECTION_NOT_READY_ERROR = "MonkeyKitSocketService is not ready yet."
+        private val dataRequestTimeout = 15000L
     }
 }

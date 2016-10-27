@@ -139,9 +139,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
         myName = prefs.getString(MonkeyChat.FULLNAME, null);
         //Log.d("MonkeyId", myMonkeyID);
-        downloadDir = new File(Environment.getExternalStorageDirectory(),
-                getResources().getString(R.string.app_name));
-        downloadDir.mkdirs();
+        initDownloadDir();
 
         //Check play services. if available try to register with GCM so that we get Push notifications
         if(MonkeyRegistrationService.Companion.checkPlayServices(this))
@@ -321,6 +319,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         };
     }
 
+    private void initDownloadDir() {
+        downloadDir = new File(Environment.getExternalStorageDirectory(),
+                getResources().getString(R.string.app_name));
+        downloadDir.mkdirs();
+        File subdir = new File(downloadDir, MonkeyChat.PHOTOS_DIR);
+        subdir.mkdir();
+        subdir = new File(downloadDir, MonkeyChat.VOICENOTES_DIR);
+        subdir.mkdir();
+    }
     /**
      * Add messages retrieved from DB to the messages list
      * @param oldMessages list of messages
@@ -810,6 +817,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     public void updateClosedConversation(String conversationId, final long lastOpen, final String lastMessageText) {
         if(activeConversationItem != null && activeConversationItem.getConvId().equals((conversationId))) {
+            Log.d("MainActivity", "updateClosedConversation");
             ConversationTransaction t = new ConversationTransaction() {
                 @Override
                 public void updateConversation(@NotNull MonkeyConversation conversation) {
@@ -1028,11 +1036,17 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onGetConversations(@NotNull ArrayList<MOKConversation> conversations, @Nullable Exception e) {
-
+        //ALWAYS CALL SUPER FOR THIS CALLBACK!!
+        super.onGetConversations(conversations, e);
         if(e!=null) {
             e.printStackTrace();
             return;
         }
+
+        if(conversations.isEmpty())
+            Log.d("MainActivity", "getconversations empty");
+        else
+            Log.d("MainActvity", "getconversations. first is " + conversations.get(0).getConversationId());
 
         ArrayList<MonkeyConversation> monkeyConversations = new ArrayList<>();
         for(MOKConversation mokConversation : conversations){
@@ -1420,6 +1434,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 getConversationsFromServer(CONV_PERPAGE, 0);
             else {
                 MonkeyConversation conversation = monkeyConversationsFragment.getLastConversation();
+                Log.d("MainActivity", "getmore conversations" +(conversation.getDatetime() / 1000));
                 getConversationsFromServer(CONV_PERPAGE, conversation.getDatetime() / 1000);
             }
         }

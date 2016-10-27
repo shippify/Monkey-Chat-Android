@@ -9,6 +9,7 @@ import com.activeandroid.query.From;
 import com.activeandroid.query.Select;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
+import com.criptext.monkeychatandroid.MonkeyChat;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
@@ -152,11 +153,11 @@ public class DatabaseHandler {
                 if(message.getParams().has("length"))
                     item.setAudioDuration(message.getParams().get("length").getAsLong());
                 if(!item.getMessageText().contains("/"))
-                    item.setMessageContent(pathToMessagesDir + "/photos/" + message.getMsg());
+                    item.setMessageContent(pathToMessagesDir + "/" + MonkeyChat.VOICENOTES_DIR + "/" + message.getMsg());
                 break;
             case photo:
                 if(!item.getMessageText().contains("/"))
-                    item.setMessageContent(pathToMessagesDir + "/voice notes/" + message.getMsg());
+                    item.setMessageContent(pathToMessagesDir + "/" + MonkeyChat.PHOTOS_DIR + "/" + message.getMsg());
                 break;
         }
 
