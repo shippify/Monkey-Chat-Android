@@ -14,6 +14,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.View;
 import android.widget.Toast;
 
 import com.criptext.ClientData;
@@ -1454,6 +1455,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(monkeyInfoFragment == null){
             MonkeyInfoFragment infoFragment = MonkeyInfoFragment.Companion.newInfoInstance(monkeyChatFragment.getConversationId(), monkeyChatFragment.getConversationId().contains("G:"));
             monkeyFragmentManager.setInfoFragment(infoFragment);
+            if(getCurrentFocus() != null){
+                getCurrentFocus().clearFocus();
+            }
         }
     }
 
