@@ -1,6 +1,7 @@
 package com.criptext.monkeychatandroid.models;
 
 import android.content.Context;
+import android.provider.ContactsContract;
 import android.util.Log;
 
 import com.activeandroid.ActiveAndroid;
@@ -306,7 +307,7 @@ public class DatabaseHandler {
                     secondaryText = "Write to this group";
                 conversation.setSecondaryText(secondaryText);
             } else {
-                conversation.setSecondaryText(MessageItem.getSecondaryTextByMessageType(lastMessage));
+                conversation.setSecondaryText(DatabaseHandler.getSecondaryTextByMessageType(lastMessage, conversation.isGroup()));
                 conversation.setDatetime(lastMessage.getMessageTimestampOrder());
 
                 if (lastMessage.isIncomingMessage())
