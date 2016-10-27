@@ -33,6 +33,9 @@ public class MonkeyChat extends com.activeandroid.app.Application{
      */
     public static String FULLNAME = "MonkeyChat.FullName";
 
+    public static String PHOTOS_DIR = "photos";
+    public static String VOICENOTES_DIR = "voice notes";
+
     @Override
     public void onCreate() {
         super.onCreate();

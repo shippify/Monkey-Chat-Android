@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
 import android.provider.ContactsContract;
@@ -60,6 +61,7 @@ import com.google.gson.JsonObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -126,6 +128,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     private AsyncDBHandler asyncDBHandler;
 
+    private File downloadDir;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -134,7 +138,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
         myName = prefs.getString(MonkeyChat.FULLNAME, null);
-        Log.d("MonkeyId", myMonkeyID);
+        //Log.d("MonkeyId", myMonkeyID);
+        initDownloadDir();
 
         //Check play services. if available try to register with GCM so that we get Push notifications
         if(MonkeyRegistrationService.Companion.checkPlayServices(this))
@@ -314,6 +319,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         };
     }
 
+    private void initDownloadDir() {
+        downloadDir = new File(Environment.getExternalStorageDirectory(),
+                getResources().getString(R.string.app_name));
+        downloadDir.mkdirs();
+        File subdir = new File(downloadDir, MonkeyChat.PHOTOS_DIR);
+        subdir.mkdir();
+        subdir = new File(downloadDir, MonkeyChat.VOICENOTES_DIR);
+        subdir.mkdir();
+    }
     /**
      * Add messages retrieved from DB to the messages list
      * @param oldMessages list of messages
@@ -464,11 +478,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         unsend working with messages
      */
     private void updateConversationLastRead(final String convId, final long lastRead){
+        Log.d("MainActivity", "updateConversation last read");
         asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
             @Override
             public void onQueryReturned(ConversationItem result) {
                 if(result != null){
 
+                    Log.d("MainActivity", "updateConversation last read found " + result.getSecondaryText() + " " + result.getTotalNewMessages());
                     ConversationTransaction transaction = new ConversationTransaction() {
                         @Override
                         public void updateConversation(MonkeyConversation monkeyConversation) {
@@ -554,7 +570,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     private MessageItem processNewMessage(MOKMessage message) {
         String conversationID = message.getConversationID(myMonkeyID);
-        MessageItem newItem = DatabaseHandler.createMessage(message, this.getCacheDir().toString(), myMonkeyID);
+        MessageItem newItem = DatabaseHandler.createMessage(message, downloadDir.getAbsolutePath(), myMonkeyID);
         if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationID)) {
             monkeyChatFragment.smoothlyAddNewItem(newItem);
         }
@@ -604,7 +620,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         ArrayList<MessageItem> messageItems = new ArrayList<>();
         for(MOKMessage message: messages){
-            messageItems.add(DatabaseHandler.createMessage(message, this.getCacheDir().toString(), myMonkeyID));
+            messageItems.add(DatabaseHandler.createMessage(message, downloadDir.getAbsolutePath(), myMonkeyID));
         }
         Collections.sort(messageItems);
         DatabaseHandler.saveMessages(messageItems);
@@ -636,7 +652,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void storeSendingMessage(final MOKMessage message) {
         //TODO update conversation
         DatabaseHandler.storeNewMessage(DatabaseHandler.createMessage(message,
-                this.getCacheDir().toString(), myMonkeyID));
+                downloadDir.getAbsolutePath(), myMonkeyID));
     }
 
     /******
@@ -808,8 +824,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 public void updateConversation(@NotNull MonkeyConversation conversation) {
                     ConversationItem conversationItem = (ConversationItem) conversation;
                     conversationItem.lastOpen = lastOpen;
-                    activeConversationItem.setTotalNewMessage(0);
-                    activeConversationItem.setSecondaryText(lastMessageText);
+                    conversationItem.setTotalNewMessage(0);
+                    conversationItem.setSecondaryText(lastMessageText);
                 }
             };
             //Apply transaction on the DB
@@ -1021,11 +1037,17 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onGetConversations(@NotNull ArrayList<MOKConversation> conversations, @Nullable Exception e) {
-
+        //ALWAYS CALL SUPER FOR THIS CALLBACK!!
+        super.onGetConversations(conversations, e);
         if(e!=null) {
             e.printStackTrace();
             return;
         }
+
+        if(conversations.isEmpty())
+            Log.d("MainActivity", "getconversations empty");
+        else
+            Log.d("MainActvity", "getconversations. first is " + conversations.get(0).getConversationId());
 
         ArrayList<MonkeyConversation> monkeyConversations = new ArrayList<>();
         for(MOKConversation mokConversation : conversations){
@@ -1040,7 +1062,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             MessageItem lastItem = null;
             if(mokConversation.getLastMessage() != null)
             lastItem = DatabaseHandler.createMessage(mokConversation.getLastMessage(),
-                    "" + getCacheDir().getAbsolutePath(), myMonkeyID);
+                    downloadDir.getAbsolutePath(), myMonkeyID);
             ConversationItem conversationItem = new ConversationItem(mokConversation.getConversationId(),
                     convName, mokConversation.getLastModified(),
                     DatabaseHandler.getSecondaryTextByMessageType(lastItem, mokConversation.isGroup()),

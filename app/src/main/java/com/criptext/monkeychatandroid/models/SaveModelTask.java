@@ -1,6 +1,8 @@
 package com.criptext.monkeychatandroid.models;
 
+import android.database.sqlite.SQLiteConstraintException;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.activeandroid.ActiveAndroid;
 import com.activeandroid.Model;
@@ -12,22 +14,20 @@ class SaveModelTask extends AsyncTask<Model, Integer, Integer> {
 
     @Override
     protected Integer doInBackground(Model... params) {
-        boolean shouldUseTransaction = params.length > 1;
+        ActiveAndroid.beginTransaction();
         try {
-            if (shouldUseTransaction)
-                ActiveAndroid.beginTransaction();
 
             for (Model model : params) {
-                model.save();
+                try {
+                    model.save();
+                } catch (SQLiteConstraintException ex) {
+                    Log.e("SaveModelTask", ex.getMessage());
+                }
             }
 
-            if (shouldUseTransaction) {
-                ActiveAndroid.setTransactionSuccessful();
-            }
+            ActiveAndroid.setTransactionSuccessful();
         } finally {
-            if(shouldUseTransaction) {
-                ActiveAndroid.endTransaction();
-            }
+            ActiveAndroid.endTransaction();
         }
         return 1;
     }

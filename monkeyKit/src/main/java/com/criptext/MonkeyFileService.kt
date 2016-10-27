@@ -17,10 +17,7 @@ import okhttp3.*
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.io.IOUtils
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.io.IOException
+import java.io.*
 import java.util.concurrent.TimeUnit
 
 /**
@@ -139,7 +136,15 @@ abstract class MonkeyFileService: IntentService(TAG){
             }
 
             val filepath = mokDownload.msg
-            IOUtils.write(resultBytes, FileOutputStream(File(filepath)))
+
+            try {
+                IOUtils.write(resultBytes, FileOutputStream(File(filepath)))
+            } catch(ex: FileNotFoundException) {
+                //Could not save the file to storage
+                Log.e(TAG, ex.message)
+                return null
+            }
+
             return filepath
         }
 
