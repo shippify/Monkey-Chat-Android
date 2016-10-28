@@ -29,7 +29,7 @@ open class PushMessage(textMessage: String, ringtone: String){
     }
 
     override fun toString(): String {
-        return json.toString().replace("\\\\\\\"","\\\"")
+        return json.toString().replace("\\\\","\\")
     }
     constructor(textMessage: String): this(textMessage, default)
 

@@ -42,6 +42,7 @@ import com.criptext.monkeychatandroid.models.UserItem;
 import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
 import com.criptext.monkeykitui.MonkeyInfoFragment;
+import com.criptext.monkeykitui.cav.EmojiHandler;
 import com.criptext.monkeykitui.conversation.ConversationsActivity;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
@@ -282,15 +283,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         params.addProperty("length",""+item.getAudioDuration()/1000);
 
                         mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
-                                MessageTypes.FileTypes.Audio, params, new PushMessage(myName + " sent you an audio"), true);
+                                MessageTypes.FileTypes.Audio, params, new PushMessage(EmojiHandler.encodeJavaForPush(myName) + " sent you an audio"), true);
                         break;
                     case photo:
                         mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
-                                MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage(myName + " sent you a photo"), true);
+                                MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage(EmojiHandler.encodeJavaForPush(myName) + " sent you a photo"), true);
                         break;
                     default:
                         mokMessage = persistMessageAndSend(item.getMessageText(), myMonkeyID,
-                                myFriendID, params, new PushMessage(myName + " sent you a message"), true);
+                                myFriendID, params, new PushMessage(EmojiHandler.encodeJavaForPush(myName) + " sent you a message"), true);
                         break;
                 }
 
@@ -927,7 +928,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         if(groupData!=null && groupData.getConversationId().equals(groupid)){
             groupData.removeMember(removed_member);
-            groupData.setInfoList(myMonkeyID);
+            groupData.setInfoList(myMonkeyID, myName);
         }
         if(monkeyInfoFragment!=null && monkeyChatFragment!=null){
             if(monkeyChatFragment.getConversationId().equals(groupid)){
@@ -1016,7 +1017,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(e==null && groupData!=null && monkeyChatFragment!=null) {
             groupData.setMembers(monkeyChatFragment.getConversationId(), mokUsers);
             groupData.setAdmins(DatabaseHandler.getConversationById(monkeyChatFragment.getConversationId()).getAdmins());
-            groupData.setInfoList(myMonkeyID);
+            groupData.setInfoList(myMonkeyID, myName);
             monkeyChatFragment.reloadAllMessages();
             if(monkeyInfoFragment != null){
                 monkeyInfoFragment.setInfo(groupData.getInfoList());
@@ -1116,7 +1117,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 if(membersOnline > 0) {
                     subtitle = membersOnline + " " + (membersOnline > 1 ? "members online" : "member online");
                 }
-                groupData.setInfoList(myMonkeyID);
+                groupData.setInfoList(myMonkeyID, myName);
                 if(monkeyInfoFragment != null){
                     monkeyInfoFragment.setInfo(groupData.getInfoList());
                 }
@@ -1345,7 +1346,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             updateClosedConversation(conversationId, lastOpenValue,
                     DatabaseHandler.getSecondaryTextByMessageType(lastItem, false));
         }
-
     }
 
     @Override

@@ -232,6 +232,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      */
     fun persistMessageAndSend(text: String, monkeyIDFrom: String, monkeyIDTo: String, params: JsonObject,
                               pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
+
         val newMessage = sendMessage(text, monkeyIDFrom, monkeyIDTo, params, pushMessage, isEncrypted)
         storeSendingMessage(newMessage)
         return newMessage
