@@ -144,7 +144,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         return membersIds;
     }
 
-    public void setInfoList(String myMonkeyId){
+    public void setInfoList(String myMonkeyId, String myName){
         infoList.clear();
         HashMap<String, MOKUser> users = this.getUsers();
 
@@ -163,7 +163,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
             }else if(myMonkeyId != null && myMonkeyId.equals(user.getMonkeyId())){
                 connection = "Online";
             }
-            UserItem user1 = new UserItem(user.getMonkeyId(), user.getInfo().has("name") ? user.getInfo().get("name").getAsString() : "Unknown",
+            UserItem user1 = new UserItem(user.getMonkeyId(),user.getMonkeyId().equals(myMonkeyId) ? myName : (user.getInfo().has("name") ? user.getInfo().get("name").getAsString() : "Unknown"),
                     tag, user.getAvatarURL(), connection);
             infoList.add(user1);
         }
