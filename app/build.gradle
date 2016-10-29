@@ -50,7 +50,7 @@ dependencies {
     compile 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
     compile project(':monkeyKit')
 //    compile project(':monkeykitui')
-    compile 'com.github.Criptext:MonkeyUIAndroid:874df0b9f9'
+    compile 'com.github.Criptext:MonkeyUIAndroid:6a8ef7e670'
     compile('com.crashlytics.sdk.android:crashlytics:2.6.5@aar') {
         transitive = true;
     }

@@ -113,12 +113,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     private String myFriendID;
     /**
-     * Object that uses the device's sensor to turn off the screen whenever the user has the device
-     * close to his/her face, like when they are making a phone call.
-     */
-    private  SensorHandler sensorHandler;
-
-    /**
      * This class is used to handle group methods.
      */
     private GroupData groupData;
@@ -131,7 +125,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             PlaybackService.VoiceNoteBinder binder = (PlaybackService.VoiceNoteBinder) service;
-            voiceNotePlayer = binder.getVoiceNotePlayer();
+            voiceNotePlayer = binder.getVoiceNotePlayer(MainActivity.this);
             if(monkeyChatFragment != null)
                 monkeyChatFragment.setVoiceNotePlayer(voiceNotePlayer);
         }
@@ -156,14 +150,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         //Check play services. if available try to register with GCM so that we get Push notifications
         if(MonkeyRegistrationService.Companion.checkPlayServices(this))
                 registerWithGCM();
-
-
-        /*
-        //Add a sensor handler so the activity can turn off the screen when the sensors detect that
-        //the user is too close to the phone and change the audio output device.
-        sensorHandler = new SensorHandler(voiceNotePlayer, this);
-        //finally load one page of messages.
-        */
 
         monkeyFragmentManager = new MonkeyFragmentManager(this);
         monkeyFragmentManager.setConversationsTitle(getResources().getString(R.string.app_name));
