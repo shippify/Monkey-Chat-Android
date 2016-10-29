@@ -1,20 +1,18 @@
 package com.criptext.monkeychatandroid;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.Environment;
+import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.os.Bundle;
-import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.View;
 import android.widget.Toast;
 
 import com.criptext.ClientData;
@@ -38,7 +36,6 @@ import com.criptext.monkeychatandroid.models.FindMessageTask;
 import com.criptext.monkeychatandroid.models.GetMessagePageTask;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.StoreNewConversationTask;
-import com.criptext.monkeychatandroid.models.UserItem;
 import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
 import com.criptext.monkeykitui.MonkeyInfoFragment;
@@ -52,8 +49,7 @@ import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.GroupChat;
 import com.criptext.monkeykitui.recycler.MonkeyInfo;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
-import com.criptext.monkeykitui.recycler.MonkeyItemTransaction;
-import com.criptext.monkeykitui.recycler.audio.DefaultVoiceNotePlayer;
+import com.criptext.monkeykitui.recycler.audio.PlaybackService;
 import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
 import com.criptext.monkeykitui.toolbar.ToolbarDelegate;
 import com.criptext.monkeykitui.util.MonkeyFragmentManager;
@@ -69,7 +65,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -118,12 +113,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     private String myFriendID;
     /**
-     * Object that uses the device's sensor to turn off the screen whenever the user has the device
-     * close to his/her face, like when they are making a phone call.
-     */
-    private  SensorHandler sensorHandler;
-
-    /**
      * This class is used to handle group methods.
      */
     private GroupData groupData;
@@ -131,6 +120,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     private AsyncDBHandler asyncDBHandler;
 
     private File downloadDir;
+
+    private ServiceConnection playbackConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            PlaybackService.VoiceNoteBinder binder = (PlaybackService.VoiceNoteBinder) service;
+            voiceNotePlayer = binder.getVoiceNotePlayer(MainActivity.this);
+            if(monkeyChatFragment != null)
+                monkeyChatFragment.setVoiceNotePlayer(voiceNotePlayer);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -146,16 +150,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         //Check play services. if available try to register with GCM so that we get Push notifications
         if(MonkeyRegistrationService.Companion.checkPlayServices(this))
                 registerWithGCM();
-
-
-        //Create a voice note player so that it can play voice note messages in the recycler view
-        //when the user clicks on them
-        if(voiceNotePlayer==null)
-            voiceNotePlayer = new DefaultVoiceNotePlayer(this);
-        //Add a sensor handler so the activity can turn off the screen when the sensors detect that
-        //the user is too close to the phone and change the audio output device.
-        sensorHandler = new SensorHandler(voiceNotePlayer, this);
-        //finally load one page of messages.
 
         monkeyFragmentManager = new MonkeyFragmentManager(this);
         monkeyFragmentManager.setConversationsTitle(getResources().getString(R.string.app_name));
@@ -176,14 +170,28 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     protected void onPause() {
         super.onPause();
-        sensorHandler.onPause();
+        //sensorHandler.onPause();
+    }
+
+    @Override
+    protected void onStart(){
+        super.onStart();
+        //bind to the service that plays voice notes.
+        startPlaybackService();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        voiceNotePlayer.releasePlayer();
-        sensorHandler.onStop();
+        getApplicationContext().unbindService(playbackConnection);
+        //sensorHandler.onStop();
+    }
+
+    private void startPlaybackService() {
+        Intent intent = new Intent(getApplicationContext(), PlaybackService.class);
+        if(!PlaybackService.Companion.isRunning())
+            getApplicationContext().startService(intent);
+        getApplicationContext().bindService(intent, playbackConnection, Context.BIND_AUTO_CREATE);
     }
 
     private void getRetainedData(){
@@ -195,8 +203,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             activeConversationItem = retainedFragment.activeConversationItem;
             if (monkeyChatFragment != null) {
                 monkeyChatFragment.setInputListener(initInputListener());
-                if(voiceNotePlayer == null)
-                    voiceNotePlayer = new DefaultVoiceNotePlayer(this);
                 monkeyChatFragment.setVoiceNotePlayer(voiceNotePlayer);
             }
             dataFragment = retainedFragment;
@@ -218,7 +224,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        sensorHandler.onDestroy();
+        //sensorHandler.onDestroy();
         retainDataInFragment();
         if(monkeyChatFragment != null)
             monkeyChatFragment.setInputListener(null);
@@ -228,12 +234,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     protected void onRestart(){
         super.onRestart();
-    }
-
-    @Override
-    protected void onStart(){
-        super.onStart();
-        voiceNotePlayer.initPlayer();
     }
 
     @Override
