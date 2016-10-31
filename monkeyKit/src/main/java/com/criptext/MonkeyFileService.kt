@@ -9,6 +9,7 @@ import android.util.Log
 import android.webkit.MimeTypeMap
 import com.criptext.comunication.Compressor
 import com.criptext.comunication.MOKMessage
+import com.criptext.http.OpenConversationTask
 import com.criptext.lib.KeyStoreCriptext
 import com.criptext.security.AESUtil
 import com.google.gson.JsonObject
@@ -42,8 +43,9 @@ abstract class MonkeyFileService: IntentService(TAG){
 
         val intent = p0 as Intent
 
-        val appId = intent.getStringExtra(APPID_KEY)
-        val appKey = intent.getStringExtra(APPKEY_KEY)
+        val clientData = ClientData(intent)
+        val appId = clientData.appId
+        val appKey = clientData.appKey
         val credential = Credentials.basic(appId, appKey);
 
         if(intent.getBooleanExtra(ISUPLOAD_KEY, false)){
@@ -68,7 +70,7 @@ abstract class MonkeyFileService: IntentService(TAG){
             val http = authorizedHttpClient(appId, appKey, 10L, 300L)
             val downloadBytes = downloadFile(http, credential, MonkeyKitSocketService.httpsURL
                     + "/file/open/"+ FilenameUtils.getBaseName(mokDownload.msg))
-            val filepath = processReceivedBytes(downloadBytes, mokDownload)
+            val filepath = processReceivedBytes(downloadBytes, mokDownload, clientData)
             onFileDownloadFinished(mokDownload.id, mokDownload.convID, filepath == null)
             broadcastResponse(DOWNLOAD_ACTION, mokDownload.id, mokDownload.timesort,
                     mokDownload.convID, filepath != null)
@@ -106,17 +108,47 @@ abstract class MonkeyFileService: IntentService(TAG){
 
     }
 
-    private fun processReceivedBytes(downloadBytes: ByteArray?, mokDownload: MOKDownload): String?{
+    /**
+     * decrypts the bytes of a file download. If the decryption fails, or there are no valid keys
+     * in the local storage, sends open conversation request to server to get keys. If new keys can't
+     * decrypt, it aborts operation. Once the file is successfully decrypted it is stored to SD Card.
+     * @param downloadBytes downloaded raw encrypted files
+     * @param claveArray Array of size 2, key and IV.
+     * @param mokDownload object representing the download.
+     * @param clientData object with the
+     *
+     */
+    private fun decryptFile(downloadBytes: ByteArray, claveArray: List<String>,
+                            mokDownload: MOKDownload, clientData: ClientData) :ByteArray? {
+        var resultBytes = if(claveArray.size == 2) aesUtil!!.decryptWithCustomKeyAndIV(downloadBytes, claveArray[0], claveArray[1])
+                            else null
+        if(resultBytes == null) { //failed to decrypt
+            val responseData = OpenConversationTask.sendOpenConversationRequest(mokDownload.sid,
+                    clientData)?.get("data")?.asJsonObject
+            if(responseData != null) {
+                val userAESUtil = AESUtil(this, clientData.monkeyId)
+                val newKey = userAESUtil.decrypt(responseData.get("convKey").asString)
+                KeyStoreCriptext.putString(this, mokDownload.sid, newKey)
+                val keyArray = newKey.split(":")
+                resultBytes = aesUtil!!.decryptWithCustomKeyAndIV(downloadBytes, keyArray[0], keyArray[1])
+            }
+
+        }
+        return resultBytes
+    }
+
+    private fun processReceivedBytes(downloadBytes: ByteArray?, mokDownload: MOKDownload, clientData: ClientData): String?{
         var resultBytes: ByteArray? = null
         if(downloadBytes != null){
             val props = mokDownload.props
             if(props.get("encr").asString == "1"){//Decrypt
                 val claves = KeyStoreCriptext.getString(this, mokDownload.sid);
                 val claveArray = claves.split(":")
-                //Log.d("MonkeyFileService", "keys for ${mokDownload.sid}: ${claveArray[0]}")
-                resultBytes = aesUtil!!.decryptWithCustomKeyAndIV(downloadBytes, claveArray[0], claveArray[1])
+                resultBytes = decryptFile(downloadBytes, claveArray, mokDownload, clientData)
+
                 if(resultBytes == null)
-                    return null
+                    return null //bad decrypt. exit.
+
                 if(props.get("device").asString == "web"){
                     var utf8str = resultBytes.toString(charset("utf8"))
                     utf8str = utf8str.substring(utf8str.indexOf(",") + 1, utf8str.length);
@@ -307,8 +339,6 @@ abstract class MonkeyFileService: IntentService(TAG){
     companion object {
         val PUSH_KEY = "MonkeyFileService.push"
         val ENCR_KEY = "MonkeyFileService.encr"
-        val APPID_KEY = "MonkeyFileService.appId"
-        val APPKEY_KEY = "MonkeyFileService.appKey"
         val ISUPLOAD_KEY = "MonkeyFileService.isUploadService"
         val TAG = "MonkeyFileService"
 

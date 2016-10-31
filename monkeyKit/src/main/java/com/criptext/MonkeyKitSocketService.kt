@@ -135,8 +135,7 @@ abstract class MonkeyKitSocketService : Service() {
             intent.putExtra(MOKMessage.DATESORT_KEY, sortdate)
             intent.putExtra(MOKMessage.CONVERSATION_KEY, conversationId)
             intent.putExtra(MonkeyFileService.ISUPLOAD_KEY, false)
-            intent.putExtra(MonkeyFileService.APPID_KEY, clientData.appId)
-            intent.putExtra(MonkeyFileService.APPKEY_KEY, clientData.appKey)
+            clientData.fillIntent(intent)
 
             startService(intent)
         }
@@ -872,8 +871,7 @@ abstract class MonkeyKitSocketService : Service() {
             intent.putExtra(MonkeyFileService.ISUPLOAD_KEY, true)
             intent.putExtra(MonkeyFileService.PUSH_KEY, pushMessage.toString())
             intent.putExtra(MonkeyFileService.ENCR_KEY, encrypted)
-            intent.putExtra(MonkeyFileService.APPID_KEY, clientData.appId)
-            intent.putExtra(MonkeyFileService.APPKEY_KEY, clientData.appKey)
+            clientData.fillIntent(intent)
 
             startService(intent)
         }
