@@ -317,6 +317,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
                 if(monkeyChatFragment != null)
                     monkeyChatFragment.smoothlyAddNewItem(newItem); // Add to recyclerView
+                if(monkeyConversationsFragment != null){
+                    updateConversationByMessage(newItem, false);
+                }
             }
         };
     }
@@ -327,10 +330,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param hasReachedEnd boolean if messages has reached end
      */
     public void addOldMessages(ArrayList<MonkeyItem> oldMessages, boolean hasReachedEnd){
-        if(oldMessages != null && monkeyChatFragment != null)
-            monkeyChatFragment.addOldMessages(oldMessages, hasReachedEnd);
-        if(monkeyChatFragment != null)
+        if(oldMessages != null && oldMessages.size()>0 && monkeyChatFragment != null) {
+            if(monkeyChatFragment.getConversationId().equals( ((MessageItem)oldMessages.get(0)).getConversationId())){
+                monkeyChatFragment.addOldMessages(oldMessages, hasReachedEnd);
+            }
+        }else if(monkeyChatFragment != null) {
             monkeyChatFragment.addOldMessages(new ArrayList<MonkeyItem>(), hasReachedEnd);
+        }
     }
 
     /**
@@ -338,7 +344,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param conversationId id of the conversation messages required
      */
     public void addOldMessagesFromServer(String conversationId){
-        if(monkeyChatFragment!=null) {
+        if(monkeyChatFragment!=null && monkeyChatFragment.getConversationId().equals(conversationId)) {
             String firstTimestamp = "0";
             if(monkeyChatFragment.getFirstMessage()!=null)
                 firstTimestamp = ""+monkeyChatFragment.getFirstMessage().getMessageTimestamp();
@@ -368,21 +374,34 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
 
     private void updateMessage(String id, String oldId, MonkeyItem.DeliveryStatus newStatus) {
-        if (monkeyChatFragment != null) {
-            MessageItem message = (MessageItem) monkeyChatFragment.findMonkeyItemById(oldId != null ? oldId : id);
-            if (message != null) {
-                message.setStatus(newStatus.ordinal());
-                if(oldId != null){
-                    message.setOldMessageId(oldId);
-                    message.setMessageId(id);
-                    DatabaseHandler.updateMessageStatus(id, oldId, newStatus);
+        MessageItem messageItem = DatabaseHandler.getMessageById(id);
+        if(messageItem == null){
+            messageItem = DatabaseHandler.getMessageById(oldId);
+        }
 
-                }else{
-                    DatabaseHandler.updateMessageStatus(id, null, newStatus);
+        if (messageItem != null) {
+            messageItem.setStatus(newStatus.ordinal());
+            if(oldId != null){
+                messageItem.setOldMessageId(oldId);
+                messageItem.setMessageId(id);
+                DatabaseHandler.updateMessageStatus(id, oldId, newStatus);
+
+            }else{
+                DatabaseHandler.updateMessageStatus(id, null, newStatus);
+            }
+            if (monkeyChatFragment != null) {
+                MessageItem message = (MessageItem) monkeyChatFragment.findMonkeyItemById(oldId != null ? oldId : id);
+                if (message != null) {
+                    message.setStatus(newStatus.ordinal());
+                    if(oldId != null){
+                        message.setOldMessageId(oldId);
+                        message.setMessageId(id);
+                    }
+                    monkeyChatFragment.updateMessageDeliveryStatus(message);
                 }
-                monkeyChatFragment.updateMessageDeliveryStatus(message);
             }
         }
+
     }
 
     /**
@@ -512,18 +531,36 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                             ConversationItem conversation = (ConversationItem) monkeyConversation;
                             conversation.setDatetime(dateTime>-1?dateTime:conversation.getDatetime());
                             conversation.lastRead = message.getMessageTimestampOrder();
+                            if(message.senderMonkeyId == myMonkeyID){
+                                int newStatus = conversation.getStatus();
+                                if(message.getDeliveryStatus().ordinal() == 0){
+                                    newStatus = 3;
+                                }
+                                conversation.setStatus(newStatus);
+                            }
                         }
                     };
 
-                    if(monkeyConversationsFragment != null)
+                    int newStatus = result.getStatus();
+                    if (message.senderMonkeyId.equals(myMonkeyID)) {
+                        if (message.getDeliveryStatus().ordinal() == 0) {
+                            newStatus = 3;
+                        }else if(read){
+                            newStatus = MonkeyConversation.ConversationStatus.sentMessageRead.ordinal();
+                        }else{
+                            newStatus = MonkeyConversation.ConversationStatus.deliveredMessage.ordinal();
+                        }
+                        result.setStatus(newStatus);
+                    }
+                    Log.d("TEST", MonkeyConversation.ConversationStatus.values()[newStatus].toString());
+                    if(monkeyConversationsFragment != null) {
                         monkeyConversationsFragment.updateConversation(result, transaction);
-                    else
+                    }else
                         transaction.updateConversation(result);
 
                     DatabaseHandler.updateConversationWithSentMessage(result,
                             DatabaseHandler.getSecondaryTextByMessageType(message, result.isGroup()),
-                            read ? MonkeyConversation.ConversationStatus.sentMessageRead
-                                    : MonkeyConversation.ConversationStatus.deliveredMessage, 0);
+                            MonkeyConversation.ConversationStatus.values()[newStatus], 0);
                 }
             }
         }, message.getConversationId());
@@ -692,6 +729,18 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     // acknowledge for each message sent. So to validate if we have the message
                     // sent, we can send a sync message.
                     sendSync();
+                }
+
+                List<MonkeyItem> conversationMessageList = messagesMap.get(senderId);
+                if(conversationMessageList != null) {
+                    Iterator<MonkeyItem> iter = conversationMessageList.iterator();
+                    while (iter.hasNext()) {
+                        MessageItem updateMessage = (MessageItem) iter.next();
+                        if (updateMessage.getMessageId().equals(oldId) || updateMessage.getMessageId().equals(newId)) {
+                            updateMessage.setStatus(MonkeyItem.DeliveryStatus.delivered.ordinal());
+                            break;
+                        }
+                    }
                 }
             }
         }, oldId, newId);
