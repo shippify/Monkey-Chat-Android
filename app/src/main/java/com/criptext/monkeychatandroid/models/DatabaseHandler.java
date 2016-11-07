@@ -189,7 +189,6 @@ public class DatabaseHandler {
 
     public static void updateMessageStatus(String messageId, String OldMessageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
         MessageItem result = getMessageById(OldMessageId != null ? OldMessageId : messageId);
-        MessageItem result2 = getMessageById(messageId);
         if (result != null) {
             result.setStatus(outgoingMessageStatus.ordinal());
             if(OldMessageId != null){
