@@ -273,8 +273,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             @Override
             public void onNewItem(@NotNull MonkeyItem item) {
 
+                String textTalk = null;
                 JsonObject params = new JsonObject();
                 MOKMessage mokMessage;
+
+                if(activeConversationItem != null && activeConversationItem.isGroup()){
+                    textTalk = activeConversationItem.getName();
+                }
 
                 //Store the message in the DB and send it via MonkeyKit
                 switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
@@ -283,15 +288,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         params.addProperty("length",""+item.getAudioDuration()/1000);
 
                         mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
-                                MessageTypes.FileTypes.Audio, params, new PushMessage(EmojiHandler.encodeJavaForPush(myName) + " sent you an audio"), true);
+                                MessageTypes.FileTypes.Audio, params, new PushMessage(EmojiHandler.encodeJavaForPush(myName) +  (textTalk==null ? " sent you an audio" : "sent an audio to " + textTalk) ), true);
                         break;
                     case photo:
                         mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
-                                MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage(EmojiHandler.encodeJavaForPush(myName) + " sent you a photo"), true);
+                                MessageTypes.FileTypes.Photo, new JsonObject(), new PushMessage(EmojiHandler.encodeJavaForPush(myName) + (textTalk==null ? " sent you a photo" : "sent a photo to " + textTalk) ), true);
                         break;
                     default:
                         mokMessage = persistMessageAndSend(item.getMessageText(), myMonkeyID,
-                                myFriendID, params, new PushMessage(EmojiHandler.encodeJavaForPush(myName) + " sent you a message"), true);
+                                myFriendID, params, new PushMessage(EmojiHandler.encodeJavaForPush(myName) + (textTalk==null ? " sent you a message" : " sent a message to " + textTalk) ), true);
                         break;
                 }
 
