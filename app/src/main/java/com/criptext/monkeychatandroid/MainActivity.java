@@ -535,7 +535,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                             long dateTime = message.getMessageTimestampOrder();
                             ConversationItem conversation = (ConversationItem) monkeyConversation;
                             conversation.setDatetime(dateTime>-1?dateTime:conversation.getDatetime());
-                            conversation.lastRead = message.getMessageTimestampOrder();
+                            if(read){
+                                conversation.lastRead = message.getMessageTimestampOrder();
+                            }
                             if(message.senderMonkeyId == myMonkeyID){
                                 int newStatus = conversation.getStatus();
                                 if(message.getDeliveryStatus().ordinal() == 0){
@@ -1161,9 +1163,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen, String lastOpenMe, String members_online) {
         if(monkeyFragmentManager!=null && monkeyChatFragment!=null) {
+            if(!monkeyChatFragment.getConversationId().equals(senderId)){
+                return;
+            }
+
             String subtitle = isOnline? "Online":"";
 
-            long lastSeenValue = System.currentTimeMillis();
+            long lastSeenValue = -1L;
             boolean isGroupConversation = senderId.contains("G:");
             if(isGroupConversation){
                 groupData.setMembersOnline(members_online);
@@ -1180,8 +1186,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 if(lastSeen.isEmpty())
                     lastSeenValue = 0L;
                 else
-                    lastSeenValue = Long.valueOf(lastSeen);
-                subtitle = "Last seen: "+Utils.Companion.getFormattedDate(lastSeenValue * 1000, this);
+                    lastSeenValue = Long.valueOf(lastSeen) * 1000;
+                subtitle = "Last seen: "+Utils.Companion.getFormattedDate(lastSeenValue, this);
             }
             if(!subtitle.isEmpty()) {
                 monkeyFragmentManager.setSubtitle(subtitle);
@@ -1189,6 +1195,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
             if(!isGroupConversation && monkeyChatFragment!=null &&
                     monkeyChatFragment.getConversationId().equals(senderId)) {
+                lastSeenValue = (activeConversationItem.lastRead > lastSeenValue ? activeConversationItem.lastRead : lastSeenValue);
                 monkeyChatFragment.setLastRead(lastSeenValue);
                 updateConversationLastRead(senderId, lastSeenValue);
             }
@@ -1262,9 +1269,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(monkeyChatFragment!=null && monkeyChatFragment.getConversationId().equals(monkeyId)) {
             monkeyChatFragment.setLastRead(newLastReadValue);
             MonkeyItem newestMessage = monkeyChatFragment.getLastMessage();
-            if(newestMessage != null) newLastReadValue = newestMessage.getMessageTimestamp();
+            if(newestMessage != null){
+                newLastReadValue = newLastReadValue > newestMessage.getMessageTimestamp() ? newLastReadValue : newestMessage.getMessageTimestamp();
+            }
         }
-        updateConversation(monkeyId, null, MonkeyConversation.ConversationStatus.sentMessageRead,
+        MessageItem lastMessage = DatabaseHandler.getLastMessage(monkeyId);
+        updateConversation(monkeyId, null, (lastMessage != null && !lastMessage.isIncomingMessage()) ? MonkeyConversation.ConversationStatus.sentMessageRead : MonkeyConversation.ConversationStatus.receivedMessage,
                 0, -1, newLastReadValue);
     }
 
