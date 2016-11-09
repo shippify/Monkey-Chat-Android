@@ -104,16 +104,18 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
         this.props = props;
     }
 
-    public String getConversationId(){
-        return conversationId;
-    }
-
     public void setMessageId(String messageId) {
         this.messageId = messageId;
     }
 
     public void setOldMessageId(String oldMessageId) {
         this.oldMessageId = oldMessageId;
+    }
+
+    @NotNull
+    @Override
+    public String getConversationId(){
+        return conversationId;
     }
 
     @NotNull
