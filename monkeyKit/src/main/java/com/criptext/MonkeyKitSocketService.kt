@@ -267,7 +267,6 @@ abstract class MonkeyKitSocketService : Service() {
             this@MonkeyKitSocketService.delegate = delegate
             if(status != ServiceStatus.initializing)
                 status = ServiceStatus.bound
-            Log.d("MonkeyKitSocketService", "set delegate. ${this@MonkeyKitSocketService.delegate != null}")
             return this@MonkeyKitSocketService;
         }
 
