@@ -49,6 +49,7 @@ import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.GroupChat;
 import com.criptext.monkeykitui.recycler.MonkeyInfo;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
+import com.criptext.monkeykitui.recycler.audio.PlaybackNotification;
 import com.criptext.monkeykitui.recycler.audio.PlaybackService;
 import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
 import com.criptext.monkeykitui.toolbar.ToolbarDelegate;
@@ -95,7 +96,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * so that it can handle all the media playback for us. However, we must initialize it in "onStart".
      * and release it in "onStop" method.
      */
-    VoiceNotePlayer voiceNotePlayer;
+    PlaybackService.VoiceNotePlayerBinder voiceNotePlayer;
 
     private SharedPreferences prefs;
     /**
@@ -124,8 +125,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     private ServiceConnection playbackConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            PlaybackService.VoiceNoteBinder binder = (PlaybackService.VoiceNoteBinder) service;
-            voiceNotePlayer = binder.getVoiceNotePlayer(MainActivity.this);
+            voiceNotePlayer = (PlaybackService.VoiceNotePlayerBinder) service;
             if(monkeyChatFragment != null)
                 monkeyChatFragment.setVoiceNotePlayer(voiceNotePlayer);
         }
@@ -1425,6 +1425,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onStopChatFragment(@NonNull String conversationId) {
         setActiveConversation(null);
+        if(voiceNotePlayer != null)
+            voiceNotePlayer.setupNotificationControl(new PlaybackNotification(R.mipmap.ic_launcher,
+                    " Playing voice note"));
     }
 
     /** CONVERSATION ACTIVITY METHODS **/
