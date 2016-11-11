@@ -15,7 +15,6 @@ import com.criptext.security.RandomStringBuilder
 import com.google.gson.JsonObject
 import org.apache.commons.io.FilenameUtils
 import org.json.JSONObject
-import java.security.Timestamp
 import java.util.*
 
 abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
@@ -232,7 +231,6 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      */
     fun persistMessageAndSend(text: String, monkeyIDFrom: String, monkeyIDTo: String, params: JsonObject,
                               pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
-
         val newMessage = sendMessage(text, monkeyIDFrom, monkeyIDTo, params, pushMessage, isEncrypted)
         storeSendingMessage(newMessage)
         return newMessage

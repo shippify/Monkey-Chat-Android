@@ -43,7 +43,7 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
     override fun doInBackground(vararg voids: Void): InitializerResult? {
             //load client data, this may be expensive
             val cData = clientData
-            Log.d("AsyncInitialzer", "mid: ${cData.monkeyId}")
+            Log.d("SocketService", "mid: ${cData.monkeyId}")
             var pendingMessages: List<JsonObject>? = null
             if(!isSyncService) //get pending messages if this service does more than just sync
                 pendingMessages = PendingMessageStore.retrieve(appContextRef.get())
@@ -59,7 +59,7 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
         val service = socketServiceRef.get()
         val messages = result!!.pendingMessages
         if(messages != null && messages.isNotEmpty())
-            service.addPendingMessages(messages)
+            service?.addPendingMessages(messages)
         if(result.hasSyncedBefore)
             service?.startSocketConnection(result.util!!, result.clientData, result.lastSync)
         else
