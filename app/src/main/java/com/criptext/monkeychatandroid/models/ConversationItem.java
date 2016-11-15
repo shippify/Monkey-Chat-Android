@@ -43,6 +43,8 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
     @Column(name = "admins")
     public String admins;
 
+    public String membersTyping;
+
     public ConversationItem(){
         super();
     }
@@ -65,6 +67,7 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
         this.admins = "";
         lastRead = 0;
         lastOpen = 0;
+        membersTyping = "";
     }
 
     public ConversationItem(MonkeyConversation conversation){
@@ -79,6 +82,7 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
         this.avatarFilePath = conversation.getAvatarFilePath();
         this.admins = conversation.getAdmins();
         this.status = conversation.getStatus();
+        membersTyping = "";
         if(status == ConversationStatus.moreConversations.ordinal())
             throw new IllegalArgumentException("ConversationItem should never have moreConversations status");
     }

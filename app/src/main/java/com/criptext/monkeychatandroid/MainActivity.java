@@ -64,6 +64,8 @@ import com.google.gson.JsonObject;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -276,6 +278,28 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     public InputListener initInputListener(){
         return new InputListener() {
+            @Override
+            public void onStopTyping() {
+                JSONObject params = new JSONObject();
+                try {
+                    params.put("type", 20);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                sendTemporalNotification(activeConversationItem.getConvId(), params);
+            }
+
+            @Override
+            public void onTyping(@NotNull String text) {
+                JSONObject params = new JSONObject();
+                try {
+                    params.put("type", 21);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                sendTemporalNotification(activeConversationItem.getConvId(), params);
+            }
+
             @Override
             public void onNewItemFileError(int type) {
                 Toast.makeText(MainActivity.this, "Error writing file of type " +
@@ -1122,7 +1146,26 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onNotificationReceived(String messageId, String senderId, String recipientId, JsonObject params, String datetime) {
-    //not supported
+        int type = params.get("type").getAsInt();
+        if(recipientId.contains("G:")){
+            if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(recipientId)){
+                if(type == 21) {
+                    groupData.addMemberTyping(senderId);
+                    monkeyFragmentManager.setSubtitle(groupData.getMembersNameTyping());
+                }else if (type ==20){
+                    groupData.removeMemberTyping(senderId);
+                    monkeyFragmentManager.setSubtitle(groupData.getMembersNameTyping());
+                }
+            }
+        }else{
+            if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(senderId)){
+                if(type == 21) {
+                    monkeyFragmentManager.setSubtitle("Typing...");
+                }else if (type ==20){
+                    monkeyFragmentManager.setSubtitle("Online");
+                }
+            }
+        }
     }
 
     @NotNull

@@ -49,8 +49,8 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
     compile project(':monkeyKit')
-//    compile project(':monkeykitui')
-    compile 'com.github.Criptext:MonkeyUIAndroid:ce93ea04b5'
+    compile project(':monkeykitui')
+//    compile 'com.github.Criptext:MonkeyUIAndroid:07c482d8a0'
     compile('com.crashlytics.sdk.android:crashlytics:2.6.5@aar') {
         transitive = true;
     }
