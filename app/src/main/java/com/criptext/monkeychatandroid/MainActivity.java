@@ -937,11 +937,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onMessageFailDecrypt(MOKMessage message) {
-
-    }
-
-    @Override
     public void onGroupAdded(String groupid, String members, JsonObject info) {
         Log.d("TEST", "ADDING NEW GROUP");
         ConversationItem conversation = DatabaseHandler.getConversationById(groupid);

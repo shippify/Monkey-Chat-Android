@@ -61,7 +61,7 @@ abstract class MonkeyFileService: IntentService(TAG){
 
             val http = authorizedHttpClient(appId, appKey, 300L, 10L)
             val uploadResponse = uploadFile(http, credential, data, processedByteData, ext = ext)
-            onFileUploadFinished(mokMessage, uploadResponse == null)
+            onFileTransferFinished(mokMessage.message_id, uploadResponse == null)
             broadcastResponse(UPLOAD_ACTION, mokMessage, uploadResponse)
         } else {
             val mokDownload = MOKDownload(intent)
@@ -71,7 +71,7 @@ abstract class MonkeyFileService: IntentService(TAG){
             val downloadBytes = downloadFile(http, credential, MonkeyKitSocketService.httpsURL
                     + "/file/open/"+ FilenameUtils.getBaseName(mokDownload.msg))
             val filepath = processReceivedBytes(downloadBytes, mokDownload, clientData)
-            onFileDownloadFinished(mokDownload.id, mokDownload.convID, filepath == null)
+            onFileTransferFinished(mokDownload.id, filepath == null)
             broadcastResponse(DOWNLOAD_ACTION, mokDownload.id, mokDownload.timesort,
                     mokDownload.convID, filepath != null)
         }
@@ -313,19 +313,7 @@ abstract class MonkeyFileService: IntentService(TAG){
      * @param mokMessage Message uploaded.
      * @param error true if the message could not be uploaded successfully.
      */
-    abstract fun onFileUploadFinished(mokMessage: MOKMessage, error: Boolean)
-
-    /**
-     * Callback to be executed once a file finishes downloading. This will only be called if the
-     * MonkeyKitSocketService is not bound to a client. This means that the download operation
-     * finished in background and the app is no longer active, so this service must update the
-     * database with the result of the download action.
-     * @param messageId Id of the message downloaded.
-     * @param conversationId unique identifier of the conversation to which the downloaded message
-     * belongs to
-     * @param error true if the message could not be downloaded successfully.
-     */
-    abstract fun onFileDownloadFinished(messageId: String, conversationId: String, error: Boolean)
+    abstract fun onFileTransferFinished(messageId: String, error: Boolean)
 
     private data class MOKDownload(val id: String, val msg: String, val props: JsonObject,
                                    val sid: String, val timesort: Long, val convID: String){

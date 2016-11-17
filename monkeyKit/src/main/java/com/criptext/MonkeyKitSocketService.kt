@@ -144,7 +144,6 @@ abstract class MonkeyKitSocketService : Service() {
     private fun initializeMonkeyKitService(){
         messageHandler = MOKMessageHandler(this)
         status = ServiceStatus.initializing
-        openDatabase();
         val asyncAES = AsyncAESInitializer(this)
         asyncAES.execute()
     }
@@ -246,7 +245,6 @@ abstract class MonkeyKitSocketService : Service() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
         //persist last time synced
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
-        closeDatabase();
         //unregister connectivity change receiver
         if(receiver!=null)
             unregisterReceiver(receiver)
@@ -405,9 +403,6 @@ abstract class MonkeyKitSocketService : Service() {
             }
             CBTypes.onNotificationReceived -> {
                 delegate?.onNotificationReceived(info[0] as String, info[1] as String, info[2] as String, info[3] as JsonObject, info[4] as String)
-            }
-            CBTypes.onMessageFailDecrypt -> {
-                delegate?.onMessageFailDecrypt(info[0] as MOKMessage);
             }
             CBTypes.onGroupAdded -> {
                 delegate?.onGroupAdded(info[0] as String, info[1] as String, info[2] as JsonObject)
@@ -1102,10 +1097,6 @@ abstract class MonkeyKitSocketService : Service() {
         status = ServiceStatus.unauthorized
     }
     abstract val uploadServiceClass: Class<*>
-
-    abstract fun openDatabase()
-
-    abstract fun closeDatabase()
 
     /**
      * Guarda un mensaje de MonkeyKit en la base de datos. La implementacion de este metodo deberia de

@@ -47,14 +47,6 @@ public class MyServiceClass extends MonkeyKitSocketService{
         return new ClientData(fullname, SensitiveData.APP_ID, SensitiveData.APP_KEY, monkeyID);
     }
 
-    @Override
-    public void closeDatabase() {
-    }
-
-    @Override
-    public void openDatabase() {
-    }
-
     @NotNull
     @Override
     public Class<?> getUploadServiceClass() {

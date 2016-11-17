@@ -25,7 +25,7 @@ interface MonkeyKitDelegate {
 
     /**
      * Our socket can get disconnect for network reasons but MonkeyKit will reconnect automatically. It is
-     * important to notify to the users that are disconnected.
+     * important to notify to the users that they are disconnected.
      */
     fun onSocketDisconnected()
 
@@ -179,9 +179,10 @@ interface MonkeyKitDelegate {
     fun onDeleteReceived(messageId: String, senderId: String, recipientId: String)
 
     /**
-     * Cuando un contacto abre una conversacion con el usuario se ejecuta este callback. La implementacion
-     * de este callback debe de marcar como leido los mensajes que se le enviaron a ese contacto.
-     * @param monkeyId monkey id of the contact
+     * When a MonkeyKit user opens a conversation with the current user, a special notification
+     * is received from server triggering this callback. In this callback you should mark as read
+     * all the messages that have been successfully delivered to that user.
+     * @param monkeyId monkey id of the user that opened the conversation.
      */
     fun onContactOpenMyConversation(monkeyId: String)
 
@@ -200,19 +201,13 @@ interface MonkeyKitDelegate {
     fun onNotificationReceived(messageId: String, senderId: String, recipientId: String, params: JsonObject, datetime: String)
 
     /**
-     * Despues de ejecutar un sync o un get, MonkeyKit recibe todos los mensajes que le debieron haber
-     * llegado mientras estaba desconectado. En este callback se reciben todos esos mensajes tras
+     * After the SyncDatabase() function of MonkeyKitSocketService finishes updating the database,
+     * this callback is executed so that you can use that same data to update the UI.
      * guardarlos en la base de datos. La implementacion de este metodo debe de actualizar las conversaciones
-     SyncComplete nuevos menLists
+     * @param data The data used to sync the database. With this callback your UI should reflect
+     * the new state of your database.
     */
      fun onSyncComplete(data: HttpSync.SyncData)
-
-    /**
-     * Al recibir una notificacion, MonkeyKit ejecuta este callback. La implementacion de este metodo
-     * debe de procesar la notificacion y notificar al usuario la informacion relevante.
-     * @param message Objeto MOKMessage que representa el mensaje que no se pudo desencriptar.
-     */
-    fun onMessageFailDecrypt(message: MOKMessage)
 
     /**
      * This function is executed when you are added to a group.
