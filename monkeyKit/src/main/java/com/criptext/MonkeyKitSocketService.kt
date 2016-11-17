@@ -1099,20 +1099,30 @@ abstract class MonkeyKitSocketService : Service() {
     abstract val uploadServiceClass: Class<*>
 
     /**
-     * Guarda un mensaje de MonkeyKit en la base de datos. La implementacion de este metodo deberia de
-     * ser asincrona para mejorar el rendimiento del servicio. MonkeyKit llamara a este metodo cada
-     * vez que reciba un mensaje para guardarlo.
-     * @param message
-     * @param incoming
-     * @param runnable Este runnable debe ejecutarse despues de guardar el mensaje
+     * This method is invoked every time a message is received in real time. The implementation of
+     * this method should store in the local database a message received through MonkeyKit. it
+     * should be asynchronous to avoid blocking the main thread.
+     * @param message the message to store.
+     * @param runnable once the insertion is complete, execute this runnable to forward the message to
+     * the delegates.
      */
     abstract fun storeReceivedMessage(message: MOKMessage, runnable: Runnable)
 
+    /**
+     * Once the socket connects, it needs to sync the local database with the server. The implementation
+     * of this method should update the database to contain all the changes that occured while the user
+     * was offline.
+     * @param syncData an object with all the messages that should have been received during the down
+     * time, this includes new messages, new notifications, and requested deletions.
+     * @param runnable once the update is complete, execute this runnable to forward the update to
+     * the delegates
+     */
     abstract fun syncDatabase(syncData: HttpSync.SyncData, runnable: Runnable);
 
     /**
      * Loads all credentials needed to initialize the service. This method will be called in
      * a background thread, so it's ok to do blocking operations.
+     * @return a ClientData object with API key, id, and user monkey id.
      */
     abstract fun loadClientData(): ClientData
 
