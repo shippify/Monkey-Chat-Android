@@ -443,11 +443,11 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      */
     fun downloadFile(fileMessageId: String, filepath: String, props: JsonObject, senderId: String,
                      sortdate: Long, conversationId: String){
-        if(!pendingDownloads.containsKey(filepath)){
+        if(!pendingDownloads.containsKey(fileMessageId)){
             service?.downloadFile(fileMessageId, filepath, props.toString(), senderId,
                     sortdate, conversationId)
 
-            pendingDownloads.put(filepath, DownloadMessage(fileMessageId, filepath, props))
+            pendingDownloads.put(fileMessageId, DownloadMessage(fileMessageId, filepath, props))
         }
     }
 

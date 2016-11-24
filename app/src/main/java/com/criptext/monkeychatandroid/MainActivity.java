@@ -49,6 +49,7 @@ import com.criptext.monkeykitui.recycler.ChatActivity;
 import com.criptext.monkeykitui.recycler.GroupChat;
 import com.criptext.monkeykitui.recycler.MonkeyInfo;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
+import com.criptext.monkeykitui.recycler.MonkeyItemTransaction;
 import com.criptext.monkeykitui.recycler.audio.PlaybackNotification;
 import com.criptext.monkeykitui.recycler.audio.PlaybackService;
 import com.criptext.monkeykitui.recycler.audio.VoiceNotePlayer;
@@ -470,8 +471,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
              asyncDBHandler.getConversationById(new FindConversationTask.OnQueryReturnedListener() {
                 @Override
                 public void onQueryReturned(ConversationItem result) {
-                    transaction.updateConversation(result);
-                    DatabaseHandler.updateConversation(result);
+                    if(result != null) {
+                        transaction.updateConversation(result);
+                        DatabaseHandler.updateConversation(result);
+                    } else { //request conversation from server.
+                        getConversationInfo(conversationId);
+                    }
 
                 }
             }, conversationId);
@@ -616,34 +621,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             monkeyItemArrayList.add(newItem);
             messagesMap.put(conversationID, monkeyItemArrayList);
         }
-        //Validate if conversation does not exists
-        if(monkeyConversationsFragment != null &&
-                monkeyConversationsFragment.findConversationById(conversationID)==null){
-            getConversationInfo(conversationID);
-        }
         return newItem;
-    }
-
-    /**
-     * adds new messages to the adapter so that it can be displayed in the RecyclerView.
-     * @param messages
-     */
-    private void processNewMessages(String conversationId, List<MonkeyItem> messages){
-
-        if(monkeyChatFragment!=null && monkeyChatFragment.getConversationId().
-                equals(conversationId)){
-            monkeyChatFragment.smoothlyAddNewItems(messages);
-        }
-        else if(messagesMap!=null && messagesMap.get(conversationId)!=null){
-            messagesMap.get(conversationId).addAll(messages);
-        }
-        else if(messagesMap!=null){
-            messagesMap.put(conversationId, messages);
-        }
-        //Validate if conversation does not exists
-        if(monkeyConversationsFragment !=null && monkeyConversationsFragment.findConversationById(conversationId)==null){
-            getConversationInfo(conversationId);
-        }
     }
 
     /**
@@ -706,11 +684,22 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onFileDownloadFinished(String fileMessageId, long fileMessageTimestamp,
-                                       String conversationId, boolean success) {
+                                       String conversationId, final boolean success) {
         //TODO use better search algorithm
         super.onFileDownloadFinished(fileMessageId, fileMessageTimestamp, conversationId, success);
-        updateMessage(fileMessageId, null,
-                success ? MonkeyItem.DeliveryStatus.delivered : MonkeyItem.DeliveryStatus.error);
+//        updateMessage(fileMessageId, null,
+//                success ? MonkeyItem.DeliveryStatus.delivered : MonkeyItem.DeliveryStatus.error);
+        if(monkeyChatFragment != null && getActiveConversation().equals(conversationId)) {
+        }
+            monkeyChatFragment.updateMessage(fileMessageId, fileMessageTimestamp, new MonkeyItemTransaction() {
+                @Override
+                public MonkeyItem invoke(MonkeyItem monkeyItem) {
+                    MessageItem item = (MessageItem) monkeyItem;
+                    item.setStatus(success ? MonkeyItem.DeliveryStatus.delivered.ordinal() :
+                            MonkeyItem.DeliveryStatus.error.ordinal());
+                    return item;
+                }
+            });
     }
 
     @Override
@@ -1328,9 +1317,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             //If the message failed to download previously, mark it as sending and rebind.
             //Rebinding will update the UI to a loading view and call this method again to start
             //the download
-            updateMessage(item.getMessageId(), null, MonkeyItem.DeliveryStatus.sending);
-            if(monkeyChatFragment != null)
-                monkeyChatFragment.rebindMonkeyItem(item);
+            MessageItem message = (MessageItem) item;
+            message.setStatus(MonkeyItem.DeliveryStatus.sending.ordinal());
+            if(monkeyChatFragment != null) {
+                monkeyChatFragment.rebindMonkeyItem(message);
+            }
         } else { //Not error status, download the file.
             final MessageItem messageItem = (MessageItem) item;
             downloadFile(messageItem.getMessageId(), messageItem.getFilePath(),
@@ -1671,5 +1662,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void deleteAllMessages(@NotNull String conversationId) {
         DatabaseHandler.deleteAll(conversationId);
         if(monkeyChatFragment != null) monkeyChatFragment.clearMessages();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if(monkeyChatFragment != null)
+            monkeyChatFragment.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 }

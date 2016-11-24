@@ -1,8 +1,11 @@
 package com.criptext
 
+import android.Manifest
 import android.app.IntentService
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.PowerManager
+import android.support.v4.content.ContextCompat
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Base64
 import android.util.Log
@@ -202,6 +205,9 @@ abstract class MonkeyFileService: IntentService(TAG){
 
     }
 
+    fun hasPermissionsToDownloadFiles() =
+            ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
     /**
      * Uploads a file to MonkeyKit Server using OkHttp3.
      * @param httpClient Okhttp client with MonkeyKit Server URL, credentials and appropiate timeout
@@ -246,6 +252,11 @@ abstract class MonkeyFileService: IntentService(TAG){
     }
 
     private fun downloadFile(httpClient: OkHttpClient,credentials: String, url: String): ByteArray?{
+        if(!hasPermissionsToDownloadFiles()) {
+            Log.e("MonkeyFileService", "EACCES app does not have permissions to write files")
+            return null
+        }
+
         val request = Request.Builder()
                 .url(url)
                 .header("Authorization", credentials)
