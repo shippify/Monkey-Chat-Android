@@ -15,6 +15,7 @@ import com.criptext.security.RandomStringBuilder
 import com.google.gson.JsonObject
 import org.apache.commons.io.FilenameUtils
 import org.json.JSONObject
+import java.io.File
 import java.util.*
 
 abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
@@ -206,6 +207,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         propsMessage.addProperty("filename", FilenameUtils.getName(filePath));
         propsMessage.addProperty("mime_type",
                 MimeTypeMap.getSingleton().getMimeTypeFromExtension(FilenameUtils.getExtension(filePath)));
+        propsMessage.addProperty("size", File(filePath).length());
 
         newMessage.props = propsMessage;
 

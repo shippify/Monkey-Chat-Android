@@ -315,9 +315,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     case audio:
                         newItem.setAudioDuration(item.getAudioDuration()/1000);
                         newItem.setMessageContent(item.getFilePath());
+                        newItem.setFileSize(mokMessage.getFileSize());
                         break;
                     case photo:
                         newItem.setMessageContent(item.getFilePath());
+                        newItem.setFileSize(mokMessage.getFileSize());
                         break;
                 }
 

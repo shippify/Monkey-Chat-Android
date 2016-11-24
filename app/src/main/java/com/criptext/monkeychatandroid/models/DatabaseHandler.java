@@ -155,10 +155,12 @@ public class DatabaseHandler {
                     item.setAudioDuration(message.getParams().get("length").getAsLong());
                 if(!item.getMessageText().contains("/"))
                     item.setMessageContent(pathToMessagesDir + "/" + MonkeyChat.VOICENOTES_DIR + "/" + message.getMsg());
+                item.setFileSize(message.getFileSize());
                 break;
             case photo:
                 if(!item.getMessageText().contains("/"))
                     item.setMessageContent(pathToMessagesDir + "/" + MonkeyChat.PHOTOS_DIR + "/" + message.getMsg());
+                item.setFileSize(message.getFileSize());
                 break;
         }
 
