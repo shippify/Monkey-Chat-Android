@@ -413,9 +413,6 @@ abstract class MonkeyKitSocketService : Service() {
             CBTypes.onGroupRemovedMember -> {
                 delegate?.onGroupRemovedMember(info[0] as String, info[1] as String)
             }
-            CBTypes.onGroupsRecover -> {
-                delegate?.onGroupsRecover(info[0] as String)
-            }
             CBTypes.onFileFailsUpload -> {
                 delegate?.onFileFailsUpload(info[0] as MOKMessage)
             }

@@ -68,9 +68,6 @@ public class MOKMessageHandler extends Handler {
                                         case com.criptext.comunication.MessageTypes.MOKGroupRemoveMember:
                                             service.processMessageFromHandler(CBTypes.onGroupRemovedMember, new Object[]{message.getRid(), message.getSid()});
                                             break;
-                                        case com.criptext.comunication.MessageTypes.MOKGroupJoined:
-                                            service.processMessageFromHandler(CBTypes.onGroupsRecover, new Object[]{message.getMsg()});
-                                            break;
                                     }
                                 }
                                 catch (Exception e){
@@ -141,10 +138,9 @@ public class MOKMessageHandler extends Handler {
                         break;
                     }
                     case MessageTypes.MOKProtocolSync: {
-                        if(message!=null && message.getMonkeyAction() == MessageTypes.MOKGroupJoined)
-                            service.processMessageFromHandler(CBTypes.onGroupsRecover, new Object[]{message.getMsg()});
-                        else
-                            service.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message.getMessage_id(), message.getSid(), message.getRid(), message.getParams(), message.getDatetime()});
+                        service.processMessageFromHandler(CBTypes.onNotificationReceived,
+                            new Object[]{message.getMessage_id(), message.getSid(), message.getRid(),
+                                    message.getParams(), message.getDatetime()});
                         break;
                     }
                     case MessageTypes.MOKProtocolMessageSync: {

@@ -14,19 +14,36 @@ import java.util.List;
 /**
  * Created by gesuwall on 10/6/16.
  */
-class UpdateConversationsTask extends AsyncTask<HashMap<String, ConversationTransaction>, Integer, Integer> {
+public class UpdateConversationsTask extends AsyncTask<String, Integer, List<ConversationItem>> {
+
+    public OnQueryReturnedListener onQueryReturnedListener = null;
+    private ConversationTransaction transaction;
+
+    public UpdateConversationsTask(ConversationTransaction transaction){
+        this.transaction = transaction;
+    }
+
+    public UpdateConversationsTask(ConversationTransaction transaction, OnQueryReturnedListener listener){
+        this(transaction);
+        onQueryReturnedListener = listener;
+    }
 
     @Override
-    protected Integer doInBackground(HashMap<String, ConversationTransaction>... params) {
+    protected void onCancelled() {
+        onQueryReturnedListener = null;
+    }
+
+    @Override
+    protected List<ConversationItem> doInBackground(String... params) {
         ActiveAndroid.beginTransaction();
-        HashMap<String, ConversationTransaction> map = params[0];
+        List<ConversationItem> results = null;
         try {
 
             From from = new Select().from(ConversationItem.class);
-            String[] args = new String[map.size()];
+            String[] args = new String[params.length];
             String query = "";
             int index = 0;
-            for (String key : map.keySet()) {
+            for (String key : params) {
                 query += "idConv = ? OR ";
                 args[index++] = key;
             }
@@ -37,14 +54,24 @@ class UpdateConversationsTask extends AsyncTask<HashMap<String, ConversationTran
 
             List<ConversationItem> listToUpdate = from.execute();
             for(ConversationItem conversation: listToUpdate) {
-                ConversationTransaction transaction = map.get(conversation.getConvId());
                 transaction.updateConversation(conversation);
                 conversation.save();
             }
+            results = listToUpdate;
             ActiveAndroid.setTransactionSuccessful();
         } finally {
             ActiveAndroid.endTransaction();
         }
-        return 1;
+        return results;
+    }
+
+    @Override
+    protected void onPostExecute(List<ConversationItem> conversationItems) {
+        if(onQueryReturnedListener != null)
+            onQueryReturnedListener.onQueryReturned(conversationItems);
+    }
+
+    public interface OnQueryReturnedListener {
+        void onQueryReturned(List<ConversationItem> results);
     }
 }

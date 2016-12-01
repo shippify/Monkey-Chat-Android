@@ -236,12 +236,6 @@ interface MonkeyKitDelegate {
     fun onGroupRemovedMember(groupid: String, removed_member: String)
 
     /**
-     * This function is executed when you ask for all your groups.
-     * @param groupids Group Ids separated by comma.
-     */
-    fun onGroupsRecover(groupids: String)
-
-    /**
      * This function is executed when a file fails upload.
      * @param message MOKMessage of the file.
      */

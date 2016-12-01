@@ -2,6 +2,10 @@ package com.criptext.monkeychatandroid.models;
 
 import android.os.AsyncTask;
 
+import com.activeandroid.Model;
+import com.activeandroid.query.Update;
+import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
+
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,6 +40,21 @@ public class AsyncDBHandler {
         };
         newTask.onQueryReturnedListener = trueListener;
         newTask.execute(params);
+    }
+
+    public void storeConversationPage(final SaveModelTask.OnQueryReturnedListener listener, Model[] models) {
+        final SaveModelTask newTask = new SaveModelTask();
+        pendingTasks.add(newTask);
+        SaveModelTask.OnQueryReturnedListener trueListener = new SaveModelTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(Model[] storedModels) {
+                pendingTasks.remove(newTask);
+                if(listener != null)
+                    listener.onQueryReturned(storedModels);
+            }
+        };
+        newTask.onQueryReturnedListener = trueListener;
+        newTask.execute(models);
     }
     public void getConversationById(final FindConversationTask.OnQueryReturnedListener listener, String... params){
         final FindConversationTask newTask = new FindConversationTask();
@@ -86,8 +105,8 @@ public class AsyncDBHandler {
     }
 
     public void getConversationPage(final GetConversationPageTask.OnQueryReturnedListener listener,
-                                    int rowsPerPage, int pageNumber) {
-        final GetConversationPageTask newTask = new GetConversationPageTask(rowsPerPage, pageNumber);
+                                    int conversationsToLoad, int loadedConversations) {
+        final GetConversationPageTask newTask = new GetConversationPageTask(conversationsToLoad, loadedConversations);
         pendingTasks.add(newTask);
         GetConversationPageTask.OnQueryReturnedListener trueListener = new GetConversationPageTask.OnQueryReturnedListener() {
             @Override
@@ -100,6 +119,22 @@ public class AsyncDBHandler {
         };
         newTask.onQueryReturnedListener = trueListener;
         newTask.execute();
+    }
+
+    public void updateMissingConversationsTask(final UpdateConversationsTask.OnQueryReturnedListener listener,
+                                              String[] ids, ConversationTransaction transaction) {
+        final UpdateConversationsTask newTask = new UpdateConversationsTask(transaction);
+        pendingTasks.add(newTask);
+        UpdateConversationsTask.OnQueryReturnedListener trueListener = new UpdateConversationsTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(List<ConversationItem> results) {
+                pendingTasks.remove(newTask);
+                if(listener != null)
+                    listener.onQueryReturned(results);
+            }
+        };
+        newTask.onQueryReturnedListener = trueListener;
+        newTask.execute(ids);
     }
 
     public void getMessagePage(final GetMessagePageTask.OnQueryReturnedListener listener,
