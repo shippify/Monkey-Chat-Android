@@ -27,6 +27,7 @@ import com.criptext.comunication.PushMessage;
 import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.http.HttpSync;
 import com.criptext.lib.MKDelegateActivity;
+import com.criptext.monkeychatandroid.dialogs.SyncStatus;
 import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.AsyncDBHandler;
 import com.criptext.monkeychatandroid.models.ConversationItem;
@@ -73,6 +74,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Handler;
 
 public class MainActivity extends MKDelegateActivity implements ChatActivity, ConversationsActivity, InfoActivity, ToolbarDelegate{
 
@@ -86,13 +88,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     HashMap<String, List<MonkeyItem>> messagesMap = new HashMap<>();
     ConversationsList conversations = null;
-    Collection<MonkeyInfo> usersList = null;
     ChatDataFragment dataFragment;
 
-    static int CONV_PERPAGE = 20;
     static int MESS_PERPAGE = 30;
-    int actualConversationsPage;
 
+    Handler handler;
     /**
      * This class is basically a media player for our voice notes. we pass this to MonkeyAdapter
      * so that it can handle all the media playback for us. However, we must initialize it in "onStart".
@@ -123,6 +123,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     private AsyncDBHandler asyncDBHandler;
 
     private File downloadDir;
+
+    private SyncStatus syncStatus;
 
     private ServiceConnection playbackConnection = new ServiceConnection() {
         @Override
@@ -160,6 +162,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         monkeyFragmentManager.setContentLayout(savedInstanceState);
 
         asyncDBHandler = new AsyncDBHandler();
+
+        //wait for a timeout to show a "connecting" message
+        syncStatus = new SyncStatus(monkeyFragmentManager);
+        syncStatus.delayConnectingMessage();
+
     }
 
     public void registerWithGCM(){
@@ -793,7 +800,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onSyncComplete(@NonNull HttpSync.SyncData syncData) {
         Log.d("MainActivity", "Sync complete");
-        setStatusBarState(Utils.ConnectionStatus.connected);
+        syncStatus.cancelMessage();
 
         final String activeConversationId = getActiveConversation();
         boolean activeConversationNeedsUpdate = false;
