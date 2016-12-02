@@ -48,54 +48,6 @@ public class DatabaseHandler {
         new SaveModelTask().execute(messageItem);
     }
 
-    public static void saveMessageBatch(HashMap<String, List<MOKMessage>> conversations, Context context,
-                                        String userSession, Runnable runnable) {
-
-        ActiveAndroid.beginTransaction();
-        try {
-            Set<Map.Entry<String, List<MOKMessage>>> set = conversations.entrySet();
-            Iterator<Map.Entry<String, List<MOKMessage>>> setIterator = set.iterator();
-            while(setIterator.hasNext()) { //iterate every conversation
-
-                Map.Entry<String, List<MOKMessage>> entry = setIterator.next();
-                List<MOKMessage> messages = entry.getValue();
-                Iterator<MOKMessage> iterator = messages.iterator();
-
-                while (iterator.hasNext()) { //iterate every message
-                    MOKMessage message = iterator.next();
-                    //Sometimes the acknowledge get lost for network reasons. So thanks to your own messages arrive in
-                    //the sync response you can verify that the message is already sent using the old_id param.
-                    boolean existOldMessage = false;
-                    if(message.getProps()!=null && message.getProps().has("old_id")) {
-                        MessageItem oldMessage = getMessageById(message.getProps().get("old_id").getAsString());
-                        if(oldMessage!=null){
-                            //TODO NOTIFY SOMEHOW A ONACKNOWLEDGE RECEIVED
-                            existOldMessage = true;
-                        }
-                    }
-                    //We verify if message doesn't exist. If the message exists we remove it from the original
-                    //list to avoid sending to the UI.
-                    if(!existMessage(message.getMessage_id()) && !existOldMessage){
-                        MessageItem messageItem = null;
-                        messageItem.save();
-                    } else {
-                        iterator.remove();
-                        if(messages.isEmpty()) {
-                            setIterator.remove();
-                        }
-                    }
-                }
-            }
-
-            ActiveAndroid.setTransactionSuccessful();
-        }
-        finally {
-            ActiveAndroid.endTransaction();
-            runnable.run();
-        }
-
-    }
-
     public static void saveMessages(List<MessageItem> messageItems){
         ActiveAndroid.beginTransaction();
         try {
@@ -144,7 +96,7 @@ public class DatabaseHandler {
         if(!item.getMessageId().contains("-"))
             item.setStatus(MonkeyItem.DeliveryStatus.delivered.ordinal());
 
-        if(isIncoming && (type==MonkeyItem.MonkeyItemType.audio || type== MonkeyItem.MonkeyItemType.photo))
+        if(type==MonkeyItem.MonkeyItemType.audio || type== MonkeyItem.MonkeyItemType.photo)
             item.setStatus(MonkeyItem.DeliveryStatus.sending.ordinal());
 
         item.setOldMessageId(message.getOldId());
@@ -155,10 +107,12 @@ public class DatabaseHandler {
                     item.setAudioDuration(message.getParams().get("length").getAsLong());
                 if(!item.getMessageText().contains("/"))
                     item.setMessageContent(pathToMessagesDir + "/" + MonkeyChat.VOICENOTES_DIR + "/" + message.getMsg());
+                item.setFileSize(message.getFileSize());
                 break;
             case photo:
                 if(!item.getMessageText().contains("/"))
                     item.setMessageContent(pathToMessagesDir + "/" + MonkeyChat.PHOTOS_DIR + "/" + message.getMsg());
+                item.setFileSize(message.getFileSize());
                 break;
         }
 
@@ -199,10 +153,6 @@ public class DatabaseHandler {
         }
     }
 
-    public static void updateConversations(HashMap<String, ConversationTransaction> map) {
-        new UpdateConversationsTask().execute(map);
-    }
-
     public static void markMessagesAsError(final ArrayList<MOKMessage> errorMessages) {
 
         ActiveAndroid.beginTransaction();
@@ -223,30 +173,21 @@ public class DatabaseHandler {
         }
     }
 
-    public static MessageItem unsendMessage(String messageId, String conversationId){
-        deleteMessage(messageId);
-        return new Select().from(MessageItem.class).where("conversationId = ?", conversationId).orderBy("timestamp DESC").executeSingle();
-    }
-
-    public static MessageItem lastConversationMessage(String conversationId){
-        return new Select().from(MessageItem.class).where("conversationId = ?", conversationId).orderBy("timestamp DESC").executeSingle();
-    }
-
-    public static void deleteMessage(String messageId){
-        new Delete().from(MessageItem.class).where("messageId = ?", messageId).execute();
+    public static void deleteMessage(MessageItem message){
+        new DeleteModelTask().execute(message);
     }
 
     /****************************
      ******* CONVERSATIONS ******
      ****************************/
 
-    public static List<ConversationItem> getConversations(int rowsPerPage, int pageNumber){
+    public static List<ConversationItem> getConversations(int conversationsToLoad, int loadedConversations){
 
         return new Select()
                 .from(ConversationItem.class)
                 .orderBy("datetime DESC")
-                .limit(rowsPerPage)
-                .offset(pageNumber * rowsPerPage)
+                .limit(conversationsToLoad)
+                .offset(loadedConversations)
                 .execute();
     }
 
@@ -332,8 +273,8 @@ public class DatabaseHandler {
         new SaveModelTask().execute(conversationItem);
     }
 
-    public static void deleteConversation(String conversationId){
-        new Delete().from(ConversationItem.class).where("idConv = ?", conversationId).execute();
+    public static void deleteConversation(ConversationItem item){
+        new DeleteModelTask().execute(item);
     }
 
     public static String getSecondaryTextByMessageType(MonkeyItem monkeyItem, boolean isGroup){

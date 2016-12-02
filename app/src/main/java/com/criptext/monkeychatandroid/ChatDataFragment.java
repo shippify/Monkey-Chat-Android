@@ -5,6 +5,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 
 import com.criptext.monkeychatandroid.models.ConversationItem;
+import com.criptext.monkeykitui.conversation.ConversationsList;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
@@ -18,7 +19,7 @@ import java.util.List;
 public class ChatDataFragment extends Fragment{
 
     HashMap<String, List<MonkeyItem>> chatMap;
-    Collection<MonkeyConversation> conversationsList;
+    ConversationsList conversations;
     GroupData groupData;
     ConversationItem activeConversationItem;
 

@@ -9,6 +9,6 @@ enum class CBTypes {
     onDeleteReceived, onCreateGroup, onRemoveGroupMember, onAddGroupMember, onGetUserInfo, onGetUsersInfo,
     onGetGroupInfo, onGetConversations, onDeleteConversation, onGetConversationMessages, onFileDownloadFinished,
     onUpdateUserData, onUpdateGroupData, onContactOpenMyConversation, onNotificationReceived, onSyncComplete,
-    onMessageFailDecrypt, onGroupAdded, onGroupNewMember, onGroupRemovedMember, onGroupsRecover, onFileFailsUpload,
+    onMessageFailDecrypt, onGroupAdded, onGroupNewMember, onGroupRemovedMember, onFileFailsUpload,
     onConversationOpenResponse, onConnectionRefused
 }

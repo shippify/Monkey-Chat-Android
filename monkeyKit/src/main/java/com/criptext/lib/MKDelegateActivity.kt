@@ -15,6 +15,7 @@ import com.criptext.security.RandomStringBuilder
 import com.google.gson.JsonObject
 import org.apache.commons.io.FilenameUtils
 import org.json.JSONObject
+import java.io.File
 import java.util.*
 
 abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
@@ -71,7 +72,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * Forward to service all the messages that the delegate generated while the service was unavailable.
      * @param socketService reference to the socketService that just bound with this delegate
      */
-    fun forwardTextMsgsToService(socketService: MonkeyKitSocketService){
+   private fun forwardTextMsgsToService(socketService: MonkeyKitSocketService){
         var i = messagesToForwardToService.size - 1
         while(i > -1){
             val msg = messagesToForwardToService.removeAt(i)
@@ -94,14 +95,15 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Crea un nuevo MOKMessage con Id unico y con un timestamp actual. Al crear un nuevo MOKMessage
-     * para ser enviado siempre debe de usarse este metodo en lugar del constructor por defecto que
-     * tiene MOKMessage ya que inicializa varios atributos de la manera correcta para ser enviado.
-     * @param textMessage texto a enviar en el mensaje
-     * @param sessionIDTo session ID del destinatario
-     * @param type tipo del mensaje. Debe de ser uno de los valores de MessageTypes.FileTypes
-     * @param params JsonObject con parametros adicionales a enviar.
-     * @return Una nueva instancia de MOK Message lista para ser enviada por el socket.
+     * Creates a new MOK message with a unique local ID and a timestamp of the current system time.
+     * This method should be always used to create a new MOKMessage object to send instead of the
+     * MOKMessage constructor.
+     * @param textMessage text to send in the message
+     * @param sessionIDfrom monkeyID of the user that sends the message.
+     * @param sessionIDTo monkeyID of the user or group that will receive the message.
+     * @param type the message type. It must be a value from MessageTypes.FileTypes
+     * @param params JsonObject with additional parameters to send with the message.
+     * @return A new instance of MOKMessage ready to be sent through a socket.
      */
 
     fun createMOKMessage(textMessage: String, sessionIDfrom: String, sessionIDTo: String,
@@ -116,17 +118,27 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         return message;
     }
 
+    /**
+     * create a JsonObject with the necessary props to send a message.
+     * @return new JsonObject with the necessary props to send a message.
+
+     */
     private fun createSendProps(old_id: String, encrypted: Boolean): JsonObject{
-            val props = JsonObject();
-            props.addProperty("str", "0");
-            props.addProperty("encr", if(encrypted)"1" else "0");
-            props.addProperty("device", "android");
-            props.addProperty("old_id", old_id);
-            return props;
-        }
+        val props = JsonObject();
+        props.addProperty("str", "0");
+        props.addProperty("encr", if(encrypted)"1" else "0");
+        props.addProperty("device", "android");
+        props.addProperty("old_id", old_id);
+        return props;
+    }
 
     /**
      * sends a file to a conversation and stores the message to the database.
+     *
+     * The upload file operation is asynchronous. When it is complete it triggers a callback
+     * depending on the result. if it was successful it executes onAcknowledgeReceived(), otherwise
+     * it executes onFileFailsUpload().
+     *
      * @param filePath The path of the file to send.
      * @param monkeyIDFrom Monkey ID of the user that sends the file.
      * @param monkeyIDTo ID of the user or group that will receive the file.
@@ -148,6 +160,11 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     /**
      * sends a file to a list of users and stores the message to the database.
+     *
+     * The upload file operation is asynchronous. When it is complete it triggers a callback
+     * depending on the result. if it was successful it executes onAcknowledgeReceived(), otherwise
+     * it executes onFileFailsUpload().
+     *
      * @param filePath The path of the file to send.
      * @param monkeyIDFrom Monkey ID of the user that sends the file.
      * @param monkeyIDTo ID of the user or group that will receive the file.
@@ -165,6 +182,11 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             pushMessage, isEncrypted) }
     /**
      * sends a file to a conversation.
+     *
+     * The upload file operation is asynchronous. When it is complete it triggers a callback
+     * depending on the result. if it was successful it executes onAcknowledgeReceived(), otherwise
+     * it executes onFileFailsUpload().
+     *
      * @param filePath The path of the file to send.
      * @param monkeyIDFrom Monkey ID of the user that sends the file.
      * @param monkeyIDTo ID of the user or group that will receive the file.
@@ -185,6 +207,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         propsMessage.addProperty("filename", FilenameUtils.getName(filePath));
         propsMessage.addProperty("mime_type",
                 MimeTypeMap.getSingleton().getMimeTypeFromExtension(FilenameUtils.getExtension(filePath)));
+        propsMessage.addProperty("size", File(filePath).length());
 
         newMessage.props = propsMessage;
 
@@ -200,6 +223,11 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     /**
      * sends a file to a list of users.
+     *
+     * The upload file operation is asynchronous. When it is complete it triggers a callback
+     * depending on the result. if it was successful it executes onAcknowledgeReceived(), otherwise
+     * it executes onFileFailsUpload().
+     *
      * @param filePath The path of the file to send.
      * @param monkeyIDFrom Monkey ID of the user that sends the file.
      * @param monkeyIDTo A list of Monkey IDs of the users that will receive the file.
@@ -219,6 +247,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     /**
      * sends a text message to a conversation and stores it to the database using the
      * storeSendingMessage method.
+     *
+     * This method is asynchronous. Once the server receives the message, the onAcknowledgeReceived()
+     * callback is executed with the new global id for the message.
      * @param text The text to send
      * @param monkeyIDFrom Monkey ID of the user that sends the message.
      * @param monkeyIDTo Monkey ID of the user or conversation that will receive the message.
@@ -239,6 +270,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     /**
      * sends a text message to a list of users and stores it to the database using the
      * storeSendingMessage method.
+     *
+     * This method is asynchronous. Once the server receives the message, the onAcknowledgeReceived()
+     * callback is executed with the new global id for the message.
      * @param text The text to send
      * @param monkeyIDFrom Monkey ID of the user that sends the message.
      * @param monkeyIDTo Monkey ID of the user or conversation that will receive the message.
@@ -256,6 +290,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
     /**
      * sends a text message to a list of users.
+     *
+     * This method is asynchronous. Once the server receives the message, the onAcknowledgeReceived()
+     * callback is executed with the new global id for the message.
      * @param text The text to send
      * @param monkeyIDFrom Monkey ID of the user that sends the message.
      * @param monkeyIDTo A list of Monkey IDs of the users that will receive the message.
@@ -273,6 +310,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     /**
      * sends a text message to a conversation.
+     *
+     * This method is asynchronous. Once the server receives the message, the onAcknowledgeReceived()
+     * callback is executed with the new global id for the message.
      * @param text The text to send
      * @param monkeyIDFrom Monkey ID of the user that sends the message.
      * @param monkeyIDTo Monkey ID of the user or conversation that will receive the message.
@@ -297,6 +337,11 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         return newMessage
     }
 
+    /**
+     * This method is invoked to store a message into the local database before sending it to the
+     * server. The implementation should be asynchronous to avoid blocking the main thread.
+     * @param message the message to store.
+     */
     abstract fun storeSendingMessage(message: MOKMessage)
 
     override fun onSocketConnected() {
@@ -322,6 +367,18 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         pendingDownloads.remove(fileMessageId)
     }
 
+    /**
+     * Tries to send again a file message. If the message is already in queue for sending, it won't
+     * do anything.
+     *
+     * The upload file operation is asynchronous. When it is complete it triggers a callback
+     * depending on the result. if it was successful it executes onAcknowledgeReceived(), otherwise
+     * it executes onFileFailsUpload().
+     * @param fileMessage the fileMessage to send. It is assumed that you got this object from either
+     * sendFileMessage() or persistFileMessageAndSend()
+     * @param pushMessage an object describing the push notification that the receiving user will get
+     * @param isEncrypted true if the file should be encrypted before sending.
+     */
     fun resendFile(fileMessage: MOKMessage, pushMessage: PushMessage, isEncrypted: Boolean) {
         if(!pendingFiles.containsKey(fileMessage.message_id)){
            pendingFiles[fileMessage.message_id] = DelegateMOKMessage(fileMessage, pushMessage, isEncrypted)
@@ -341,6 +398,19 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
     }
 
+    /**
+     * Tries to send again a file message.
+     *
+     * The upload file operation is asynchronous. When it is complete it triggers a callback
+     * depending on the result. if it was successful it executes onAcknowledgeReceived(), otherwise
+     * it executes onFileFailsUpload().
+     * @param fileMessageId the id of the message to send. It is assumed that you got this object
+     * from either sendFileMessage() or persistFileMessageAndSend()
+     * @return true if the message is now in queue for sending. if the message could not be added to
+     * the queue, then most likely a reference to the message with the provided id does not exists
+     * within this instance of MKDelegateActivity. You could try using the overloaded version of
+     * resendFile() that takes a MOKMessage object as argument.
+     */
     fun resendFile(fileMessageId: String): Boolean{
         val fileMOKMessage = pendingFiles[fileMessageId];
         if(fileMOKMessage != null) {
@@ -362,26 +432,34 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Asynchronously downloads a file from the MonkeyKit server. Once the the download is finished
-     * the onFileDownloadFinished will be executed.
+     * Downloads a file received in a message. This method is asynchronous, when the response is
+     * received, the onFileDownloadFinished() callback is executed with the status of the download.
      * @param fileMessageId the ID of the file message to download
      * @param filepath the absolute path where the downloaded file should be stored.
      * @param props the props JsonObject of the file message to download
      * @param senderId the monkey ID of the user who sent this file message
+     * @param sortdate the timestampOrder of the received file.
      * @param conversationId an identifier of the conversation to which the download message belongs to
      * This will be used in the onDownloadFinished callback so that you can easily search for your
      * message and update it
      */
     fun downloadFile(fileMessageId: String, filepath: String, props: JsonObject, senderId: String,
                      sortdate: Long, conversationId: String){
-        if(!pendingDownloads.containsKey(filepath)){
+        if(!pendingDownloads.containsKey(fileMessageId)){
             service?.downloadFile(fileMessageId, filepath, props.toString(), senderId,
                     sortdate, conversationId)
 
-            pendingDownloads.put(filepath, DownloadMessage(fileMessageId, filepath, props))
+            pendingDownloads.put(fileMessageId, DownloadMessage(fileMessageId, filepath, props))
         }
     }
 
+    /**
+     * Callback executed when the activity is about to be destroyed with messages that still
+     * have not been received by the server. You should mark this messages as error since
+     * the service will not keep trying to resend them while the user is away from the app to
+     * avoid draining battery.
+     * @param errorMessages list of messages that have not been yet delivered.
+     */
     abstract fun onDestroyWithPendingMessages(errorMessages: ArrayList<MOKMessage>)
 
     override fun onDestroy() {
@@ -400,9 +478,12 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Create a new chat group.
+     * Create a new chat group. This method is asynchronous, when the response is received, the
+     * onCreateGroup() callback is executed with the new group's info.
      * @param members A string with the Monkey ID of the participants, separated by commas.
      * @param groupName A string with the name of the group.
+     * @param groupId Optionally, a string with an id for the group. If value is null, server
+     * will randomly choose one for you.
      */
     fun createGroup(members: String, groupName: String, groupId: String?){
         val socketService = service
@@ -428,11 +509,17 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
 
     /**
-     * request all the messages sent to the current user since the last time it was synced. When
-     * the messages are successfully received. the onMessageBatchReady() callback is executed
+     * Manually request to sync with server. The sync operation is done automatically every time the
+     * socket connects to the network. in most cases there is no need for you to call this method
+     * manually.
      *
-     * The sync operation is done automatically every time the socket connects to the network. in
-     * most cases there is no need for you to call this method manually.
+     * However, there is one case in which you will want to use this. If your app supports
+     * multi-session and in the onAcknowledgeReceived() callback you receive a message with unknown
+     * id, it means that it was sent from a different device. You can sync with server to get that
+     * message.
+     *
+     * Naturally this method is asynchronous, and when the response is received the onSyncComplete
+     * callback is executed with your new data.
      */
     fun sendSync(){
         val socketService = service
@@ -449,8 +536,10 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Get info of a conversation. The result will arrive via this two delegates: onGetGroupInfo or onGetUserInfo.
-     * @param conversationId conversation id.
+     * Request necessary info to render a conversation. This method is asynchronous, when the
+     * response is received, either the onGetConversationInfo() or onGetUserInfo() callback is
+     * executed with the requested info depending on whether the conversation was a group or not.
+     * @param conversationId id of the requested conversation
      */
     fun getConversationInfo(conversationId: String){
         val socketService = service
@@ -461,7 +550,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Send a notification.
+     * Send a notification to a conversation.
      * @param sessionIDTo session ID of the receiver
      * @param paramsObject JsonObject with the parameters
      * @param pushMessage message for push notification
@@ -472,7 +561,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Send a temporal notification.
+     * Send a temporal notification to a conversation.
      * @param monkeyIDTo session ID of the receiver
      * @param paramsObject JsonObject with the parameters
      */
@@ -482,7 +571,11 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Get all conversation of a user using the monkey ID.
+     * Get all conversation of the current user using his/her monkey ID. This method is
+     * asynchronous, when the response is received, the onGetConversations() callback is executed
+     * with a list of the conversations you requested.
+     * @param quantity the maximum number of conversations to retrieve, it must be between 1 and 100
+     * @param fromTimestamp retrieve conversations no older than this timestamp
      */
     fun getConversationsFromServer(quantity: Int, fromTimestamp: Long){
         val socketService = service
@@ -496,10 +589,12 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Get all messages of a conversation.
-     * @param monkeyid monkeyid ID of the user.
-     * @param numberOfMessages number of messages to load.
-     * @param lastTimeStamp last timestamp of the message loaded.
+     * requests all messages of a conversation from the server. This method is asynchronous, when
+     * the response is received the onGetConversationMessages() callback with the list of messages.
+     * @param monkeyid  ID of the conversation whose messages you request.
+     * @param numberOfMessages maximum number of messages to request.
+     * @param lastTimeStamp last timestamp of the last oldest message you have from this conversation.
+     * If you don't have any use 0. This is useful to avoid getting duplicated messages.
      */
     fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String){
         val socketService = service
@@ -507,8 +602,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Remove a group member asynchronously int the Monkey server. This method help you to delete yourself
-     * of the group. Response is delivered via monkeyJsonResponse.
+     * Remove a member from a group. This method help you to delete yourself of the group. This
+     * method is asynchronous, when the response is received the onRemoveGroupMember() callback with
+     * the updated group members list is executed.
      * @param group_id ID of the group
      * @param monkey_id ID of member to delete
      */
@@ -518,8 +614,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     /**
-     * Add a member to a group asynchronously.
-     * @param new_member Session ID of the new member
+     * Add a member to a group. This method is asynchronous, when the response is received the
+     * onAddGroupMember() callback with the updated group members list is executed.
+     * @param new_member Monkey ID of the new member
      * @param group_id ID of the group
      */
     fun addGroupMember(new_member: String, group_id: String){
@@ -527,13 +624,21 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         socketService?.addGroupMember(new_member, group_id)
     }
 
+
+    /**
+     * Requests from server necessary info about a list of users. This info is often used to render
+     * the members of a group. This method is asynchronous, when the response is received the
+     * onGetUsersInfo() callback with the requested data is executed.
+     * @param userIds string with monkeyId's of the requested users separated by commas.
+     */
     fun getUsersInfo(userIds: String){
         val socketService = service
         socketService?.getUsersInfo(userIds)
     }
     /**
-     * Delete a conversation.
-     * @param monkeyid monkeyid ID of the user.
+     * Delete a conversation in the server. This method is asynchronous, when the response is
+     * received the onConversationDeleted() callback with the deleted conversation is executed.
+     * @param conversationId id of the conversation to delete.
      */
     fun deleteConversation(conversationId: String){
         val socketService = service

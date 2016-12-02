@@ -102,6 +102,8 @@ class MOKMessage(var message_id: String,var sid: String,var rid: String,var msg:
         return props!!.has("file_type")
     }
 
+    fun getFileSize() = props?.get("size")?.asLong ?: 0L
+
     fun getMediaType(): Int{
         if(!isMediaType())
             return MessageTypes.FileTypes.Default

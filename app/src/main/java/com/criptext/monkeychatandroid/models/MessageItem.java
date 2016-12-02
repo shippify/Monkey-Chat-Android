@@ -22,32 +22,34 @@ import java.util.List;
 @Table(name = "MessageItem")
 public class MessageItem extends Model implements MonkeyItem, Comparable<MessageItem> {
 
-    @Column(name = "senderMonkeyId")
-    public String senderMonkeyId;
-    @Column(name = "conversationId", index = true)
-    public String conversationId;
-    @Column(name = "messageId", unique = true)
-    public String messageId;
-    @Column(name = "oldMessageId")
-    public String oldMessageId;
-    @Column(name = "messageContent")
-    public String messageContent;
-    @Column(name = "timestamp")
-    public long timestamp;
-    @Column(name = "timestampOrder", index = true)
-    public long timestampOrder;
-    @Column(name = "isIncoming")
-    public boolean isIncoming;
-    @Column(name = "status")
-    public int status;//DeliveryStatus
-    @Column(name = "itemType")
-    public int itemType;//MonkeyItemType
     @Column(name = "audioDuration")
     public long audioDuration;
+    @Column(name = "conversationId", index = true)
+    public String conversationId;
+    @Column(name = "fileSize")
+    public Long fileSize;
+    @Column(name = "isIncoming")
+    public boolean isIncoming;
+    @Column(name = "itemType")
+    public int itemType;//MonkeyItemType
+    @Column(name = "messageId", unique = true)
+    public String messageId;
+    @Column(name = "messageContent")
+    public String messageContent;
+    @Column(name = "oldMessageId")
+    public String oldMessageId;
     @Column(name = "params")
     public String params;//JsonObject
     @Column(name = "props")
     public String props;//JsonObject
+    @Column(name = "senderMonkeyId")
+    public String senderMonkeyId;
+    @Column(name = "status")
+    public int status;//DeliveryStatus
+    @Column(name = "timestamp")
+    public long timestamp;
+    @Column(name = "timestampOrder", index = true)
+    public long timestampOrder;
 
     public MessageItem(){
         super();
@@ -56,16 +58,17 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
     public MessageItem(String senderId, String conversationId, String messageId, String messageContent, long timestamp,
                        long timestampOrder, boolean isIncoming, MonkeyItemType itemType){
         super();
-        this.senderMonkeyId = senderId;
+        this.audioDuration = 0;
         this.conversationId = conversationId;
-        this.messageId = messageId;
-        this.messageContent = messageContent;
-        this.timestamp = timestamp;
-        this.timestampOrder = timestampOrder;
+        this.fileSize = 0L;
         this.isIncoming = isIncoming;
         this.itemType = itemType.ordinal();
-        this.audioDuration = 0;
+        this.messageContent = messageContent;
+        this.messageId = messageId;
+        this.senderMonkeyId = senderId;
         this.status = DeliveryStatus.sending.ordinal();
+        this.timestamp = timestamp;
+        this.timestampOrder = timestampOrder;
     }
 
     public void setStatus (int status){
@@ -171,7 +174,11 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
 
     @Override
     public long getFileSize() {
-        return 0;
+        return fileSize;
+    }
+
+    public void setFileSize(long fileSize) {
+        this.fileSize = fileSize;
     }
 
     @Override

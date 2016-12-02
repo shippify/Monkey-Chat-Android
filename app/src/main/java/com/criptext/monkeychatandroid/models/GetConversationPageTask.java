@@ -2,27 +2,24 @@ package com.criptext.monkeychatandroid.models;
 
 import android.os.AsyncTask;
 
-import com.criptext.monkeychatandroid.models.ConversationItem;
-import com.criptext.monkeychatandroid.models.DatabaseHandler;
-
 import java.util.List;
 
 /**
  * Created by gesuwall on 10/13/16.
  */
 public class GetConversationPageTask extends AsyncTask<Void, Void, List<ConversationItem>> {
-    private int rowsPerPage;
-    private int pageNumber;
+    private int conversationsToLoad;
+    private int loadedConversations;
 
     public OnQueryReturnedListener onQueryReturnedListener = null;
 
-    public GetConversationPageTask(int rowsPerPage, int pageNumber){
-        this.rowsPerPage = rowsPerPage;
-        this.pageNumber = pageNumber;
+    public GetConversationPageTask(int conversationsToLoad, int loadedConversations){
+        this.conversationsToLoad = conversationsToLoad;
+        this.loadedConversations = loadedConversations;
     }
     @Override
     protected List<ConversationItem> doInBackground(Void... params) {
-        return DatabaseHandler.getConversations(rowsPerPage, pageNumber);
+        return DatabaseHandler.getConversations(conversationsToLoad, loadedConversations);
     }
 
     @Override

@@ -7,13 +7,18 @@ import android.util.Log;
 import com.activeandroid.ActiveAndroid;
 import com.activeandroid.Model;
 
+import java.util.LinkedList;
+import java.util.List;
+
 /**
  * Created by gesuwall on 9/20/16.
  */
-class SaveModelTask extends AsyncTask<Model, Integer, Integer> {
+public class SaveModelTask extends AsyncTask<Model, Integer, Model[]> {
+
+    OnQueryReturnedListener onQueryReturnedListener = null;
 
     @Override
-    protected Integer doInBackground(Model... params) {
+    protected Model[] doInBackground(Model... params) {
         ActiveAndroid.beginTransaction();
         try {
 
@@ -29,6 +34,16 @@ class SaveModelTask extends AsyncTask<Model, Integer, Integer> {
         } finally {
             ActiveAndroid.endTransaction();
         }
-        return 1;
+        return params;
+    }
+
+    @Override
+    protected void onPostExecute(Model[] models) {
+        if(this.onQueryReturnedListener != null)
+            onQueryReturnedListener.onQueryReturned(models);
+    }
+
+    public interface OnQueryReturnedListener {
+        void onQueryReturned(Model[] storedModels);
     }
 }
