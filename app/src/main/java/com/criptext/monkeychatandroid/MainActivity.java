@@ -1244,7 +1244,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void retainMessages(@NotNull String conversationId, @NotNull List<? extends MonkeyItem> messages) {
-        activeConversationItem = null;
         if(messagesMap!=null)
             messagesMap.put(conversationId, (List<MonkeyItem>) messages);
         if(!messages.isEmpty()) {
@@ -1254,6 +1253,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             updateClosedConversation(conversationId, lastOpenValue,
                     DatabaseHandler.getSecondaryTextByMessageType(lastItem, false));
         }
+        activeConversationItem = null;
     }
 
     @Override
