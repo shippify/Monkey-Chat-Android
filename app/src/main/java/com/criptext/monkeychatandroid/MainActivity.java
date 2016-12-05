@@ -723,7 +723,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onMessageReceived(@NonNull MOKMessage message) {
         MessageItem newItem = processNewMessage(message);
-        boolean isMyOwnMsg = !newItem.isIncomingMessage();
         Log.d("MainActivity", "active conv " + (activeConversationItem != null));
         updateConversationByMessage(newItem, activeConversationItem != null &&
                 activeConversationItem.getConvId().equals(newItem.getConversationId()));
@@ -1134,6 +1133,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onDeleteReceived(String messageId, String senderId, String recipientId) {
+
     }
 
     @Override

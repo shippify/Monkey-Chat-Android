@@ -172,6 +172,9 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
     @NotNull
     @Override
     public String getSecondaryText() {
+        if(membersTyping!=null && !membersTyping.isEmpty()){
+            return "Someone is typing...";
+        }
         return secondaryText;
     }
 
@@ -217,6 +220,9 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
     @NotNull
     @Override
     public String getSubtitle() {
+        if(!membersTyping.isEmpty()){
+            return "Someone is typing...";
+        }
         return secondaryText;
     }
 
