@@ -654,7 +654,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         if(e != null) //Something went wrong, invalidate last request
             lastMoreConversationsRequest = null
         else //request successful. don't accept anymore requests like this
-            lastMoreConversationsRequest!!.acknowledged = true
+            lastMoreConversationsRequest?.acknowledged = true
     }
 
     private data class DownloadMessage(val fileMessageId: String, val filepath: String,

@@ -286,7 +286,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                sendTemporalNotification(activeConversationItem.getConvId(), params);
+                if(activeConversationItem != null){
+                    sendTemporalNotification(activeConversationItem.getConvId(), params);
+                }
             }
 
             @Override
@@ -297,7 +299,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                sendTemporalNotification(activeConversationItem.getConvId(), params);
+                if(activeConversationItem != null){
+                    sendTemporalNotification(activeConversationItem.getConvId(), params);
+                }
             }
 
             @Override
@@ -583,7 +587,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
         Collections.sort(messageItems);
         DatabaseHandler.saveMessages(messageItems);
-        if(monkeyChatFragment != null && getActiveConversation().equals(messageItems.get(0).getMessageId())) {
+        if(monkeyChatFragment != null && messageItems.size() > 0 && getActiveConversation().equals(messageItems.get(0).getConversationId())) {
             monkeyChatFragment.addOldMessages(new ArrayList<MonkeyItem>(messageItems), messages.size() == 0);
         }
     }
@@ -636,8 +640,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         super.onFileDownloadFinished(fileMessageId, fileMessageTimestamp, conversationId, success);
 //        updateMessage(fileMessageId, null,
 //                success ? MonkeyItem.DeliveryStatus.delivered : MonkeyItem.DeliveryStatus.error);
-        if(monkeyChatFragment != null && getActiveConversation().equals(conversationId)) {
-        }
+        if (monkeyChatFragment != null && getActiveConversation().equals(conversationId)) {
             monkeyChatFragment.updateMessage(fileMessageId, fileMessageTimestamp, new MonkeyItemTransaction() {
                 @Override
                 public MonkeyItem invoke(MonkeyItem monkeyItem) {
@@ -647,6 +650,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     return item;
                 }
             });
+        }
     }
 
     @Override

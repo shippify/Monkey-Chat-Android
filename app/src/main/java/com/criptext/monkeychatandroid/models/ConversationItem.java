@@ -220,7 +220,7 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
     @NotNull
     @Override
     public String getSubtitle() {
-        if(!membersTyping.isEmpty()){
+        if(membersTyping != null && !membersTyping.isEmpty()){
             return "Someone is typing...";
         }
         return secondaryText;
