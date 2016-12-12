@@ -40,6 +40,7 @@ public class MonkeyChat extends com.activeandroid.app.Application{
 
     public static String PHOTOS_DIR = "photos";
     public static String VOICENOTES_DIR = "voice notes";
+    public static String DOCUMENTS_DIR = "documents";
 
 
     public static File getDownloadDir(Context ctx) {

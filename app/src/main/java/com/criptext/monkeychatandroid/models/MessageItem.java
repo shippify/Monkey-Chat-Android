@@ -50,6 +50,8 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
     public long timestamp;
     @Column(name = "timestampOrder", index = true)
     public long timestampOrder;
+    @Column(name = "filePath")
+    public String filePath;
 
     public MessageItem(){
         super();
@@ -115,6 +117,10 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
         this.oldMessageId = oldMessageId;
     }
 
+    public void setFilePath(String newFilePath) {
+        this.filePath = newFilePath;
+    }
+
     @NotNull
     @Override
     public String getConversationId(){
@@ -163,7 +169,10 @@ public class MessageItem extends Model implements MonkeyItem, Comparable<Message
     @NotNull
     @Override
     public String getFilePath() {
-        return messageContent;
+        if(filePath == null || filePath.isEmpty()){
+            return messageContent;
+        }
+        return filePath;
     }
 
     @NotNull

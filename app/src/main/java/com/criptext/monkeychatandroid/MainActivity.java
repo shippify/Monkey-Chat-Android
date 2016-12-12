@@ -338,6 +338,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                             new PushMessage(EmojiHandler.encodeJavaForPush(myName) +
                             (textTalk==null ? " sent you a photo" : "sent a photo to " + textTalk) ), true);
                         break;
+                    case file:
+                        mokMessage = persistFileMessageAndSend(item.getFilePath(), myMonkeyID, myFriendID,
+                                MessageTypes.FileTypes.Document, new JsonObject(),
+                                new PushMessage(EmojiHandler.encodeJavaForPush(myName) +
+                                (textTalk==null ? " sent you a file" : "sent a file to " + textTalk) ), true);
+                        break;
                     default:
                         mokMessage = persistMessageAndSend(item.getMessageText(), myMonkeyID,
                             myFriendID, params, new PushMessage(EmojiHandler.encodeJavaForPush(myName) +
@@ -365,6 +371,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         newItem.setMessageContent(item.getFilePath());
                         newItem.setFileSize(mokMessage.getFileSize());
                         break;
+                    case file:
+                        newItem.setFilePath(mokMessage.getMsg());
+                        newItem.setFileSize(mokMessage.getFileSize());
+
                 }
 
                 if(monkeyChatFragment != null)
@@ -1320,10 +1330,16 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public ConversationsList onRequestConversations() {
         //TODO rewrite async
-        if(!conversations.isEmpty())
+
+        if(conversations != null && !conversations.isEmpty())
             return conversations;
         else {
             int firstBatchSize = 20;
+
+            if(conversations == null){
+                conversations = new ConversationsList();
+            }
+
             List<ConversationItem> firstConversations = DatabaseHandler.getConversations(firstBatchSize, 0);
              conversations.insertConversations(firstConversations, firstConversations.size() < firstBatchSize);
             return conversations;

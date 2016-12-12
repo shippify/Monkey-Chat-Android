@@ -83,6 +83,9 @@ public class DatabaseHandler {
                 case MessageTypes.FileTypes.Photo:
                     type = MonkeyItem.MonkeyItemType.photo;
                     break;
+                case MessageTypes.FileTypes.Document:
+                    type = MonkeyItem.MonkeyItemType.file;
+                    break;
             }
         }
 
@@ -112,6 +115,16 @@ public class DatabaseHandler {
             case photo:
                 if(!item.getMessageText().contains("/"))
                     item.setMessageContent(pathToMessagesDir + "/" + MonkeyChat.PHOTOS_DIR + "/" + message.getMsg());
+                item.setFileSize(message.getFileSize());
+                break;
+            case file:
+                if(!item.getMessageText().contains("/")) {
+                    item.setMessageContent(item.getJsonProps().get("filename").getAsString());
+                    item.setFilePath(pathToMessagesDir + "/" + MonkeyChat.DOCUMENTS_DIR + "/" + message.getMsg());
+                }else{
+                    item.setFilePath(item.getMessageText());
+                    item.setMessageContent(item.getJsonProps().get("filename").getAsString());
+                }
                 item.setFileSize(message.getFileSize());
                 break;
         }
