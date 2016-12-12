@@ -201,7 +201,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         String members = "";
 
         for (MOKUser value : users.values()){
-            if(membersTyping.contains(value.getMonkeyId())){
+            if(!value.getMonkeyId().isEmpty() && membersTyping.contains(value.getMonkeyId())){
                 if(members.isEmpty()){
                     members += (value.getInfo().has("name") ? value.getInfo().get("name").getAsString() : "Unknown");
                 }else{

@@ -1325,7 +1325,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         else {
             int firstBatchSize = 20;
             List<ConversationItem> firstConversations = DatabaseHandler.getConversations(firstBatchSize, 0);
-             conversations.insertConversations(firstConversations, firstConversations.size() < firstBatchSize);
+            //INSER CONVERSATIONS SHOULD BE CALLED ONLY HERE!!!
+            conversations.insertConversations(firstConversations, firstConversations.size() < firstBatchSize);
             return conversations;
         }
     }
