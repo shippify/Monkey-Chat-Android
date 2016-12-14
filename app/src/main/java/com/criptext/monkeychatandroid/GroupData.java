@@ -30,6 +30,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
     private HashMap<String, Integer> userIndexHashMap;
     ArrayList<MonkeyInfo> infoList;
     private String membersOnline;
+    private String membersTyping;
     private String admins;
     private boolean askingUsers = false;
     private List<Integer> colorsForUsersInGroup;
@@ -44,6 +45,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         userIndexHashMap = new HashMap<>();
         infoList = new ArrayList<>();
         membersOnline = "";
+        membersTyping = "";
         initColorsForGroup();
         //TODO GET MEMBERS FROM DB
         for(String memberId: membersIds.split(",")){
@@ -94,6 +96,25 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
             membersIds = memberId;
         }else{
             membersIds = membersIds.concat("," + memberId);
+        }
+    }
+
+    public void removeMemberTyping(String monkeyId){
+        membersTyping = membersTyping.replace(monkeyId, "");
+        membersTyping = membersTyping.replace(",,", ",");
+        if (membersTyping.endsWith(",")) {
+            membersTyping = membersTyping.substring(0, membersTyping.length()-1);
+        }
+    }
+
+    public void addMemberTyping(String memberId){
+        if(membersTyping.contains(memberId)){
+            return;
+        }
+        if(membersTyping.length() <= 0){
+            membersTyping = memberId;
+        }else{
+            membersTyping = membersTyping.concat("," + memberId);
         }
     }
 
@@ -173,6 +194,33 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
                 return lhs.getTitle().toLowerCase().compareTo(rhs.getTitle().toLowerCase());
             }
         });
+    }
+
+    public String getMembersNameTyping(){
+        HashMap<String, MOKUser> users = this.getUsers();
+        String members = "";
+
+        for (MOKUser value : users.values()){
+            if(!value.getMonkeyId().isEmpty() && membersTyping.contains(value.getMonkeyId())){
+                if(members.isEmpty()){
+                    members += (value.getInfo().has("name") ? value.getInfo().get("name").getAsString() : "Unknown");
+                }else{
+                    members += ", " + (value.getInfo().has("name") ? value.getInfo().get("name").getAsString() : "Unknown");
+                }
+            }
+        }
+
+        if(!members.isEmpty()){
+            return members + " typing...";
+        }
+
+        if(membersOnline.split(",").length > 1){
+            return membersOnline.split(",").length + " members online";
+        }else if(membersOnline.split(",").length == 1){
+            return "1 member online";
+        }
+
+        return "";
     }
 
     public ArrayList<MonkeyInfo> getInfoList(){

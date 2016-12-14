@@ -64,6 +64,8 @@ import com.google.gson.JsonObject;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -276,6 +278,32 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
     public InputListener initInputListener(){
         return new InputListener() {
+            @Override
+            public void onStopTyping() {
+                JSONObject params = new JSONObject();
+                try {
+                    params.put("type", 20);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                if(activeConversationItem != null){
+                    sendTemporalNotification(activeConversationItem.getConvId(), params);
+                }
+            }
+
+            @Override
+            public void onTyping(@NotNull String text) {
+                JSONObject params = new JSONObject();
+                try {
+                    params.put("type", 21);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                if(activeConversationItem != null){
+                    sendTemporalNotification(activeConversationItem.getConvId(), params);
+                }
+            }
+
             @Override
             public void onNewItemFileError(int type) {
                 Toast.makeText(MainActivity.this, "Error writing file of type " +
@@ -551,7 +579,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * adds old messages to the adapter so that it can be displayed in the RecyclerView.
      * @param messages
      */
-    private void processOldMessages(ArrayList<MOKMessage> messages){
+    private void processOldMessages(String conversationId, ArrayList<MOKMessage> messages){
 
         ArrayList<MessageItem> messageItems = new ArrayList<>();
         for(MOKMessage message: messages){
@@ -559,7 +587,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
         Collections.sort(messageItems);
         DatabaseHandler.saveMessages(messageItems);
-        if(monkeyChatFragment != null && getActiveConversation().equals(messageItems.get(0).getMessageId())) {
+        if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(conversationId)) {
             monkeyChatFragment.addOldMessages(new ArrayList<MonkeyItem>(messageItems), messages.size() == 0);
         }
     }
@@ -612,8 +640,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         super.onFileDownloadFinished(fileMessageId, fileMessageTimestamp, conversationId, success);
 //        updateMessage(fileMessageId, null,
 //                success ? MonkeyItem.DeliveryStatus.delivered : MonkeyItem.DeliveryStatus.error);
-        if(monkeyChatFragment != null && getActiveConversation().equals(conversationId)) {
-        }
+        if (monkeyChatFragment != null && getActiveConversation().equals(conversationId)) {
             monkeyChatFragment.updateMessage(fileMessageId, fileMessageTimestamp, new MonkeyItemTransaction() {
                 @Override
                 public MonkeyItem invoke(MonkeyItem monkeyItem) {
@@ -623,6 +650,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     return item;
                 }
             });
+        }
     }
 
     @Override
@@ -699,7 +727,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onMessageReceived(@NonNull MOKMessage message) {
         MessageItem newItem = processNewMessage(message);
-        boolean isMyOwnMsg = !newItem.isIncomingMessage();
         Log.d("MainActivity", "active conv " + (activeConversationItem != null));
         updateConversationByMessage(newItem, activeConversationItem != null &&
                 activeConversationItem.getConvId().equals(newItem.getConversationId()));
@@ -713,7 +740,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         asyncDBHandler.getConversationPage(new GetConversationPageTask.OnQueryReturnedListener() {
             @Override
             public void onQueryReturned(List<ConversationItem> conversationPage) {
-                conversations.insertConversations(conversationPage, conversationPage.size() == 0);
+                conversations.addOldConversations(conversationPage, false);
             }
         }, totalConversations, 0);
     }
@@ -1013,13 +1040,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onGetConversationMessages(@NotNull ArrayList<MOKMessage> messages, @Nullable Exception e) {
+    public void onGetConversationMessages(@NotNull String conversationId, @NotNull ArrayList<MOKMessage> messages, @Nullable Exception e) {
 
         if(e!=null) {
             e.printStackTrace();
             return;
         }
-        processOldMessages(messages);
+        processOldMessages(conversationId, messages);
     }
 
     @Override
@@ -1110,6 +1137,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onDeleteReceived(String messageId, String senderId, String recipientId) {
+
     }
 
     @Override
@@ -1122,7 +1150,26 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onNotificationReceived(String messageId, String senderId, String recipientId, JsonObject params, String datetime) {
-    //not supported
+        int type = params.get("type").getAsInt();
+        if(recipientId.contains("G:")){
+            if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(recipientId)){
+                if(type == 21) {
+                    groupData.addMemberTyping(senderId);
+                    monkeyFragmentManager.setSubtitle(groupData.getMembersNameTyping());
+                }else if (type ==20){
+                    groupData.removeMemberTyping(senderId);
+                    monkeyFragmentManager.setSubtitle(groupData.getMembersNameTyping());
+                }
+            }
+        }else{
+            if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(senderId)){
+                if(type == 21) {
+                    monkeyFragmentManager.setSubtitle("Typing...");
+                }else if (type ==20){
+                    monkeyFragmentManager.setSubtitle("Online");
+                }
+            }
+        }
     }
 
     @NotNull
@@ -1278,7 +1325,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         else {
             int firstBatchSize = 20;
             List<ConversationItem> firstConversations = DatabaseHandler.getConversations(firstBatchSize, 0);
-             conversations.insertConversations(firstConversations, firstConversations.size() < firstBatchSize);
+            //INSER CONVERSATIONS SHOULD BE CALLED ONLY HERE!!!
+            conversations.insertConversations(firstConversations, firstConversations.size() < firstBatchSize);
             return conversations;
         }
     }
@@ -1306,7 +1354,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void setConversationsFragment(@Nullable MonkeyConversationsFragment monkeyConversationsFragment) {
-        conversations.setListUI(monkeyConversationsFragment);
+        if(conversations != null){
+            conversations.setListUI(monkeyConversationsFragment);
+        }
 
     }
 
@@ -1328,7 +1378,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     conversations.addOldConversations(conversationPage, false);
                 }
             }
-        }, loadedConversations, conversationsToLoad);
+        }, conversationsToLoad, loadedConversations);
     }
 
     @Override
@@ -1385,7 +1435,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         ArrayList<MonkeyInfo> infoList = new ArrayList<>();
 
         while(it.hasNext()){
-            ConversationItem conversation = (ConversationItem)it.next();
+            MonkeyConversation monkeyConversation = (MonkeyConversation) it.next();
+
+            if(monkeyConversation.getStatus() == MonkeyConversation.ConversationStatus.moreConversations.ordinal()){
+                continue;
+            }
+
+            ConversationItem conversation = (ConversationItem)monkeyConversation;
             if(conversation.getConvId().contains("G:") && conversation.getGroupMembers().contains(myMonkeyID) &&
                     conversation.getGroupMembers().contains(conversationId)){
                 infoList.add(conversation);

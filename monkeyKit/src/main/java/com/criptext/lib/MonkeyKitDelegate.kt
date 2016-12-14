@@ -129,7 +129,7 @@ interface MonkeyKitDelegate {
      * *
      * @param e the exception of the result
      */
-    fun onGetConversationMessages(messages: ArrayList<MOKMessage>, e: Exception?)
+    fun onGetConversationMessages(conversationId: String, messages: ArrayList<MOKMessage>, e: Exception?)
 
     /**
      * This function is executed when a message arrived and stored in the DB.

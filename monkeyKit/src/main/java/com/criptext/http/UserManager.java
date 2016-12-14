@@ -275,7 +275,7 @@ public class UserManager extends AQueryHttp {
         }
     }
 
-    public void getConversationMessages(String monkeyid, String conversationId, int numberOfMessages
+    public void getConversationMessages(String monkeyid, final String conversationId, int numberOfMessages
             , String lastTimeStamp, final AsyncConnSocket asyncConnSocket){
 
         String newlastTimeStamp = lastTimeStamp;
@@ -359,7 +359,7 @@ public class UserManager extends AQueryHttp {
                         @Override
                         protected void onPostExecute(Exception e) {
                             service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
-                                    messageList, null});
+                                    conversationId, messageList, null});
                         }
                     }.execute("");
 
