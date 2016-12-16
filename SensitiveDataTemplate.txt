@@ -1,0 +1,6 @@
+package com.criptext.monkeychatandroid;
+
+public class SensitiveData {
+    public static String APP_ID = "SOME_USER";
+    public static String APP_KEY = "NO KEY FOR YOU, SORRY BOT";
+}
