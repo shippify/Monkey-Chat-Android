@@ -41,15 +41,15 @@ public class UpdateConversationsTask extends AsyncTask<String, Integer, List<Con
 
             From from = new Select().from(ConversationItem.class);
             String[] args = new String[params.length];
-            String query = "";
+            StringBuilder queryBuilder = new StringBuilder();
             int index = 0;
             for (String key : params) {
-                query += "idConv = ? OR ";
+                queryBuilder.append("idConv = ? OR ");
                 args[index++] = key;
             }
 
-            query = query.substring(0, query.length() - 4);
-            from.where(query, args);
+            String query = queryBuilder.substring(0, queryBuilder.length() - 4);
+            from.where(query, (Object [])args);
 
 
             List<ConversationItem> listToUpdate = from.execute();
