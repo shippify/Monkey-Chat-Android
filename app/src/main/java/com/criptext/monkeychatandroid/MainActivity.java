@@ -264,8 +264,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                if(activeConversationItem != null){
-                    sendTemporalNotification(activeConversationItem.getConvId(), params);
+                if(state.activeConversationItem != null){
+                    sendTemporalNotification(state.activeConversationItem.getConvId(), params);
                 }
             }
 
@@ -277,8 +277,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                if(activeConversationItem != null){
-                    sendTemporalNotification(activeConversationItem.getConvId(), params);
+                if(state.activeConversationItem != null){
+                    sendTemporalNotification(state.activeConversationItem.getConvId(), params);
                 }
             }
 
@@ -1139,6 +1139,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onNotificationReceived(String messageId, String senderId, String recipientId, JsonObject params, String datetime) {
         int type = params.get("type").getAsInt();
+        final GroupData groupData = state.groupData;
         if(recipientId.contains("G:")){
             if(monkeyChatFragment != null && monkeyChatFragment.getConversationId().equals(recipientId)){
                 if(type == 21) {
