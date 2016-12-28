@@ -55,7 +55,9 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
                     hasSyncedBefore, lastSync, cData)
     }
 
-    override fun onPostExecute(result: InitializerResult?) {
+    fun initialize() = execute()
+
+    public override fun onPostExecute(result: InitializerResult?) {
         val service = socketServiceRef.get()
         val messages = result!!.pendingMessages
         if(messages != null && messages.isNotEmpty())

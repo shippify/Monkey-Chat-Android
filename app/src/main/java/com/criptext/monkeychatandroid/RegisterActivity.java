@@ -71,15 +71,18 @@ public class RegisterActivity extends AppCompatActivity {
         MonkeyInit mStart = new MonkeyInit(RegisterActivity.this, existingMonkeyId,
                 SensitiveData.APP_ID, SensitiveData.APP_KEY, userInfo, ignore_params){
             @Override
-            public void onSessionOK(String sessionID){
+            public void onSessionOK(String sessionID, String sdomain, int sport){
                 SharedPreferences.Editor editor = prefs.edit();
                 editor.putBoolean(MonkeyChat.IS_REGISTERED,true);
                 editor.putString(MonkeyChat.MONKEY_ID,sessionID);
                 editor.putString(MonkeyChat.FULLNAME, editTextName.getText().toString());
+                editor.putString(MonkeyChat.FULLNAME, editTextName.getText().toString());
+                editor.putString(MonkeyChat.SOCKET_DOMAIN, sdomain);
+                editor.putInt(MonkeyChat.SOCKET_PORT, sport);
                 editor.apply();
                 Intent mainIntent =new Intent(RegisterActivity.this,MainActivity.class);
                 ClientData data = new ClientData(editTextName.getText().toString(), SensitiveData.APP_ID, SensitiveData.APP_KEY,
-                        sessionID);
+                        sessionID, sdomain, sport);
                 data.fillIntent(mainIntent);
                 startActivity(mainIntent);
                 finish();

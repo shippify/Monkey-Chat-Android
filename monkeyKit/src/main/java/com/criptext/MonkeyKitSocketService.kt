@@ -145,7 +145,7 @@ abstract class MonkeyKitSocketService : Service() {
         messageHandler = MOKMessageHandler(this)
         status = ServiceStatus.initializing
         val asyncAES = AsyncAESInitializer(this)
-        asyncAES.execute()
+        asyncAES.initialize()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -188,7 +188,7 @@ abstract class MonkeyKitSocketService : Service() {
     fun startFirstSocketConnection(aesUtil: AESUtil, cdata: ClientData, lastSync: Long) {
         initialize(aesUtil, cdata, lastSync)
         //since this is the first time we are connecting, let's get all conversations before syncing
-        userManager!!.getConversations(clientData.monkeyId, 30, 0)
+        userManager.getConversations(clientData.monkeyId, 30, 0)
     }
     /**
      * This method gets called by the Async Intializer on its PostExecute method.
@@ -1058,7 +1058,7 @@ abstract class MonkeyKitSocketService : Service() {
         try {
 
             val base64EncodedCredentials = "Basic " + Base64.encodeToString(
-                    (serviceClientData.password).toByteArray(),
+                    (serviceClientData.appKey).toByteArray(),
                     Base64.NO_WRAP);
 
 
@@ -1127,17 +1127,6 @@ abstract class MonkeyKitSocketService : Service() {
         val transitionMessagesPrefs = "MonkeyKit.transitionMessages";
         val lastSyncPrefs = "MonkeyKit.lastSyncTime";
         val lastSyncKey = "MonkeyKit.lastSyncKey";
-        var prefs: SharedPreferences? = null
-
-        val baseURL: String
-            get() {
-                return prefs!!.getString("sdomain","monkey.criptext.com")
-            }
-
-        val port: Int
-            get(){
-                return Integer.parseInt(prefs!!.getString("sport","1139"))
-            }
 
         val httpsURL = "https://secure.criptext.com"
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
@@ -1146,7 +1135,6 @@ abstract class MonkeyKitSocketService : Service() {
         fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>) {
             val intent = Intent(context, service)
             context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
-            prefs = PreferenceManager.getDefaultSharedPreferences(context);
         }
     }
 

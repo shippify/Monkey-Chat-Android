@@ -53,13 +53,12 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
 
 
-    private val monkeyKitConnection = object : ServiceConnection {
+    val monkeyKitConnection = object : ServiceConnection {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
-            val binder = p1 as MonkeyKitSocketService.MonkeyBinder
-            val sService = binder.getService(this@MKDelegateActivity)
-            service = sService
-
-            forwardTextMsgsToService(sService)
+            if (p1 != null) { //Unit tests will have null p1, let's ignore that.
+                val binder = p1 as MonkeyKitSocketService.MonkeyBinder
+                connectWithNewService(binder)
+            }
 
         }
 
@@ -72,7 +71,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * Forward to service all the messages that the delegate generated while the service was unavailable.
      * @param socketService reference to the socketService that just bound with this delegate
      */
-   private fun forwardTextMsgsToService(socketService: MonkeyKitSocketService){
+   fun connectWithNewService(binder: MonkeyKitSocketService.MonkeyBinder){
+        val socketService = binder.getService(this@MKDelegateActivity)
+        service = socketService
         var i = messagesToForwardToService.size - 1
         while(i > -1){
             val msg = messagesToForwardToService.removeAt(i)

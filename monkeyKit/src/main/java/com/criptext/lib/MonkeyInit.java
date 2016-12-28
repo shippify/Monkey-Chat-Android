@@ -67,9 +67,9 @@ public class MonkeyInit {
             @Override
             protected void onPostExecute(ServerResponse res){
                 if(!res.isError())
-                    onSessionOK(res.getContent());
+                    onSessionOK(res.monkeyId, res.domain, res.port);
                 else
-                    onSessionError(res.getContent());
+                    onSessionError("Network Error");
             }
 
             @Override
@@ -79,23 +79,24 @@ public class MonkeyInit {
                     String session;
                     if(myOldMonkeyId.isEmpty()) {
                         aesUtil = new AESUtil(ctxRef.get(), myOldMonkeyId);
-                        return new ServerResponse(false, getSessionHTTP((String)params[0], (String)params[1], (JSONObject)params[2], (JSONArray) params[3]));
+                        return getSessionHTTP((String)params[0], (String)params[1],
+                                (JSONObject)params[2], (JSONArray) params[3]);
                     } else {
-                        session = userSync(myOldMonkeyId);
+                        return userSync(myOldMonkeyId);
                     }
-                    return new ServerResponse(false, session);
-
                 }catch(IllegalArgumentException ex){
-                    return new ServerResponse(true, ex.getMessage());
                 } catch(Exception ex){
                     ex.printStackTrace();
-                    return new ServerResponse(true, ex.getClass().getName());
                 }
+
+                ServerResponse resp =new ServerResponse(null, null, -1);
+                resp.error = true;
+                return resp;
             }
         };
     }
 
-    public void onSessionOK(String session){
+    public void onSessionOK(String monkeyId, String domain, int port){
     //grab your new session id
     }
 
@@ -125,7 +126,7 @@ public class MonkeyInit {
 
     }
 
-    private String getSessionHTTP(String urlUser, String urlPass, JSONObject userInfo, JSONArray ignore_params) throws JSONException,
+    private ServerResponse getSessionHTTP(String urlUser, String urlPass, JSONObject userInfo, JSONArray ignore_params) throws JSONException,
             UnsupportedEncodingException, ClientProtocolException, IOException{
         // Create a new HttpClient and Post Header
         HttpClient httpclient = MonkeyHttpClient.newClient();
@@ -160,7 +161,7 @@ public class MonkeyInit {
 
     }
 
-    private String userSync(String monkeyId) throws Exception{
+    private ServerResponse userSync(final String monkeyId) throws Exception{
 
         // Create a new HttpClient and Post Header
         RSAUtil rsaUtil = new RSAUtil();
@@ -183,9 +184,6 @@ public class MonkeyInit {
          Log.d("userSyncMS", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
 
-        prefs.edit().putString("sdomain", finalResult.getString("sdomain")).apply();
-        prefs.edit().putString("sport", finalResult.getString("sport")).apply();
-
         final String keys = finalResult.getString("keys");
         final long lastSync = finalResult.getLong("last_time_synced");
         String decriptedKey = rsaUtil.desencrypt(keys);
@@ -202,10 +200,13 @@ public class MonkeyInit {
             return getSessionHTTP(this.urlUser, this.urlPass, this.userInfo, this.ignore_params);
         }
 
-        return monkeyId;
+
+        final String domain = finalResult.getString("sdomain");
+        final int port = finalResult.getInt("sport");
+        return new ServerResponse(monkeyId, domain, port);
     }
 
-    private String connectHTTP(String monkeyId, String encriptedKeys, JSONArray ignore_params) throws JSONException,
+    private ServerResponse connectHTTP(String monkeyId, String encriptedKeys, JSONArray ignore_params) throws JSONException,
             IOException{
 
         // Create a new HttpClient and Post Header
@@ -230,20 +231,24 @@ public class MonkeyInit {
         prefs.edit().putString("sdomain", finalResult.getString("sdomain")).apply();
         prefs.edit().putString("sport", finalResult.getString("sport")).apply();
 
-        return finalResult.getString("monkeyId");
+        final String domain = finalResult.getString("sdomain");
+        final int port = finalResult.getInt("sport");
+        return new ServerResponse(monkeyId, domain, port);
     }
 
     public class ServerResponse {
-        private boolean error;
-        private String content;
+        boolean error;
+        final String monkeyId;
+        final int port;
+        final String domain;
 
-        public ServerResponse(boolean error, String content){
-            this.error = error;
-            this.content = content;
+        public ServerResponse(String monkeyId, String domain, int port){
+            this.monkeyId = monkeyId;
+            this.port = port;
+            this.domain = domain;
         }
 
         public boolean isError(){ return error; }
 
-        public String getContent(){ return content; }
     }
 }

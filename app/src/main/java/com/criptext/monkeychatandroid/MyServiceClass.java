@@ -1,7 +1,6 @@
 package com.criptext.monkeychatandroid;
 
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 
 import com.criptext.ClientData;
@@ -14,9 +13,6 @@ import com.criptext.monkeychatandroid.models.SyncDatabaseTask;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 
 /**
  * Created by Daniel Tigse on 4/19/16.
@@ -44,7 +40,9 @@ public class MyServiceClass extends MonkeyKitSocketService{
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String fullname = prefs.getString(MonkeyChat.FULLNAME, null);
         String monkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
-        return new ClientData(fullname, SensitiveData.APP_ID, SensitiveData.APP_KEY, monkeyID);
+        String sdomain = prefs.getString(MonkeyChat.SOCKET_DOMAIN, null);
+        int sport = prefs.getInt(MonkeyChat.SOCKET_PORT, 1139);
+        return new ClientData(fullname, SensitiveData.APP_ID, SensitiveData.APP_KEY, monkeyID, sdomain, sport);
     }
 
     @NotNull

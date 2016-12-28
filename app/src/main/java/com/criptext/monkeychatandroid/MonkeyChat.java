@@ -18,7 +18,6 @@ import io.fabric.sdk.android.Fabric;
 public class MonkeyChat extends com.activeandroid.app.Application{
 
 
-    public String MONKEY_REALM = "SampleApp.MonkeyKitRealm";
     private static MonkeyChat singleton;
 
     /**
@@ -37,6 +36,8 @@ public class MonkeyChat extends com.activeandroid.app.Application{
      * to start the MonkeyKitSocketService.
      */
     public static String FULLNAME = "MonkeyChat.FullName";
+    public static String SOCKET_DOMAIN = "MonkeyChat.SocketDomain";
+    public static String SOCKET_PORT = "MonkeyChat.SocketPort";
 
     public static String PHOTOS_DIR = "photos";
     public static String VOICENOTES_DIR = "voice notes";

@@ -33,6 +33,8 @@ public class AsyncConnSocket implements ComServerDelegate{
 
 	private String sessionId;
 	private String urlPassword;
+	private String sdomain;
+	private int sport;
 	public DarkStarClient socketClient;
 	protected ComServerListener userServerListener;
 	private HandlerThread handlerThread;
@@ -49,30 +51,16 @@ public class AsyncConnSocket implements ComServerDelegate{
 	private MonkeyKitSocketService service;
 	//TIMEOUT
 
-	public AsyncConnSocket(String sessionId, String urlPassword, Handler mainMessageHandler) {
-		this.sessionId=sessionId;
-		this.urlPassword=urlPassword;
-		this.mainMessageHandler=mainMessageHandler;
-		socketStatus = Status.sinIniciar;
-	}
-
-	public AsyncConnSocket(String sessionId, String urlPassword, Handler mainMessageHandler, Runnable r) {
-		this.sessionId=sessionId;
-		this.urlPassword=urlPassword;
-		this.mainMessageHandler=mainMessageHandler;
-		this.lastAction = r;
-		socketStatus = Status.sinIniciar;
-	}
-
 	public AsyncConnSocket(ClientData cdata, Handler messageHandler, MonkeyKitSocketService service){
 		this.sessionId = cdata.getMonkeyId();
 		this.urlPassword = cdata.getPassword();
 		this.mainMessageHandler = messageHandler;
+		this.sdomain = cdata.getSdomain();
+		this.sport = cdata.getSport();
 		this.socketStatus = Status.sinIniciar;
 		this.service = service;
 		Log.d("AsyncConnSocket", "new socket");
 	}
-
 
 	@Override
 	public void promptAction(String action) {}
@@ -152,8 +140,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	public void conexionRecursiva(){
 
 		socketStatus = Status.reconectando; userServerListener=new ComServerListener((ComServerDelegate) this);
-		socketClient = new DarkStarSocketClient(MonkeyKitSocketService.Companion.getBaseURL(),
-                MonkeyKitSocketService.Companion.getPort(),(DarkStarListener)userServerListener);
+		socketClient = new DarkStarSocketClient(sdomain, sport,(DarkStarListener)userServerListener);
 		connThread = new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -162,7 +149,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 
 					for(int i = 1; i <= STRIKES; i++)
                         if (AsyncConnSocket.this.getSocketStatus() != Status.conectado) {
-                            System.out.println("RECONNECTING - "+sessionId + " #" + i + " " + (System.currentTimeMillis()/1000));
+                            System.out.println("RECONNECTING - "+sessionId + " " + sdomain + " " + sport + " #" + i + " " + (System.currentTimeMillis()/1000));
                             socketClient.connect();
                             AsyncConnSocket.this.socketClient.login(AsyncConnSocket.this.sessionId, urlPassword);
 
