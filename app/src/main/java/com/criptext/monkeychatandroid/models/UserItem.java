@@ -94,4 +94,15 @@ public class UserItem implements MonkeyInfo {
     public String getInfoId() {
         return monkeyId;
     }
+
+    @Override
+    public void setRightTitle(@NotNull String rightTitle) {
+        this.rol = rightTitle;
+    }
+
+    @NotNull
+    @Override
+    public void setSubtitle(@NotNull String subtitle) {
+        this.status = subtitle;
+    }
 }

@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -26,7 +27,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
 
     private String conversationId;
     private String membersIds;
-    private HashMap<String, MOKUser> mokUserHashMap;
+    private HashMap<String, MonkeyInfo> userHashMap;
     private HashMap<String, Integer> userIndexHashMap;
     ArrayList<MonkeyInfo> infoList;
     private String membersOnline;
@@ -41,7 +42,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         this.conversationId = conversationId;
         this.membersIds = members;
         this.delegate = act;
-        mokUserHashMap = new HashMap<>();
+        userHashMap = new HashMap<>();
         userIndexHashMap = new HashMap<>();
         infoList = new ArrayList<>();
         membersOnline = "";
@@ -49,7 +50,7 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         initColorsForGroup();
         //TODO GET MEMBERS FROM DB
         for(String memberId: membersIds.split(",")){
-            if(mokUserHashMap.get(memberId)==null){
+            if(userHashMap.get(memberId)==null){
                 getMembers();
                 askingUsers = true;
                 break;
@@ -61,15 +62,12 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         return conversationId;
     }
 
-    public void setMembers(String conversationId, ArrayList<MOKUser> mokUsers){
-        if(conversationId.equals(this.conversationId)) {
-            askingUsers = false;
-            mokUserHashMap.clear();
-            userIndexHashMap.clear();
-            for (MOKUser mokUser : mokUsers) {
-                mokUserHashMap.put(mokUser.getMonkeyId(), mokUser);
-                userIndexHashMap.put(mokUser.getMonkeyId(), userIndexHashMap.size());
-            }
+    public void setMembers(List<UserItem> userItems){
+        userHashMap.clear();
+        userIndexHashMap.clear();
+        for (UserItem userItem : userItems) {
+            userHashMap.put(userItem.getMonkeyId(), userItem);
+            userIndexHashMap.put(userItem.getMonkeyId(), userIndexHashMap.size());
         }
     }
 
@@ -85,18 +83,24 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         if (membersIds.endsWith(",")) {
             membersIds = membersIds.substring(0, membersIds.length()-1);
         }
-        mokUserHashMap.remove(monkeyId);
+        userHashMap.remove(monkeyId);
     }
 
-    public void addMember(String memberId){
-        if(membersIds.contains(memberId)){
+    public void addMember(UserItem userItem){
+        if(membersIds.contains(userItem.getMonkeyId())){
             return;
         }
         if(membersIds.length() <= 0){
-            membersIds = memberId;
+            membersIds = userItem.getMonkeyId();
         }else{
-            membersIds = membersIds.concat("," + memberId);
+            membersIds = membersIds.concat("," + userItem.getMonkeyId());
         }
+        userHashMap.put(userItem.getMonkeyId(), userItem);
+    }
+
+
+    public HashMap<String, MonkeyInfo> getUsers() {
+        return userHashMap;
     }
 
     public void removeMemberTyping(String monkeyId){
@@ -118,9 +122,6 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         }
     }
 
-    public HashMap<String, MOKUser> getUsers(){
-        return mokUserHashMap;
-    }
 
     public void setMembersOnline(String membersOnline){
         this.membersOnline = membersOnline;
@@ -141,10 +142,10 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
     @NotNull
     @Override
     public String getMemberName(@NotNull String monkeyId) {
-        MOKUser mokUser = mokUserHashMap.get(monkeyId);
+        MonkeyInfo user = userHashMap.get(monkeyId);
         String finalName = "Unknown";
-        if(mokUser!=null && mokUser.getInfo()!=null && mokUser.getInfo().has("name")){
-            finalName = mokUser.getInfo().get("name").getAsString();
+        if(user!=null && !user.getTitle().isEmpty() ){
+            finalName = user.getTitle();
         }
         return finalName;
     }
@@ -167,26 +168,25 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
 
     public void setInfoList(String myMonkeyId, String myName){
         infoList.clear();
-        HashMap<String, MOKUser> users = this.getUsers();
+        HashMap<String, MonkeyInfo> users = this.getUsers();
 
-        for (MOKUser value : users.values()){
-            if(value.getMonkeyId() == null || value.getMonkeyId().isEmpty()){
+        for (MonkeyInfo user : users.values()){
+            if(user.getInfoId() == null || user.getInfoId().isEmpty()){
                 continue;
             }
-            MOKUser user = value;
             String connection = "Offline";
             String tag = "";
-            if(this.getAdmins() != null && this.getAdmins().contains(user.getMonkeyId())){
+            if(this.getAdmins() != null && this.getAdmins().contains(user.getInfoId())){
                 tag = "Admin";
             }
-            if(this.getMembersOnline() != null && this.getMembersOnline().contains(user.getMonkeyId())){
+            if(this.getMembersOnline() != null && this.getMembersOnline().contains(user.getInfoId())){
                 connection = "Online";
-            }else if(myMonkeyId != null && myMonkeyId.equals(user.getMonkeyId())){
+            }else if(myMonkeyId != null && myMonkeyId.equals(user.getInfoId())){
                 connection = "Online";
             }
-            UserItem user1 = new UserItem(user.getMonkeyId(),user.getMonkeyId().equals(myMonkeyId) ? myName : (user.getInfo().has("name") ? user.getInfo().get("name").getAsString() : "Unknown"),
-                    tag, user.getAvatarURL(), connection);
-            infoList.add(user1);
+            user.setSubtitle(connection);
+            user.setRightTitle(tag);
+            infoList.add(user);
         }
         Collections.sort(infoList, new Comparator<MonkeyInfo>() {
             @Override
@@ -197,15 +197,15 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
     }
 
     public String getMembersNameTyping(){
-        HashMap<String, MOKUser> users = this.getUsers();
+        HashMap<String, MonkeyInfo> users = this.getUsers();
         String members = "";
 
-        for (MOKUser value : users.values()){
-            if(!value.getMonkeyId().isEmpty() && membersTyping.contains(value.getMonkeyId())){
+        for (MonkeyInfo user : users.values()){
+            if(!user.getInfoId().isEmpty() && membersTyping.contains(user.getInfoId())){
                 if(members.isEmpty()){
-                    members += (value.getInfo().has("name") ? value.getInfo().get("name").getAsString() : "Unknown");
+                    members += user.getTitle();
                 }else{
-                    members += ", " + (value.getInfo().has("name") ? value.getInfo().get("name").getAsString() : "Unknown");
+                    members += ", " + user.getTitle();
                 }
             }
         }
