@@ -8,10 +8,14 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 
 import com.criptext.monkeychatandroid.models.ConversationItem;
+import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeykitui.conversation.ConversationsList;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
+import com.criptext.monkeykitui.recycler.MessagesList;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 import com.criptext.monkeykitui.util.MonkeyFragmentManager;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -23,12 +27,17 @@ import java.util.Stack;
  */
 public class ChatDataFragment extends Fragment{
 
-    HashMap<String, List<MonkeyItem>> messagesMap;
+    HashMap<String, MessagesList> messagesMap;
     ConversationsList conversations;
     /**
      * This class is used to handle group methods.
      */
     GroupData groupData;
+
+    /**
+     * holds the active conversation. This object should be set when the user expresses an intent to
+     * open/close the conversation, it should not be tied to the chat fragment.
+     */
     ConversationItem activeConversationItem;
     /**
      * Monkey ID of the current user. This is stored in Shared Preferences, so we use this
@@ -53,6 +62,48 @@ public class ChatDataFragment extends Fragment{
         f.myName = prefs.getString(MonkeyChat.FULLNAME, null);
 
         return f;
+    }
+
+    /**
+     * Adds a new entry to the HashMap with the specified conversation ID and messages. Be careful,
+     * this will overwrite any previous entries with the same conversation id.
+     * @param newMessages list of messages
+     */
+    public void addNewMessagesList(String conversationId, List<MessageItem> newMessages) {
+        MessagesList newList = new MessagesList(conversationId);
+        newList.insertMessages(newMessages, false);
+        messagesMap.put(conversationId, newList);
+    }
+
+    /**
+     * returns messages list for a conversation. creates a new list and adds it to the HashMap if
+     * none exist. Will never ever return null.
+     * @param conversationId id of the conversation of the requested messages
+     * @return MessagesList object with cached messages.
+     */
+    @NotNull
+    public MessagesList getLoadedMessages(String conversationId) {
+        MessagesList convMessages = messagesMap.get(conversationId);
+        if (convMessages == null) {
+            convMessages = new MessagesList(conversationId);
+            convMessages.setHasReachedEnd(false);
+            messagesMap.put(conversationId, convMessages);
+        }
+        return convMessages;
+    }
+
+    public MessagesList getActiveConversationMessages() {
+        if (activeConversationItem != null) {
+            return getLoadedMessages(activeConversationItem.getConvId());
+        }
+        return null;
+    }
+
+    public String getActiveConversationId() {
+        if (activeConversationItem != null) {
+            return activeConversationItem.getConvId();
+        }
+        return null;
     }
 
     @Override

@@ -41,7 +41,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * with the previous conversation Id. You should call this method when your chat activity/fragment
      * starts and when it stops.
      */
-    var activeConversation: String? = null
+    var openConversation: String? = null
         set(value) {
             if(isSocketConnected) {
                 if (value != null)
@@ -349,7 +349,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         for(file in pendingFiles.values){
             service!!.sendFileMessage(file.message, file.push, file.isEncrypted)
         }
-        activeConversation = activeConversation //send open conversation
+        openConversation = openConversation //send open conversation
         setOnline(true)
     }
 
@@ -474,7 +474,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         if(errorMessages.isNotEmpty())
             onDestroyWithPendingMessages(errorMessages)
 
-        activeConversation = null //send close conversation
+        openConversation = null //send close conversation
 
     }
 
