@@ -1,6 +1,7 @@
 package com.criptext.monkeychatandroid.models;
 
 import com.activeandroid.annotation.Column;
+import com.criptext.comunication.MOKUser;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.recycler.MonkeyInfo;
 
@@ -41,6 +42,14 @@ public class UserItem implements MonkeyInfo {
         this.rol = user.getSubtitle();
         this.avatarFilePath = user.getAvatarUrl();
         this.status = user.getSubtitle();
+    }
+
+    public UserItem(MOKUser user){
+        this.monkeyId = user.getMonkeyId();
+        this.name = user.getInfo().has("name") ? user.getInfo().get("name").getAsString() : "Unknown";
+        this.rol = "";
+        this.avatarFilePath = user.getAvatarURL();
+        this.status = "";
     }
 
     public void setId(String monkeyId) {

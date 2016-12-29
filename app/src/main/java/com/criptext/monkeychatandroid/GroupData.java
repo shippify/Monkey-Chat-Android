@@ -62,12 +62,12 @@ public class GroupData implements com.criptext.monkeykitui.recycler.GroupChat{
         return conversationId;
     }
 
-    public void setMembers(List<UserItem> userItems){
+    public void setMembers(List<MonkeyInfo> monkeyInfoItems){
         userHashMap.clear();
         userIndexHashMap.clear();
-        for (UserItem userItem : userItems) {
-            userHashMap.put(userItem.getMonkeyId(), userItem);
-            userIndexHashMap.put(userItem.getMonkeyId(), userIndexHashMap.size());
+        for (MonkeyInfo monkeyInfoItem : monkeyInfoItems) {
+            userHashMap.put(monkeyInfoItem.getInfoId(), monkeyInfoItem);
+            userIndexHashMap.put(monkeyInfoItem.getInfoId(), userIndexHashMap.size());
         }
     }
 

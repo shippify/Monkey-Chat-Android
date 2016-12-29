@@ -38,7 +38,9 @@ import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.SaveModelTask;
 import com.criptext.monkeychatandroid.models.StoreNewConversationTask;
 import com.criptext.monkeychatandroid.models.UpdateConversationsTask;
+
 import com.criptext.monkeychatandroid.models.UpdateMessageDeliveryStatusTask;
+import com.criptext.monkeychatandroid.models.UserItem;
 import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
 import com.criptext.monkeykitui.MonkeyInfoFragment;
@@ -890,7 +892,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onGetUsersInfo(@NotNull ArrayList<MOKUser> mokUsers, @Nullable Exception e) {
         final GroupData groupData = state.groupData;
         if(e==null && groupData!=null && monkeyChatFragment!=null) {
-            groupData.setMembers(monkeyChatFragment.getConversationId(), mokUsers);
+            ArrayList<MonkeyInfo> users = new ArrayList<>();
+            for(MOKUser mokUser : mokUsers){
+                users.add(new UserItem(mokUser));
+            }
+            groupData.setMembers(users);
             groupData.setAdmins(DatabaseHandler.getConversationById(monkeyChatFragment.getConversationId()).getAdmins());
             groupData.setInfoList(state.myMonkeyID, state.myName);
             monkeyChatFragment.reloadAllMessages();
