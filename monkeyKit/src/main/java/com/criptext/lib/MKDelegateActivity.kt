@@ -584,7 +584,6 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         if(lastMoreConversationsRequest == null || lastMoreConversationsRequest!!.expired ||
                 lastMoreConversationsRequest!!.acknowledged && fromTimestamp != lastMoreConversationsRequest!!.timestamp) {
             lastMoreConversationsRequest = MoreDataRequest(fromTimestamp)
-            Log.d("MKDelegateActivity", "get conversations from server")
             socketService?.getAllConversations(quantity, fromTimestamp)
         }
     }
@@ -597,9 +596,20 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * @param lastTimeStamp last timestamp of the last oldest message you have from this conversation.
      * If you don't have any use 0. This is useful to avoid getting duplicated messages.
      */
-    fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String){
+    fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: Long){
         val socketService = service
-        socketService?.getConversationMessages(conversationId, numberOfMessages, lastTimeStamp)
+        if(lastMoreMessagesRequest == null || lastMoreMessagesRequest!!.expired ||
+                lastMoreMessagesRequest!!.acknowledged && lastTimeStamp != lastMoreMessagesRequest!!.timestamp) {
+            lastMoreMessagesRequest = MoreDataRequest(lastTimeStamp)
+            socketService?.getConversationMessages(conversationId, numberOfMessages, "" + lastTimeStamp)
+        }
+    }
+
+    override fun onGetConversationMessages(conversationId: String, messages: ArrayList<MOKMessage>, e: Exception?) {
+        if(e != null) //Something went wrong, invalidate last request
+            lastMoreMessagesRequest = null
+        else //request successful. don't accept anymore requests like this
+            lastMoreMessagesRequest?.acknowledged = true
     }
 
     /**

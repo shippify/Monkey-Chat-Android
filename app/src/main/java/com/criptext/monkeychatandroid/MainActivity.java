@@ -124,7 +124,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         boolean restored = restoreState();
-        //Log.d("MonkeyId", myMonkeyID);
         downloadDir = MonkeyChat.getDownloadDir(this);
 
         //Check play services. if available try to register with GCM so that we get Push notifications
@@ -366,7 +365,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     conversation.setTotalNewMessage(0);
                 } else
                     conversation.setTotalNewMessage(conversation.getTotalNewMessages() + 1);
-                Log.d("MainActivity", "transaction total new messages" + conversation.getTotalNewMessages());
                 String secondaryText = DatabaseHandler.getSecondaryTextByMessageType(message, monkeyConversation.isGroup());
                 conversation.setSecondaryText(secondaryText);
 
@@ -435,10 +433,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void requestMessagesFromServer(String conversationId){
         final MessagesList conversationMessages = state.messagesMap.get(conversationId);
         if (conversationId != null) {
-            String firstTimestamp = "0";
+            long firstTimestamp = 0L;
             final MonkeyItem firstItem = conversationMessages.getFirstItem();
             if (firstItem != null)
-                firstTimestamp = "" + firstItem.getMessageTimestamp();
+                firstTimestamp = firstItem.getMessageTimestamp();
             getConversationMessages(conversationId, MESS_PERPAGE, firstTimestamp);
         }
     }
@@ -654,7 +652,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onCreateGroup(String groupMembers, String groupName, String groupID, Exception e) {
-        Log.d("TEST", "group create");
         if(e==null){
             ConversationItem conversationItem = new ConversationItem(groupID,
                     groupName, System.currentTimeMillis(), "Write to this group",
@@ -665,12 +662,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onAddGroupMember(@Nullable String groupID, @Nullable String members, @Nullable Exception e) {
-        Log.d("TEST", "group add");
     }
 
     @Override
     public void onRemoveGroupMember(@Nullable String groupID, @Nullable String members, @Nullable Exception e) {
-        Log.d("TEST", "remove member");
     }
 
     @Override
@@ -759,7 +754,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onSyncComplete(@NonNull HttpSync.SyncData syncData) {
-        Log.d("MainActivity", "Sync complete");
         syncStatus.cancelMessage();
 
         final String activeConversationId = state.getActiveConversationId();
@@ -961,25 +955,25 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }
             monkeyConversations.add(conversationItem);
         }
-        ConversationItem[] conversationItems = new ConversationItem[monkeyConversations.size()];
+        final ConversationItem[] conversationItems = new ConversationItem[monkeyConversations.size()];
         for(int i = 0; i < monkeyConversations.size(); i++){
             conversationItems[i] = new ConversationItem(monkeyConversations.get(i));
         }
-
         if(conversationItems.length > 0)
             asyncDBHandler.storeConversationPage(new SaveModelTask.OnQueryReturnedListener() {
                 @Override
                 public void onQueryReturned(Model[] storedModels) {
                     ConversationItem[] storedConversations = (ConversationItem[]) storedModels;
                     state.conversations.addOldConversations(Arrays.asList(storedConversations),
-                            storedModels.length == 0);
+                            conversationItems.length == 0);
                 }
             }, conversationItems);
     }
 
     @Override
     public void onGetConversationMessages(@NotNull String conversationId, @NotNull ArrayList<MOKMessage> messages, @Nullable Exception e) {
-
+        //ALWAYS CALL SUPER FOR THIS CALLBACK
+        super.onGetConversationMessages(conversationId, messages, e);
         if(e!=null) {
             e.printStackTrace();
             return;
@@ -1200,19 +1194,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         DatabaseHandler.markMessagesAsError(errorMessages);
     }
 
-    @Override
-    public void setChatFragment(@Nullable MonkeyChatFragment chatFragment) {
-        Log.d("MainActivity", "set chat fragment");
-        monkeyChatFragment = chatFragment;
-    }
-
-    @Override
-    public void deleteChatFragment(@Nullable MonkeyChatFragment chatFragment) {
-        if(monkeyChatFragment != null && monkeyChatFragment == chatFragment ){
-            monkeyChatFragment = null;
-        }
-    }
-
     @NotNull
     @Override
     public MessagesList getInitialMessages(String conversationId) {
@@ -1242,8 +1223,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onStartChatFragment(@NonNull String conversationId) {
+    public void onStartChatFragment(@NonNull MonkeyChatFragment fragment, @NonNull String conversationId) {
         setOpenConversation(conversationId);
+        monkeyChatFragment = fragment;
         monkeyChatFragment.setVoiceNotePlayer(voiceNotePlayer);
         monkeyChatFragment.setInputListener(initInputListener());
     }
@@ -1252,12 +1234,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onStopChatFragment(@NonNull String conversationId) {
         setOpenConversation(null);
 
-
-
         if(voiceNotePlayer != null)
             voiceNotePlayer.setupNotificationControl(new PlaybackNotification(R.mipmap.ic_launcher,
                     " Playing voice note"));
         monkeyChatFragment.setInputListener(null);
+        monkeyChatFragment = null;
     }
 
     /** CONVERSATION ACTIVITY METHODS **/
