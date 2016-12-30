@@ -10,14 +10,14 @@ import android.support.v4.app.Fragment;
 import com.criptext.monkeychatandroid.models.ConversationItem;
 import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeykitui.conversation.ConversationsList;
-import com.criptext.monkeykitui.conversation.MonkeyConversation;
+
 import com.criptext.monkeykitui.recycler.MessagesList;
-import com.criptext.monkeykitui.recycler.MonkeyItem;
 import com.criptext.monkeykitui.util.MonkeyFragmentManager;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
+import com.criptext.monkeykitui.conversation.DefaultGroupData;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
@@ -32,7 +32,7 @@ public class ChatDataFragment extends Fragment{
     /**
      * This class is used to handle group methods.
      */
-    GroupData groupData;
+    DefaultGroupData groupData;
 
     /**
      * holds the active conversation. This object should be set when the user expresses an intent to

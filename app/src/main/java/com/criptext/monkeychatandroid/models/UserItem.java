@@ -23,6 +23,8 @@ public class UserItem implements MonkeyInfo {
     @Column(name = "status")
     public String status;
 
+    public int userColor;
+
     public UserItem(){
         super();
     }
@@ -113,5 +115,16 @@ public class UserItem implements MonkeyInfo {
     @Override
     public void setSubtitle(@NotNull String subtitle) {
         this.status = subtitle;
+    }
+
+    @NotNull
+    @Override
+    public int getColor() {
+        return userColor;
+    }
+
+    @Override
+    public void setColor(@NotNull int color) {
+        this.userColor = color;
     }
 }
