@@ -35,6 +35,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     private var lastMoreMessagesRequest: MoreDataRequest? = null
 
     private var lastMoreConversationsRequest: MoreDataRequest? = null
+
+    val hasMessagesToForwardToService: Boolean
+        get() = messagesToForwardToService.isNotEmpty()
     /**
      * sets the currently active conversation id. When a non null value is set. it sends an "openConversation"
      * to the server. When a null value is set, a "closeConversation" message is sent to the server
@@ -85,7 +88,6 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     override fun onStart() {
         super.onStart()
         MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName)
-
     }
 
     override fun onStop() {

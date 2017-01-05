@@ -5,6 +5,7 @@ import com.criptext.ClientData
 import com.criptext.MonkeyKitSocketService
 import com.criptext.comunication.CBTypes
 import java.lang.ref.WeakReference
+import java.net.SocketTimeoutException
 
 /**
  * Created by gesuwall on 10/13/16.
@@ -19,9 +20,18 @@ class HttpSyncTask(service: MonkeyKitSocketService, val since: Long, val qty: In
         clientData = service.serviceClientData
     }
 
+    fun execHttpSync(): HttpSync.SyncData? {
+        try {
+            val httpSync = HttpSync.newInstance(serviceRef.get(), clientData)
+            return httpSync?.execute(since, qty)
+        } catch (ex: SocketTimeoutException) {
+            return execHttpSync()
+        }
+
+    }
+
     override fun doInBackground(vararg p0: Void?): HttpSync.SyncData? {
-        val httpSync = HttpSync.newInstance(serviceRef.get(), clientData)
-        return httpSync?.execute(since, qty)
+        return execHttpSync()
     }
 
     override fun onPostExecute(result: HttpSync.SyncData?) {

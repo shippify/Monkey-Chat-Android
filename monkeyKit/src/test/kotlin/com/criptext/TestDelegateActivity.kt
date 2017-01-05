@@ -13,6 +13,13 @@ import java.util.*
  */
 
 class TestDelegateActivity() : MKDelegateActivity() {
+
+    private val messagesDB: HashMap<String, MOKMessage> = hashMapOf()
+    private val pendingMessages: HashMap<String, MOKMessage> = hashMapOf()
+
+    fun getStoredMessage(messageID: String) = messagesDB[messageID]
+    fun getStoredPendingMessage(messageID: String) = pendingMessages[messageID]
+
     override fun onUpdateGroupData(groupId: String, e: Exception?) {
     }
 
@@ -20,9 +27,13 @@ class TestDelegateActivity() : MKDelegateActivity() {
     }
 
     override fun storeSendingMessage(message: MOKMessage) {
+        messagesDB.put(message.message_id, message)
     }
 
     override fun onDestroyWithPendingMessages(errorMessages: ArrayList<MOKMessage>) {
+        for(m in errorMessages) {
+            pendingMessages.put(m.message_id, m)
+        }
     }
 
     override fun onConnectionRefused() {

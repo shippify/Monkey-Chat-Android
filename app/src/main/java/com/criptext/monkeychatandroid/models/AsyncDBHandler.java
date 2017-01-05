@@ -104,6 +104,23 @@ public class AsyncDBHandler {
         newTask.execute(params);
     }
 
+    public void updateMessageDeliveryStatus(final UpdateMessageDeliveryStatusTask.OnQueryReturnedListener listener, String... params) {
+        final UpdateMessageDeliveryStatusTask newTask = new UpdateMessageDeliveryStatusTask();
+        pendingTasks.add(newTask);
+        UpdateMessageDeliveryStatusTask.OnQueryReturnedListener trueListener =
+                    new UpdateMessageDeliveryStatusTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(MessageItem result) {
+                pendingTasks.remove(newTask);
+                if (listener != null) {
+                    listener.onQueryReturned(result);
+                }
+            }
+        };
+        newTask.onQueryReturnedListener = trueListener;
+        newTask.execute(params);
+    }
+
     public void getConversationPage(final GetConversationPageTask.OnQueryReturnedListener listener,
                                     int conversationsToLoad, int loadedConversations) {
         final GetConversationPageTask newTask = new GetConversationPageTask(conversationsToLoad, loadedConversations);

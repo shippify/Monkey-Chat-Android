@@ -105,6 +105,7 @@ abstract class MonkeyKitSocketService : Service() {
     var broadcastReceiver: BroadcastReceiver? = null
 
     lateinit var messageHandler: MOKMessageHandler
+    private set
 
     internal var receiver : ConnectionChangeReceiver? = null
 
@@ -222,7 +223,7 @@ abstract class MonkeyKitSocketService : Service() {
         status = ServiceStatus.dead
         messageHandler.clearServiceReference()
 
-        if(asyncSocketIsConnected)
+        if(isAsyncSocketConnected())
             asyncConnSocket.disconectSocket()
 
         //let the CPU go to sleep by releasing the wake lock
@@ -430,10 +431,10 @@ abstract class MonkeyKitSocketService : Service() {
 
     private fun decryptAES(encryptedText: String) = aesutil.decrypt(encryptedText)
 
-    fun isSocketConnected() = status >= ServiceStatus.running && asyncSocketIsConnected
+    fun isSocketConnected() = status >= ServiceStatus.running && isAsyncSocketConnected()
 
-    private val asyncSocketIsConnected : Boolean
-     get() {
+    private fun isAsyncSocketConnected(): Boolean
+     {
          try {
              return asyncConnSocket.isConnected
          } catch (ex: UninitializedPropertyAccessException){
@@ -573,7 +574,7 @@ abstract class MonkeyKitSocketService : Service() {
         HttpSyncTask(this, since, qty).execute()
     }
 
-    public fun sendSync() {
+    fun sendSync() {
         if(status != ServiceStatus.initializing) {
             status = ServiceStatus.initializing
             HttpSyncTask(this, lastTimeSynced, 50).execute()

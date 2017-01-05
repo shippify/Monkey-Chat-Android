@@ -88,11 +88,11 @@ public class MOKMessageHandler extends Handler {
                         try {
                             if(message.getType().compareTo(MessageTypes.MOKOpen)==0){
                                 service.processMessageFromHandler(CBTypes.onConversationOpenResponse
-                                                , new Object[]{message.getSid()
-                                                        ,message.getProps().get("online").getAsString().compareTo("1")==0
-                                                        ,message.getProps().has("last_seen")?message.getProps().get("last_seen").getAsString():null
-                                                        ,message.getProps().has("last_open_me")?message.getProps().get("last_open_me").getAsString():null
-                                                        ,message.getProps().has("members_online")?message.getProps().get("members_online").getAsString(): ""});
+                                    , new Object[]{message.getSid()
+                                        ,message.getProps().get("online").getAsString().compareTo("1")==0
+                                        ,message.getProps().has("last_seen")?message.getProps().get("last_seen").getAsString():null
+                                        ,message.getProps().has("last_open_me")?message.getProps().get("last_open_me").getAsString():null
+                                        ,message.getProps().has("members_online")?message.getProps().get("members_online").getAsString(): ""});
                             }
                             else {
                                 //The acknowledge message has the id of the successfully sent message in
@@ -104,6 +104,9 @@ public class MOKMessageHandler extends Handler {
                                                 ,message.getOldId(),message.getStatus() == 52
                                                 ,Integer.parseInt(message.getType())});
                             }
+                        } catch (UnsupportedOperationException e) {
+                            Log.e("MOKMessageHandler", "unsupported json " + message.getProps().toString());
+                            e.printStackTrace();
                         } catch (Exception e) {
                             e.printStackTrace();
                         }

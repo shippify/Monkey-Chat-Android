@@ -38,6 +38,7 @@ import com.criptext.monkeychatandroid.models.MessageItem;
 import com.criptext.monkeychatandroid.models.SaveModelTask;
 import com.criptext.monkeychatandroid.models.StoreNewConversationTask;
 import com.criptext.monkeychatandroid.models.UpdateConversationsTask;
+import com.criptext.monkeychatandroid.models.UpdateMessageDeliveryStatusTask;
 import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
 import com.criptext.monkeykitui.MonkeyInfoFragment;
@@ -618,15 +619,22 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         //Always call super so that MKDelegate knows that it should not attempt to retry this message anymore
         super.onAcknowledgeRecieved(senderId, recipientId, newId, oldId, read, messageType);
 
-        asyncDBHandler.getMessageById(new FindMessageTask.OnQueryReturnedListener() {
+        asyncDBHandler.updateMessageDeliveryStatus(new UpdateMessageDeliveryStatusTask.OnQueryReturnedListener() {
             @Override
-            public void onQueryReturned(MessageItem result) {
+            public void onQueryReturned(final MessageItem result) {
                 if(result != null){
-                    if(!read)
-                        markMessageAsDelivered(oldId, newId, read);
-                    else if(monkeyChatFragment != null && senderId.equals(monkeyChatFragment.getConversationId()))
-                        monkeyChatFragment.setLastRead(result.getMessageTimestampOrder());
+                    if(read && monkeyChatFragment != null && senderId.equals(monkeyChatFragment.getConversationId()))
+                        monkeyChatFragment.setLastRead(result.getMessageTimestampOrder()); //update checkmarks in fragment
+
                     updateConversationByMessage(result, read);
+
+                    MessagesList convMessageList = state.getLoadedMessages(senderId);
+                    convMessageList.updateMessage(result, new MonkeyItemTransaction() {
+                        @Override
+                        public MonkeyItem invoke(MonkeyItem monkeyItem) {
+                            return result;
+                        }
+                    });
 
                 } else if((messageType == Integer.parseInt(MessageTypes.MOKText)
                         || messageType == Integer.parseInt(MessageTypes.MOKFile))){
@@ -635,17 +643,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     // sent, we can send a sync message.
                     sendSync();
                 }
-
-                MessagesList conversationMessageList = state.getLoadedMessages(senderId);
-                    Iterator<MonkeyItem> iter = conversationMessageList.iterator();
-                    while (iter.hasNext()) {
-                        MessageItem updateMessage = (MessageItem) iter.next();
-                        if (updateMessage.getMessageId().equals(oldId) || updateMessage.getMessageId().equals(newId)) {
-                            updateMessage.setStatus(MonkeyItem.DeliveryStatus.delivered.ordinal());
-                            //is this updated also in DB??
-                            break;
-                        }
-                    }
             }
         }, oldId, newId);
     }
