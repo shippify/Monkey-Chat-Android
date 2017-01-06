@@ -162,7 +162,7 @@ abstract class MonkeyFileService: IntentService(TAG){
             if(resultBytes == null)
                 return null
 
-            if (props.get("cmpr").asString == "gzip") {//Decompress
+            if (props.has("cmpr") && props.get("cmpr").asString == "gzip") {//Decompress
                 val compressor = Compressor();
                 try {
                     resultBytes = compressor.gzipDeCompress(resultBytes);

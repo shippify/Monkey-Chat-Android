@@ -237,4 +237,24 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
     public String getInfoId() {
         return idConv;
     }
+
+    @Override
+    public void setRightTitle(@NotNull String rightTitle) {
+
+    }
+
+    @Override
+    public void setSubtitle(@NotNull String subtitle) {
+
+    }
+
+    @Override
+    public int getColor() {
+        return 0;
+    }
+
+    @Override
+    public void setColor(int color) {
+
+    }
 }

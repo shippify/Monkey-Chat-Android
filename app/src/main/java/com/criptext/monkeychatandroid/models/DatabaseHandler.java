@@ -13,6 +13,7 @@ import com.criptext.comunication.MessageTypes;
 import com.criptext.monkeychatandroid.MonkeyChat;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
+import com.criptext.monkeykitui.recycler.EndItem;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 import com.criptext.monkeykitui.util.Utils;
 
@@ -278,7 +279,7 @@ public class DatabaseHandler {
     }
 
     public static String getSecondaryTextByMessageType(MonkeyItem monkeyItem, boolean isGroup){
-        if(monkeyItem == null)
+        if(monkeyItem == null || monkeyItem instanceof EndItem)
             return isGroup ? "Write to group" : "Write to contact";
         switch (MonkeyItem.MonkeyItemType.values()[monkeyItem.getMessageType()]) {
             case audio:

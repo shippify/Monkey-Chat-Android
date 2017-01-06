@@ -1,6 +1,7 @@
 package com.criptext.monkeychatandroid.models;
 
 import com.activeandroid.annotation.Column;
+import com.criptext.comunication.MOKUser;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.recycler.MonkeyInfo;
 
@@ -22,6 +23,8 @@ public class UserItem implements MonkeyInfo {
     @Column(name = "status")
     public String status;
 
+    public int userColor;
+
     public UserItem(){
         super();
     }
@@ -41,6 +44,14 @@ public class UserItem implements MonkeyInfo {
         this.rol = user.getSubtitle();
         this.avatarFilePath = user.getAvatarUrl();
         this.status = user.getSubtitle();
+    }
+
+    public UserItem(MOKUser user){
+        this.monkeyId = user.getMonkeyId();
+        this.name = user.getInfo().has("name") ? user.getInfo().get("name").getAsString() : "Unknown";
+        this.rol = "";
+        this.avatarFilePath = user.getAvatarURL();
+        this.status = "";
     }
 
     public void setId(String monkeyId) {
@@ -93,5 +104,27 @@ public class UserItem implements MonkeyInfo {
     @Override
     public String getInfoId() {
         return monkeyId;
+    }
+
+    @Override
+    public void setRightTitle(@NotNull String rightTitle) {
+        this.rol = rightTitle;
+    }
+
+    @NotNull
+    @Override
+    public void setSubtitle(@NotNull String subtitle) {
+        this.status = subtitle;
+    }
+
+    @NotNull
+    @Override
+    public int getColor() {
+        return userColor;
+    }
+
+    @Override
+    public void setColor(@NotNull int color) {
+        this.userColor = color;
     }
 }
