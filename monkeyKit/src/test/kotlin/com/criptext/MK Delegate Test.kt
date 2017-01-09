@@ -25,7 +25,7 @@ import org.robolectric.util.ActivityController
 
 @RunWith(RobolectricTestRunner::class)
 @Config(constants = BuildConfig::class, shadows=arrayOf(ShadowAESInitializer::class,
-        ShadowAESUtil::class, ShadowMonkeyKitService::class))
+        ShadowAESUtil::class, ShadowMonkeyKitService::class), manifest = "TestManifest.xml")
 class `MK Delegate Test` {
     lateinit var controller: ActivityController<TestDelegateActivity>
     lateinit var service: TestService
