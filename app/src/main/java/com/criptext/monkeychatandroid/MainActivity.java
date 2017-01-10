@@ -502,14 +502,12 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     /**
      * Creates a new MonkeyChatFragment and adds it to the activity.
      * @param chat conversation to display
-     * @param hasReachedEnd true of the initial messages are the only existing messages of the chat
      */
-    public void startChatWithMessages(ConversationItem chat, boolean hasReachedEnd){
+    public void startChatWithMessages(ConversationItem chat){
         MonkeyChatFragment fragment = new MonkeyChatFragment.Builder(chat.getConvId(), chat.getName())
                                             .setAvatarURL(chat.getAvatarFilePath())
                                             .setLastRead(chat.lastRead)
                                             .setMembersIds(chat.getGroupMembers())
-                                            .setReachedEnd(hasReachedEnd)
                                             .build();
          monkeyFragmentManager.setChatFragment(fragment);
     }
@@ -1270,10 +1268,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void onConversationClicked(final @NotNull MonkeyConversation conversation) {
 
         state.activeConversationItem = (ConversationItem) conversation;
-        List<MonkeyItem> messages = state.messagesMap.get(conversation.getConvId());
-        if(messages!=null && !messages.isEmpty()){
+        List<MonkeyItem> messages = state.getLoadedMessages(conversation.getConvId());
+        if(!messages.isEmpty()){
             //Get initial messages from memory
-            startChatWithMessages((ConversationItem) conversation, false);
+            startChatWithMessages((ConversationItem) conversation);
         }
         else{
             //Get initial messages from DB
@@ -1281,7 +1279,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 @Override
                 public void onQueryReturned(List<MessageItem> messageItems) {
                     state.addNewMessagesList(conversation.getConvId(), messageItems);
-                    startChatWithMessages((ConversationItem) conversation, false);
+                    startChatWithMessages((ConversationItem) conversation);
                 }
             }, conversation.getConvId(), MESS_PERPAGE, 0);
         }
@@ -1395,14 +1393,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             final ConversationItem conversation = (ConversationItem) infoItem;
             List<MonkeyItem> messages = state.messagesMap.get(conversation.getConvId());
             if(messages!=null && !messages.isEmpty()){
-                startChatFromInfo(conversation, false);
+                startChatFromInfo(conversation);
             }else{
                 //Get initial messages from DB
                 asyncDBHandler.getMessagePage(new GetMessagePageTask.OnQueryReturnedListener() {
                     @Override
                     public void onQueryReturned(List<MessageItem> messageItems) {
                         state.addNewMessagesList(conversation.getConvId(), messageItems);
-                        startChatFromInfo(conversation, false);
+                        startChatFromInfo(conversation);
                     }
                 }, conversation.getConvId(), MESS_PERPAGE, 0);
             }
@@ -1421,21 +1419,24 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         infoItem.getTitle(), System.currentTimeMillis(), "Write to this Conversation",
                         0, false, "", infoItem.getAvatarUrl(), MonkeyConversation.ConversationStatus.empty.ordinal());
                 conversationsList.add(conversationItem);
-                startChatFromInfo(conversationItem, true);
+                MessagesList newMessagesList = new MessagesList(infoItem.getInfoId());
+                newMessagesList.setHasReachedEnd(true);
+                state.messagesMap.put(infoItem.getInfoId(), newMessagesList);
+                startChatFromInfo(conversationItem);
                 DatabaseHandler.saveConversations(new ConversationItem[]{conversationItem});
                 return;
             }
             final ConversationItem conversationUserCopy = conversationUser;
             List<MonkeyItem> messages = state.messagesMap.get(conversationUser.getConvId());
             if(messages!=null && !messages.isEmpty()){
-                startChatFromInfo(conversationUser, false);
+                startChatFromInfo(conversationUser);
             }else{
                 //Get initial messages from DB
                 asyncDBHandler.getMessagePage(new GetMessagePageTask.OnQueryReturnedListener() {
                     @Override
                     public void onQueryReturned(List<MessageItem> messageItems) {
                         state.addNewMessagesList(conversationUserCopy.getConvId(), messageItems);
-                        startChatFromInfo(conversationUserCopy, false);
+                        startChatFromInfo(conversationUserCopy);
                     }
                 }, conversationUser.getConvId(), MESS_PERPAGE, 0);
             }
@@ -1444,12 +1445,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
     }
 
-    public void startChatFromInfo(ConversationItem chat, boolean hasReachedEnd){
+    public void startChatFromInfo(ConversationItem chat){
         MonkeyChatFragment fragment = new MonkeyChatFragment.Builder(chat.getConvId(), chat.getName())
                 .setAvatarURL(chat.getAvatarFilePath())
                 .setLastRead(chat.lastRead)
                 .setMembersIds(chat.getGroupMembers())
-                .setReachedEnd(hasReachedEnd)
                 .build();
 
         state.activeConversationItem = chat;

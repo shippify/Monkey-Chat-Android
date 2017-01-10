@@ -61,7 +61,7 @@ dependencies {
     compile project(':monkeyKit')
 
 //    compile project(':monkeykitui')
-    compile 'com.github.Criptext:Monkey-UI-Android:c9e8e39447'
+    compile 'com.github.Criptext:Monkey-UI-Android:05fe590683'
     //Monkey SDK makes build resolve to use appcompat 22, we need to force it to use 23 for tests
     compile ('com.android.support:appcompat-v7:23.4.0') {
         force = true
