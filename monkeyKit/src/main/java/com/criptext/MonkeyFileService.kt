@@ -157,6 +157,8 @@ abstract class MonkeyFileService: IntentService(TAG){
                     utf8str = utf8str.substring(utf8str.indexOf(",") + 1, utf8str.length);
                     resultBytes = Base64.decode(utf8str.toByteArray(charset("utf8")), 0);
                 }
+            }else{
+                resultBytes = downloadBytes
             }
 
             if(resultBytes == null)
