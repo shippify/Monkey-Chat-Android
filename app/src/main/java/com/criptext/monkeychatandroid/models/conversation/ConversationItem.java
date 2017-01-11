@@ -1,4 +1,4 @@
-package com.criptext.monkeychatandroid.models;
+package com.criptext.monkeychatandroid.models.conversation;
 
 import android.util.Log;
 

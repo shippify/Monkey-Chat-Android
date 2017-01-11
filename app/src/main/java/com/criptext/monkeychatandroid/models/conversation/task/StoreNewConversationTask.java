@@ -1,13 +1,10 @@
-package com.criptext.monkeychatandroid.models;
+package com.criptext.monkeychatandroid.models.conversation.task;
 
 import android.os.AsyncTask;
-import android.provider.ContactsContract;
-import android.util.Log;
 
 import com.activeandroid.ActiveAndroid;
-import com.criptext.monkeykitui.conversation.MonkeyConversation;
-
-import java.util.List;
+import com.criptext.monkeychatandroid.models.DatabaseHandler;
+import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
 
 /**
  * Stores a new conversation in background, querying the database for existing unread messages

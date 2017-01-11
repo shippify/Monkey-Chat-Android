@@ -1,4 +1,4 @@
-package com.criptext.monkeychatandroid.models;
+package com.criptext.monkeychatandroid.models.message;
 
 import android.support.annotation.NonNull;
 
@@ -10,10 +10,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import org.jetbrains.annotations.NotNull;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Created by gesuwall on 4/7/16.

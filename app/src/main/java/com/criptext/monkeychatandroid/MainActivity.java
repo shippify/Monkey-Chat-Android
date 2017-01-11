@@ -28,18 +28,18 @@ import com.criptext.lib.MKDelegateActivity;
 import com.criptext.monkeychatandroid.dialogs.SyncStatus;
 import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.AsyncDBHandler;
-import com.criptext.monkeychatandroid.models.ConversationItem;
+import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
-import com.criptext.monkeychatandroid.models.FindConversationTask;
-import com.criptext.monkeychatandroid.models.FindMessageTask;
-import com.criptext.monkeychatandroid.models.GetConversationPageTask;
-import com.criptext.monkeychatandroid.models.GetMessagePageTask;
-import com.criptext.monkeychatandroid.models.MessageItem;
+import com.criptext.monkeychatandroid.models.conversation.TransactionCreator;
+import com.criptext.monkeychatandroid.models.conversation.task.FindConversationTask;
+import com.criptext.monkeychatandroid.models.conversation.task.GetConversationPageTask;
+import com.criptext.monkeychatandroid.models.message.task.GetMessagePageTask;
+import com.criptext.monkeychatandroid.models.message.MessageItem;
 import com.criptext.monkeychatandroid.models.SaveModelTask;
-import com.criptext.monkeychatandroid.models.StoreNewConversationTask;
-import com.criptext.monkeychatandroid.models.UpdateConversationsTask;
+import com.criptext.monkeychatandroid.models.conversation.task.StoreNewConversationTask;
+import com.criptext.monkeychatandroid.models.conversation.task.UpdateConversationsTask;
 
-import com.criptext.monkeychatandroid.models.UpdateMessageDeliveryStatusTask;
+import com.criptext.monkeychatandroid.models.message.task.UpdateMessageDeliveryStatusTask;
 import com.criptext.monkeychatandroid.models.UserItem;
 import com.criptext.monkeykitui.MonkeyChatFragment;
 import com.criptext.monkeykitui.MonkeyConversationsFragment;
@@ -356,44 +356,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         };
     }
 
-    public ConversationTransaction createTransactionFromMessage(final MessageItem message,
-                                                                final boolean read) {
-        return new ConversationTransaction() {
-            @Override
-            public void updateConversation(MonkeyConversation monkeyConversation) {
-                long dateTime = message.getMessageTimestampOrder();
-                ConversationItem conversation = (ConversationItem) monkeyConversation;
-                conversation.setDatetime(dateTime > -1 ? dateTime : conversation.getDatetime());
-                if (read) {
-                    conversation.lastRead = message.getMessageTimestampOrder();
-                    conversation.setTotalNewMessage(0);
-                } else
-                    conversation.setTotalNewMessage(conversation.getTotalNewMessages() + 1);
-                String secondaryText = DatabaseHandler.getSecondaryTextByMessageType(message, monkeyConversation.isGroup());
-                conversation.setSecondaryText(secondaryText);
-
-                int newStatus;
-                if (!message.isIncomingMessage()) {
-                    switch (message.getDeliveryStatus()) {
-                        case sending:
-                            newStatus = MonkeyConversation.ConversationStatus.sendingMessage.ordinal();
-                            break;
-                        case delivered:
-                            newStatus = MonkeyConversation.ConversationStatus.deliveredMessage.ordinal();
-                            break;
-                        default:
-                            throw new UnsupportedOperationException("tried to conversation with outgoing message with type error");
-                    }
-                } else {
-                    newStatus = MonkeyConversation.ConversationStatus.receivedMessage.ordinal();
-                }
-                conversation.setStatus(newStatus);
-            }
-        };
-
-    }
-
-
     /**
      * Updates a conversation in the database and then optionally adds it to the conversation list.
      * If conversation is not found in the database, fetch the conversation from server. This
@@ -421,7 +383,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     private  void updateConversationByMessage(MessageItem message, boolean read) {
-        ConversationTransaction transaction = createTransactionFromMessage(message, read);
+        ConversationTransaction transaction = TransactionCreator.fromSentMessage(message, read);
         ConversationItem conversation = (ConversationItem) state.conversations.findConversationById(message.conversationId);
         if (conversation != null) {
             state.conversations.updateConversation(conversation, transaction);
@@ -1041,18 +1003,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param conversationId
      * @param newLastReadValue
      */
-    public void updateConversationLastRead(String conversationId, final long newLastReadValue) {
+    public void updateConversationLastRead(String conversationId, long newLastReadValue) {
         if(conversationId.startsWith("G:"))
             return; //don't update group conversations
 
-        ConversationTransaction transaction = new ConversationTransaction() {
-                @Override
-                public void updateConversation(@NotNull MonkeyConversation conversation) {
-                    ConversationItem conversationItem = (ConversationItem) conversation;
-                    conversationItem.lastRead = newLastReadValue;
-                }
-            };
-
+        ConversationTransaction transaction = TransactionCreator.fromContactOpenedConversation(newLastReadValue);
         ConversationItem openedConversation =
                 (ConversationItem) state.conversations.findConversationById(conversationId);
 
@@ -1064,13 +1019,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 if(monkeyChatFragment!=null && monkeyChatFragment.getConversationId().equals(conversationId))
                     monkeyChatFragment.setLastRead(newLastReadValue);
 
-                state.conversations.updateConversation(openedConversation, new ConversationTransaction() {
-                    @Override
-                    public void updateConversation(@NotNull MonkeyConversation conversation) {
-                        ConversationItem conversationItem = (ConversationItem) conversation;
-                        conversationItem.lastRead = newLastReadValue;
-                    }
-                });
+                state.conversations.updateConversation(openedConversation, transaction);
                 DatabaseHandler.updateConversation(openedConversation);
             }
         }
@@ -1490,5 +1439,5 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void removeMember(@NotNull String monkeyId) {
 
-    }
+   }
 }

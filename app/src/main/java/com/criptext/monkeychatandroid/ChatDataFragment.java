@@ -7,8 +7,8 @@ import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 
-import com.criptext.monkeychatandroid.models.ConversationItem;
-import com.criptext.monkeychatandroid.models.MessageItem;
+import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
+import com.criptext.monkeychatandroid.models.message.MessageItem;
 import com.criptext.monkeykitui.conversation.ConversationsList;
 
 import com.criptext.monkeykitui.recycler.MessagesList;

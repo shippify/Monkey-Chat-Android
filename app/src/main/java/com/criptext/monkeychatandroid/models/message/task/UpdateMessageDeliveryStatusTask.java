@@ -1,8 +1,10 @@
-package com.criptext.monkeychatandroid.models;
+package com.criptext.monkeychatandroid.models.message.task;
 
 import android.os.AsyncTask;
 
 import com.activeandroid.ActiveAndroid;
+import com.criptext.monkeychatandroid.models.DatabaseHandler;
+import com.criptext.monkeychatandroid.models.message.MessageItem;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 /**

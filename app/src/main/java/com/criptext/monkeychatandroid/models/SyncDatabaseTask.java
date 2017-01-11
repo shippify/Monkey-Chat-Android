@@ -6,6 +6,7 @@ import com.activeandroid.ActiveAndroid;
 import com.criptext.comunication.MOKDelete;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.http.HttpSync;
+import com.criptext.monkeychatandroid.models.message.MessageItem;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.HashMap;

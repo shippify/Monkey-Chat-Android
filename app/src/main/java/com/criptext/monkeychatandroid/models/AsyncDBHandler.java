@@ -3,7 +3,16 @@ package com.criptext.monkeychatandroid.models;
 import android.os.AsyncTask;
 
 import com.activeandroid.Model;
-import com.activeandroid.query.Update;
+import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
+import com.criptext.monkeychatandroid.models.conversation.task.FindConversationTask;
+import com.criptext.monkeychatandroid.models.conversation.task.FindConversationsTask;
+import com.criptext.monkeychatandroid.models.conversation.task.GetConversationPageTask;
+import com.criptext.monkeychatandroid.models.conversation.task.StoreNewConversationTask;
+import com.criptext.monkeychatandroid.models.conversation.task.UpdateConversationsTask;
+import com.criptext.monkeychatandroid.models.message.MessageItem;
+import com.criptext.monkeychatandroid.models.message.task.FindMessageTask;
+import com.criptext.monkeychatandroid.models.message.task.GetMessagePageTask;
+import com.criptext.monkeychatandroid.models.message.task.UpdateMessageDeliveryStatusTask;
 import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 
 import java.util.HashMap;

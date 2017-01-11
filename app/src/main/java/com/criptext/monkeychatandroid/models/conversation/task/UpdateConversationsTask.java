@@ -1,14 +1,13 @@
-package com.criptext.monkeychatandroid.models;
+package com.criptext.monkeychatandroid.models.conversation.task;
 
 import android.os.AsyncTask;
-import android.util.Log;
 
 import com.activeandroid.ActiveAndroid;
 import com.activeandroid.query.From;
 import com.activeandroid.query.Select;
+import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
 import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 
-import java.util.HashMap;
 import java.util.List;
 
 /**

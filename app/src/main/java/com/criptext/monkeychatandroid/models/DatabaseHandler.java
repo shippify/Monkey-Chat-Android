@@ -1,7 +1,5 @@
 package com.criptext.monkeychatandroid.models;
 
-import android.content.Context;
-import android.provider.ContactsContract;
 import android.util.Log;
 
 import com.activeandroid.ActiveAndroid;
@@ -11,6 +9,8 @@ import com.activeandroid.query.Select;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.monkeychatandroid.MonkeyChat;
+import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
+import com.criptext.monkeychatandroid.models.message.MessageItem;
 import com.criptext.monkeykitui.conversation.MonkeyConversation;
 import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 import com.criptext.monkeykitui.recycler.EndItem;
@@ -21,10 +21,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Created by daniel on 4/26/16.

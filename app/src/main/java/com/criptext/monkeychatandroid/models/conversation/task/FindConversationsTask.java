@@ -1,6 +1,9 @@
-package com.criptext.monkeychatandroid.models;
+package com.criptext.monkeychatandroid.models.conversation.task;
 
 import android.os.AsyncTask;
+
+import com.criptext.monkeychatandroid.models.DatabaseHandler;
+import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
 
 import java.util.HashMap;
 
