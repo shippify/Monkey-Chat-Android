@@ -101,7 +101,7 @@ public class DatabaseHandler {
 
         switch (type){
             case audio:
-                if(message.getParams().has("length"))
+                if(message.getParams() != null && message.getParams().has("length"))
                     item.setAudioDuration(message.getParams().get("length").getAsLong());
                 if(!item.getMessageText().contains("/"))
                     item.setMessageContent(pathToMessagesDir + "/" + MonkeyChat.VOICENOTES_DIR + "/" + message.getMsg());

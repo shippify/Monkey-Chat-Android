@@ -62,7 +62,7 @@ interface MonkeyKitDelegate {
      * @param members new members of the group.
      * @param e the exception of the result
      */
-    fun onAddGroupMember(groupID: String?, members: String?, e: Exception?)
+    fun onAddGroupMember(groupID: String?, newMember : String?, members: String?, e: Exception?)
 
     /**
      * After delete a group member with removeGroupMember method, the server will update the group from a remote DB.
@@ -71,7 +71,7 @@ interface MonkeyKitDelegate {
      * @param members new members of the group.
      * @param e the exception of the result
      */
-    fun onRemoveGroupMember(groupID: String?, members: String?, e: Exception?)
+    fun onRemoveGroupMember(groupID: String?, removedMember : String?, members: String?, e: Exception?)
 
     /**
      * This function will give you a MOKConversation with the information required.
