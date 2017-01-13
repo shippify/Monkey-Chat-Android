@@ -152,7 +152,7 @@ public class GroupManager extends AQueryHttp {
         }
     }
 
-    public void removeGroupMember(final String group_id, String monkey_id){
+    public void removeGroupMember(final String group_id, final String monkey_id){
 
         try {
             String urlConnect = MonkeyKitSocketService.Companion.getHttpsURL() +"/group/delete";
@@ -175,16 +175,16 @@ public class GroupManager extends AQueryHttp {
                     if (response != null) {
                         try {
                             service.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
-                                    group_id, response.getJSONObject("data").getString("members"), null});
+                                    group_id, monkey_id, response.getJSONObject("data").getString("members"), null});
                         } catch (JSONException e) {
                             e.printStackTrace();
                             service.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
-                                    group_id, null, e});
+                                    group_id, monkey_id, null, e});
                         }
                     }
                     else{
                         service.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
-                                group_id, null, new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
+                                group_id, monkey_id, null, new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                     }
                 }
             });
@@ -194,7 +194,7 @@ public class GroupManager extends AQueryHttp {
         }
     }
 
-    public void addGroupMember(String new_member, final String group_id){
+    public void addGroupMember(final String new_member, final String group_id){
         try {
 
             String urlConnect = MonkeyKitSocketService.Companion.getHttpsURL() +"/group/addmember";
@@ -220,16 +220,16 @@ public class GroupManager extends AQueryHttp {
                     if (response != null) {
                         try {
                             service.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
-                                    group_id, response.getJSONObject("data").getString("members"), null});
+                                    group_id, new_member, response.getJSONObject("data").getString("members"), null});
                         } catch (JSONException e) {
                             e.printStackTrace();
                             service.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
-                                    group_id, null, e});
+                                    group_id, new_member, null, e});
                         }
                     }
                     else{
                         service.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
-                                group_id, null, new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
+                                group_id, new_member, null, new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                     }
                 }
             });

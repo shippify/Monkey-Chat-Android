@@ -39,7 +39,7 @@ class TestDelegateActivity() : MKDelegateActivity() {
     override fun onConnectionRefused() {
     }
 
-    override fun onAddGroupMember(groupID: String?, members: String?, e: Exception?) {
+    override fun onAddGroupMember(groupID: String?, newMember : String?, members: String?, e: Exception?) {
     }
 
     override fun onContactOpenMyConversation(monkeyId: String) {
@@ -84,7 +84,7 @@ class TestDelegateActivity() : MKDelegateActivity() {
     override fun onNotificationReceived(messageId: String, senderId: String, recipientId: String, params: JsonObject, datetime: String) {
     }
 
-    override fun onRemoveGroupMember(groupID: String?, members: String?, e: Exception?) {
+    override fun onRemoveGroupMember(groupID: String?, removedMember : String?, members: String?, e: Exception?) {
     }
 
     override fun onSocketDisconnected() {

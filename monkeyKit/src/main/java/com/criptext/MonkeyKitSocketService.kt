@@ -368,10 +368,10 @@ abstract class MonkeyKitSocketService : Service() {
                         info[2] as String?, info[3] as Exception?)
             }
             CBTypes.onRemoveGroupMember -> {
-                delegate?.onRemoveGroupMember(info[0] as String, info[1] as String?, info[2] as Exception?)
+                delegate?.onRemoveGroupMember(info[0] as String, info[1] as String?, info[2] as String?, info[3] as Exception?)
             }
             CBTypes.onAddGroupMember -> {
-                delegate?.onAddGroupMember(info[0] as String, info[1] as String?, info[2] as Exception?)
+                delegate?.onAddGroupMember(info[0] as String, info[1] as String?, info[2] as String?, info[3] as Exception?)
             }
             CBTypes.onFileDownloadFinished -> {
                 delegate?.onFileDownloadFinished(info[0] as String, info[1] as Long, info[2] as String,

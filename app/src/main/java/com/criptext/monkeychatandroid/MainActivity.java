@@ -1,5 +1,6 @@
 package com.criptext.monkeychatandroid;
 
+import android.app.Fragment;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -526,8 +527,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         //Since our chat fragment uses different activities to take and edit photos, we must forward
         // the onActivityResult event to it so that it can react to the results of take photo, choose
         //photo and edit photo.
-        if(monkeyChatFragment != null)
+        if(monkeyChatFragment != null) {
             monkeyChatFragment.onActivityResult(requestCode, resultCode, data);
+        }else{
+            android.support.v4.app.Fragment tempChatFragment = getSupportFragmentManager().findFragmentByTag(MonkeyFragmentManager.Companion.getCHAT_FRAGMENT_TAG());
+            if(tempChatFragment != null){
+                tempChatFragment.onActivityResult(requestCode, resultCode, data);
+            }
+        }
     }
 
     /******
@@ -621,11 +628,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     @Override
-    public void onAddGroupMember(@Nullable String groupID, @Nullable String members, @Nullable Exception e) {
+    public void onAddGroupMember(@Nullable String groupID, @Nullable String newMember, @Nullable String members, @Nullable Exception e) {
     }
 
     @Override
-    public void onRemoveGroupMember(@Nullable String groupID, @Nullable String members, @Nullable Exception e) {
+    public void onRemoveGroupMember(@Nullable String groupID, @Nullable String removedMember, @Nullable String members, @Nullable Exception e) {
     }
 
     @Override
@@ -1123,7 +1130,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             final MessageItem messageItem = (MessageItem) item;
             downloadFile(messageItem.getMessageId(), messageItem.getFilePath(),
                     messageItem.getJsonProps(), messageItem.getSenderId(),
-                    messageItem.getMessageTimestampOrder(), state.getActiveConversationId());
+                    messageItem.getMessageTimestampOrder(), messageItem.getConversationId());
         }
 
     }
@@ -1171,10 +1178,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onBackPressed() {
         final Stack stack = state.mkFragmentStack;
-        if (!stack.isEmpty() && stack.peek() == MonkeyFragmentManager.FragmentTypes.chat) //user exit chat, clear active conversation
+        if (!stack.isEmpty() && stack.peek() == MonkeyFragmentManager.FragmentTypes.chat) { //user exit chat, clear active conversation
             updateClosedConversation();
+            state.activeConversationItem = null;
+        }
 
-        state.activeConversationItem = null;
         super.onBackPressed();
     }
 
@@ -1193,7 +1201,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(voiceNotePlayer != null)
             voiceNotePlayer.setupNotificationControl(new PlaybackNotification(R.mipmap.ic_launcher,
                     " Playing voice note"));
-        monkeyChatFragment.setInputListener(null);
+        //monkeyChatFragment.setInputListener(null);
         monkeyChatFragment = null;
     }
 
@@ -1302,11 +1310,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Nullable
     @Override
     public ArrayList<MonkeyInfo> getInfo(String conversationId) {
-        if(monkeyChatFragment == null){
-            return null;
-        }
 
-        if(monkeyChatFragment.getConversationId().contains("G:")){
+        if(conversationId.contains("G:")){
             return state.groupData.getInfoList();
         }
         Iterator it = state.conversations.iterator();
