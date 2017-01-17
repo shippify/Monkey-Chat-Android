@@ -101,6 +101,7 @@ public class DatabaseHandler {
 
         switch (type){
             case audio:
+                //TODO make sure get params is never null, this right here is a quick fix
                 if(message.getParams() != null && message.getParams().has("length"))
                     item.setAudioDuration(message.getParams().get("length").getAsLong());
                 if(!item.getMessageText().contains("/"))
