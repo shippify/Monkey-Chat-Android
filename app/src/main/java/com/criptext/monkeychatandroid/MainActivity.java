@@ -34,6 +34,7 @@ import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.conversation.TransactionCreator;
 import com.criptext.monkeychatandroid.models.conversation.task.FindConversationTask;
 import com.criptext.monkeychatandroid.models.conversation.task.GetConversationPageTask;
+import com.criptext.monkeychatandroid.models.conversation.task.UpdateConversationsInfoTask;
 import com.criptext.monkeychatandroid.models.message.task.GetMessagePageTask;
 import com.criptext.monkeychatandroid.models.message.MessageItem;
 import com.criptext.monkeychatandroid.models.SaveModelTask;
@@ -66,6 +67,7 @@ import com.criptext.monkeykitui.util.MonkeyFragmentManager;
 import com.criptext.monkeykitui.util.Utils;
 import com.google.gson.JsonObject;
 
+import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -77,6 +79,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Stack;
@@ -147,7 +150,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         //wait for a timeout to show a "connecting" message
         syncStatus = new SyncStatus(monkeyFragmentManager);
-        syncStatus.delayConnectingMessage();
+        if(!isSocketConnected()) {
+            syncStatus.delayConnectingMessage();
+        }
     }
 
     public void registerWithGCM(){
@@ -712,6 +717,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         case com.criptext.comunication.MessageTypes.MOKGroupRemoveMember:
                             onGroupRemovedMember(not.getReceiverId(), not.getSenderId());
                             break;
+                        case com.criptext.comunication.MessageTypes.MOKGroupCreate:
+                            onGroupAdded(not.getReceiverId(), not.getProps().get("members").getAsString(), not.getProps().getAsJsonObject("info"));
+
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -751,6 +759,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             }, activeConversationId, activeConversationMessages.size(), 0);
         }
 
+        if(!syncData.getUsers().isEmpty()){
+            getUsersInfo(StringUtils.join(syncData.getUsers(), ","));
+        }
+
         syncConversationsFragment();
         syncNotifications(syncData.getNotifications());
     }
@@ -765,7 +777,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                         info.get("name").getAsString() : "Uknown Group", System.currentTimeMillis(),
                         "Write to this group", 0, true, members, info.has("avatar") ?
                         info.get("avatar").getAsString() : "", MonkeyConversation.ConversationStatus.empty.ordinal());
-                    DatabaseHandler.saveConversations(new ConversationItem[]{result});
+                    DatabaseHandler.syncConversation(result);
                     state.conversations.addNewConversation(result);
                 }
             }
@@ -876,6 +888,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 monkeyInfoFragment.setInfo(groupData.getInfoList());
             }
         }
+
+        asyncDBHandler.updateConversationsInfo(new UpdateConversationsInfoTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(ArrayList<ConversationItem> conversationsUpdated) {
+                for (ConversationItem conversation : conversationsUpdated) {
+                    state.conversations.updateConversation(conversation);
+                }
+            }
+        }, mokUsers);
     }
 
     @Override

@@ -8,6 +8,7 @@ import com.activeandroid.query.From;
 import com.activeandroid.query.Select;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MessageTypes;
+import com.criptext.http.HttpSync;
 import com.criptext.monkeychatandroid.MonkeyChat;
 import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
 import com.criptext.monkeychatandroid.models.message.MessageItem;
@@ -260,10 +261,20 @@ public class DatabaseHandler {
             conversation.save();
     }
 
-    public static void syncConversation(String id){
+    public static void syncConversation(String id, HttpSync.SyncData syncData){
         ConversationItem conversation = getConversationById(id);
         if(conversation != null) {
             syncConversation(conversation);
+        }else if(!id.contains("G:")){
+            MessageItem lastMessage = getLastMessage(id);
+            if(lastMessage != null){
+                conversation = new ConversationItem(id,
+                        "Unknown", lastMessage.timestampOrder, "Write to this contact",
+                        1, false, "", "", MonkeyConversation.ConversationStatus.empty.ordinal());
+                conversation.save();
+                syncConversation(conversation);
+            }
+            syncData.getUsers().add(id);
         }
     }
 
