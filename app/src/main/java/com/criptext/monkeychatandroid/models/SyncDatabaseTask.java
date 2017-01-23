@@ -95,7 +95,7 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
                 if(removed && !newMessagesMap.containsKey(convId) && !newDeletesMap.containsKey(convId))
                     iterator.remove();
                 else
-                    DatabaseHandler.syncConversation(convId);
+                    DatabaseHandler.syncConversation(convId, syncData);
             }
 
             ActiveAndroid.setTransactionSuccessful();
