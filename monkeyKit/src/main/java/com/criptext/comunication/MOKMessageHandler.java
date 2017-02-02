@@ -90,7 +90,7 @@ public class MOKMessageHandler extends Handler {
                                 service.processMessageFromHandler(CBTypes.onConversationOpenResponse
                                     , new Object[]{message.getSid()
                                         ,message.getProps().get("online").getAsString().compareTo("1")==0
-                                        ,message.getProps().has("last_seen")?message.getProps().get("last_seen").toString():null
+                                        ,message.getProps().has("last_seen")?message.getProps().get("last_seen").getAsString():null
                                         ,message.getProps().has("last_open_me")?message.getProps().get("last_open_me").getAsString():null
                                         ,message.getProps().has("members_online")?message.getProps().get("members_online").getAsString(): ""});
                             }

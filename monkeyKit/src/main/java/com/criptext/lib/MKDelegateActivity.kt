@@ -1,6 +1,7 @@
 package com.criptext.lib
 
 import android.content.ComponentName
+import android.content.Intent
 import android.content.ServiceConnection
 import android.support.v7.app.AppCompatActivity
 import android.os.IBinder
@@ -25,7 +26,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     abstract val serviceClassName: Class<*>
 
     val isSocketConnected: Boolean
-        get () =  service?.isSocketConnected() ?: false
+        get () =  service?.isSocketConnected() ?:
+                (MonkeyKitSocketService.status >= MonkeyKitSocketService.ServiceStatus.running)
 
     private val messagesToForwardToService = ArrayList<DelegateMOKMessage>()
     val pendingFiles = HashMap<String, DelegateMOKMessage>();
@@ -46,12 +48,15 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      */
     var openConversation: String? = null
         set(value) {
-            if(isSocketConnected) {
+            val s = service
+            if (s != null && isSocketConnected) {
                 if (value != null)
-                    service!!.openConversation(value)
-                else if(field != null)
-                    service!!.closeConversation(field!!)
+                    s.openConversation(value)
+                else if (field != null)
+                    s.closeConversation(field!!)
             }
+            //service is only null during rotation, let's ignore that scenario for now, besides
+            // in the onSocketConnected callback this function is executed again, so we are safe.
             field = value
         }
 
@@ -87,6 +92,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onStart() {
         super.onStart()
+        if (MonkeyKitSocketService.status == MonkeyKitSocketService.ServiceStatus.dead) {
+            startService(Intent(this, serviceClassName))
+        }
         MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName)
     }
 
@@ -97,6 +105,14 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         unbindService(monkeyKitConnection)
     }
 
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        stopMonkeyKitService()
+    }
+
+    fun stopMonkeyKitService() {
+        stopService(Intent(this, serviceClassName))
+    }
     /**
      * Creates a new MOK message with a unique local ID and a timestamp of the current system time.
      * This method should be always used to create a new MOKMessage object to send instead of the

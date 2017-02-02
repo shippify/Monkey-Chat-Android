@@ -61,7 +61,7 @@ class `MK Delegate Test` {
     }
 
     @Test
-    fun `Should stop service and disconnect after onStop`() {
+    fun `Should not stop service and disconnect after onStop`() {
         var act = controller.get()
 
         ShadowMonkeyKitService.simulateConnectionProcess(service, HttpSync.SyncData("my_id",
@@ -72,7 +72,26 @@ class `MK Delegate Test` {
 
         act = controller.stop().get()
 
-        act.isSocketConnected `should equal` false
+        act.isSocketConnected `should equal` true
+        ShadowMonkeyKitService.isOnline `should equal` false
+    }
+
+    @Test
+    fun `Should stop service after user leaving`() {
+        var act = controller.get()
+
+        ShadowMonkeyKitService.simulateConnectionProcess(service, HttpSync.SyncData("my_id",
+                HttpSync.SyncResponse(listOf(), listOf(), listOf())))
+
+        act.isSocketConnected `should equal` true
+        ShadowMonkeyKitService.isOnline `should equal` true
+
+        act = controller.userLeaving().stop().get()
+
+        val shadowAct = Shadows.shadowOf(act)
+        val stopServiceIntent = shadowAct.nextStoppedService
+
+        stopServiceIntent `should not be` null
         ShadowMonkeyKitService.isOnline `should equal` false
     }
 

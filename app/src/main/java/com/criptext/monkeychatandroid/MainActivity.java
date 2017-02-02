@@ -1,6 +1,5 @@
 package com.criptext.monkeychatandroid;
 
-import android.app.Fragment;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +9,7 @@ import android.net.NetworkInfo;
 import android.os.IBinder;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.Fragment;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 import com.activeandroid.Model;
 import com.criptext.ClientData;
+import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MOKNotification;
@@ -535,7 +536,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         if(monkeyChatFragment != null) {
             monkeyChatFragment.onActivityResult(requestCode, resultCode, data);
         }else{
-            android.support.v4.app.Fragment tempChatFragment = getSupportFragmentManager().findFragmentByTag(MonkeyFragmentManager.Companion.getCHAT_FRAGMENT_TAG());
+            Fragment tempChatFragment = getSupportFragmentManager().findFragmentByTag(MonkeyFragmentManager.Companion.getCHAT_FRAGMENT_TAG());
             if(tempChatFragment != null){
                 tempChatFragment.onActivityResult(requestCode, resultCode, data);
             }
@@ -1199,10 +1200,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onBackPressed() {
         final Stack stack = state.mkFragmentStack;
-        if (!stack.isEmpty() && stack.peek() == MonkeyFragmentManager.FragmentTypes.chat) { //user exit chat, clear active conversation
-            updateClosedConversation();
-            state.activeConversationItem = null;
-        }
+        if (!stack.isEmpty())
+            if (stack.peek() == MonkeyFragmentManager.FragmentTypes.chat) {
+                //user exit chat, clear active conversation
+                updateClosedConversation();
+                state.activeConversationItem = null;
+            } else if(stack.peek() == MonkeyFragmentManager.FragmentTypes.conversations) {
+                //User exit app
+                stopMonkeyKitService();
+            }
 
         super.onBackPressed();
     }
