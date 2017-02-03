@@ -8,9 +8,14 @@ import android.util.Log;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.http.OpenConversationTask;
 import com.criptext.lib.KeyStoreCriptext;
+import com.criptext.lib.ResponseParser;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * A handler for MonkeyKitSocketService to recieve MOKMessages from a background thread
@@ -22,6 +27,8 @@ public class MOKMessageHandler extends Handler {
         public MOKMessageHandler(MonkeyKitSocketService service){
             serviceRef = new WeakReference<>(service);
         }
+
+
 
         public void clearServiceReference(){
             serviceRef.clear();
@@ -87,12 +94,18 @@ public class MOKMessageHandler extends Handler {
                     case MessageTypes.MOKProtocolAck:
                         try {
                             if(message.getType().compareTo(MessageTypes.MOKOpen)==0){
+                                JsonObject props = message.getProps();
+                                String members_online = message.getProps().has("members_online")
+                                    ? message.getProps().get("members_online").getAsString() : "";
+                                String last_seen = ResponseParser.Companion
+                                    .getLastSeenFromOpenResponseProps(props, members_online.isEmpty());
                                 service.processMessageFromHandler(CBTypes.onConversationOpenResponse
                                     , new Object[]{message.getSid()
-                                        ,message.getProps().get("online").getAsString().compareTo("1")==0
-                                        ,message.getProps().has("last_seen")?message.getProps().get("last_seen").getAsString():null
-                                        ,message.getProps().has("last_open_me")?message.getProps().get("last_open_me").getAsString():null
-                                        ,message.getProps().has("members_online")?message.getProps().get("members_online").getAsString(): ""});
+                                        , props.get("online").getAsString().compareTo("1")==0
+                                        , last_seen
+                                        , props.has("last_open_me") ?
+                                                props.get("last_open_me").getAsString() : null
+                                        , members_online});
                             }
                             else {
                                 //The acknowledge message has the id of the successfully sent message in
