@@ -79,10 +79,12 @@ abstract class MonkeyKitSocketService : Service() {
      * Delegate object that will execute callbacks
      */
     var delegate: MonkeyKitDelegate? = null
-    private set (value) {
-        if (value != null)
-            pendingDelegateActions.forEach(Runnable::run)
+    private set (value) { //We need some sort of delegate handler object to test this more easily
         field = value
+        if (value != null) {
+            pendingDelegateActions.forEach(Runnable::run)
+            pendingDelegateActions.clear()
+        }
     };
     /**
      * true if the service was started manually only for sync

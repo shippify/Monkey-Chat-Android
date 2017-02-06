@@ -1,67 +1,59 @@
-package com.criptext.monkeychatandroid;
-
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
+package com.criptext.monkeychatandroid.state;
 
 import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
 import com.criptext.monkeychatandroid.models.message.MessageItem;
 import com.criptext.monkeykitui.conversation.ConversationsList;
-
+import com.criptext.monkeykitui.conversation.DefaultGroupData;
 import com.criptext.monkeykitui.recycler.MessagesList;
 import com.criptext.monkeykitui.util.MonkeyFragmentManager;
 
 import org.jetbrains.annotations.NotNull;
-
-import com.criptext.monkeykitui.conversation.DefaultGroupData;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Stack;
 
 /**
- * Created by gesuwall on 8/17/16.
+ * Created by gabriel on 2/3/17.
  */
-public class ChatDataFragment extends Fragment{
 
-    HashMap<String, MessagesList> messagesMap;
-    ConversationsList conversations;
+public class ChatState {
+    public HashMap<String, MessagesList> messagesMap;
+    public ConversationsList conversations;
     /**
      * This class is used to handle group methods.
      */
-    DefaultGroupData groupData;
+    public DefaultGroupData groupData;
 
     /**
      * holds the active conversation. This object should be set when the user expresses an intent to
      * open/close the conversation, it should not be tied to the chat fragment.
      */
-    ConversationItem activeConversationItem;
+    public ConversationItem activeConversationItem;
     /**
      * Monkey ID of the current user. This is stored in Shared Preferences, so we use this
      * property to cache it so that we don't have to read from disk every time we need it.
      */
-    String myMonkeyID;
+    public String myMonkeyID;
     /**
      * Name of the current user. This is stored in Shared Preferences, so we use this
      * property to cache it so that we don't have to read from disk every time we need it.
      */
-    String myName;
-    Stack<MonkeyFragmentManager.FragmentTypes> mkFragmentStack;
+    public String myName;
 
-    static ChatDataFragment newInstance(Context context) {
-        ChatDataFragment f = new ChatDataFragment();
-        f.messagesMap = new HashMap<>();
-        f.conversations = new ConversationsList();
-        f.mkFragmentStack = new Stack<>();
-        //First, initialize the constants from SharedPreferences.
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        f.myMonkeyID = prefs.getString(MonkeyChat.MONKEY_ID, null);
-        f.myName = prefs.getString(MonkeyChat.FULLNAME, null);
+    /**
+     * A model of the fragment manager backstack. Useful to determine which fragment should be currently
+     * visible.
+     */
+    public Stack<MonkeyFragmentManager.FragmentTypes> mkFragmentStack;
 
-        return f;
+    public ChatState(String myMonkeyID, String myName) {
+        messagesMap = new HashMap<>();
+        conversations = new ConversationsList();
+        mkFragmentStack = new Stack<>();
+        this.myMonkeyID = myMonkeyID;
+        this.myName = myName;
+
     }
 
     /**
@@ -106,9 +98,4 @@ public class ChatDataFragment extends Fragment{
         return null;
     }
 
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setRetainInstance(true);
-    }
 }
