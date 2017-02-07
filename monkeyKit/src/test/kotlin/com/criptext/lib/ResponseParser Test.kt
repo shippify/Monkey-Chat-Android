@@ -1,6 +1,7 @@
 package com.criptext.lib
 
 import com.google.gson.JsonParser
+import org.amshove.kluent.`should be`
 import org.amshove.kluent.`should equal`
 import org.junit.Test
 
@@ -21,17 +22,32 @@ class `ResponseParser Test` {
            + "p519nvfmfgfzdbfn7b9\":\"1486150593\",\"if9ynf7looscygpvakhxs9k9\":\"1486054385\",\"i"
            + "ju8xj5eq1898l00rwbz9f6r\":\"1483931517\"}}").asJsonObject
 
-        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props, true)
+        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props)
         last_seen `should equal` "1483931517"
     }
 
     @Test
     fun `returns the string last_seen value in a normal conversation open response`() {
-        val props = parser.parse("{\"online\":\"1\",\"members_online\":\"idm0yzeb459zpefgg3rw9udi,"
-           + "imic29drtsv4z2nj5n42huxr,ife4c0qdb0dopbg538lg14i\",\"last_seen\": \"1486149945\"}")
+        val props = parser.parse("{\"online\":\"1\",\"last_seen\": \"1486149945\"}")
                 .asJsonObject
 
-        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props, false)
+        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props)
         last_seen `should equal` "1486149945"
+    }
+
+    @Test
+    fun `returns null if there is no last_seen value`() {
+        val props = parser.parse("{\"online\":\"1\",\"members_online\":\"idm0yzeb459zpefgg3rw9udi\"}")
+                .asJsonObject
+        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props)
+        last_seen `should be` null
+    }
+
+    @Test
+    fun `returns null if last_seen object is empty`() {
+        val props = parser.parse("{\"online\":\"1\",\"last_seen\": {}}")
+                .asJsonObject
+        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props)
+        last_seen `should be` null
     }
 }
