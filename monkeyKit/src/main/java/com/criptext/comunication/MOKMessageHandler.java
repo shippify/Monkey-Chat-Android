@@ -98,7 +98,7 @@ public class MOKMessageHandler extends Handler {
                                 String members_online = message.getProps().has("members_online")
                                     ? message.getProps().get("members_online").getAsString() : "";
                                 String last_seen = ResponseParser.Companion
-                                    .getLastSeenFromOpenResponseProps(props, members_online.isEmpty());
+                                    .getLastSeenFromOpenResponseProps(props, !members_online.isEmpty());
                                 service.processMessageFromHandler(CBTypes.onConversationOpenResponse
                                     , new Object[]{message.getSid()
                                         , props.get("online").getAsString().compareTo("1")==0
