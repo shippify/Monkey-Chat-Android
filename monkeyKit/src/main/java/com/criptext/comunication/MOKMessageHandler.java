@@ -8,14 +8,10 @@ import android.util.Log;
 import com.criptext.MonkeyKitSocketService;
 import com.criptext.http.OpenConversationTask;
 import com.criptext.lib.KeyStoreCriptext;
-import com.criptext.lib.ResponseParser;
-import com.google.gson.JsonElement;
+import com.criptext.lib.MonkeyJson;
 import com.google.gson.JsonObject;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
 
 /**
  * A handler for MonkeyKitSocketService to recieve MOKMessages from a background thread
@@ -97,7 +93,7 @@ public class MOKMessageHandler extends Handler {
                                 JsonObject props = message.getProps();
                                 String members_online = message.getProps().has("members_online")
                                     ? message.getProps().get("members_online").getAsString() : "";
-                                String last_seen = ResponseParser.Companion
+                                String last_seen = MonkeyJson.Companion
                                     .getLastSeenFromOpenResponseProps(props);
                                 service.processMessageFromHandler(CBTypes.onConversationOpenResponse
                                     , new Object[]{message.getSid()

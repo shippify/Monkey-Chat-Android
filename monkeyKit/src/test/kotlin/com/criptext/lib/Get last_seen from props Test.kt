@@ -9,7 +9,7 @@ import org.junit.Test
  * Created by gabriel on 2/3/17.
  */
 
-class `ResponseParser Test` {
+class `Get last_seen from props Test` {
     val parser = JsonParser()
 
     @Test
@@ -22,7 +22,7 @@ class `ResponseParser Test` {
            + "p519nvfmfgfzdbfn7b9\":\"1486150593\",\"if9ynf7looscygpvakhxs9k9\":\"1486054385\",\"i"
            + "ju8xj5eq1898l00rwbz9f6r\":\"1483931517\"}}").asJsonObject
 
-        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props)
+        val last_seen = MonkeyJson.Companion.getLastSeenFromOpenResponseProps(props)
         last_seen `should equal` "1483931517"
     }
 
@@ -31,7 +31,7 @@ class `ResponseParser Test` {
         val props = parser.parse("{\"online\":\"1\",\"last_seen\": \"1486149945\"}")
                 .asJsonObject
 
-        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props)
+        val last_seen = MonkeyJson.Companion.getLastSeenFromOpenResponseProps(props)
         last_seen `should equal` "1486149945"
     }
 
@@ -39,7 +39,7 @@ class `ResponseParser Test` {
     fun `returns null if there is no last_seen value`() {
         val props = parser.parse("{\"online\":\"1\",\"members_online\":\"idm0yzeb459zpefgg3rw9udi\"}")
                 .asJsonObject
-        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props)
+        val last_seen = MonkeyJson.Companion.getLastSeenFromOpenResponseProps(props)
         last_seen `should be` null
     }
 
@@ -47,7 +47,7 @@ class `ResponseParser Test` {
     fun `returns null if last_seen object is empty`() {
         val props = parser.parse("{\"online\":\"1\",\"last_seen\": {}}")
                 .asJsonObject
-        val last_seen = ResponseParser.Companion.getLastSeenFromOpenResponseProps(props)
+        val last_seen = MonkeyJson.Companion.getLastSeenFromOpenResponseProps(props)
         last_seen `should be` null
     }
 }

@@ -18,7 +18,7 @@ class PendingMessageStore {
 
     companion object {
         private val filename = "pending.txt";
-        private val separator = "\nsp\n";
+        private val separator = "\n{sp]\n";
         fun store(context: Context, messages: List<JsonObject>) {
             val file = context.openFileOutput(filename, Context.MODE_PRIVATE)
             var first = true
@@ -48,11 +48,7 @@ class PendingMessageStore {
                     val array: ByteArray = ByteArray(file.available())
                     file.read(array)
                     val jsonStr = String(array)
-                    val jsonArray = jsonStr.split(separator)
-                    val parser = JsonParser()
-                    return jsonArray.map { it ->
-                        parser.parse(it).asJsonObject
-                    }
+                    return MonkeyJson.parsePendingMsgsFromFile(jsonStr, separator)
                 } catch(ex: FileNotFoundException) {
                     return listOf()
                 } finally {

@@ -241,9 +241,10 @@ abstract class MonkeyKitSocketService : Service() {
         delegate = null;
         watchdog?.cancel()
         //persist pending messages to a file
-        if(pendingMessages.isNotEmpty()){
+        val sanitizedPendingMessages = MonkeyJson.sanitizePendingMsgsForFile(pendingMessages)
+        if(sanitizedPendingMessages.isNotEmpty()){
             //Log.d("serviceOnDestroy", "save messages")
-            val task = PendingMessageStore.AsyncStoreTask(this, pendingMessages.toList())
+            val task = PendingMessageStore.AsyncStoreTask(this, sanitizedPendingMessages)
             task.execute()
         }else{
             val task = PendingMessageStore.AsyncCleanTask(this)

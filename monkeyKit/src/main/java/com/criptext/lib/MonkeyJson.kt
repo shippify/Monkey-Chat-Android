@@ -2,12 +2,13 @@ package com.criptext.lib
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 
 /**
  * Created by gabriel on 2/3/17.
  */
 
-class ResponseParser {
+class MonkeyJson {
 
     companion object {
     /**
@@ -35,6 +36,23 @@ class ResponseParser {
             } catch (ex: IllegalStateException){
                 return props.get("last_seen").asString
             }
+        }
+
+        fun parsePendingMsgsFromFile(fileContents: String, separator: String): List<JsonObject> {
+            val jsonArray = fileContents.split(separator)
+            val parser = JsonParser()
+            return jsonArray
+                .map { it ->
+                    try {
+                    parser.parse(it).asJsonObject
+                    } catch (ex: Exception) {
+                        JsonObject()
+                    }
+                }.filter { it -> it != null && it.entrySet().size > 0 }
+        }
+
+        fun sanitizePendingMsgsForFile(list: List<JsonObject>): List<JsonObject> {
+            return list.filter { it -> it.entrySet().size > 0 && it.has("args") }
         }
     }
 }
