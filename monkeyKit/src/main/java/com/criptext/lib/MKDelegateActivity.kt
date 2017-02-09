@@ -38,6 +38,13 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     private var lastMoreConversationsRequest: MoreDataRequest? = null
 
+    /**
+     * Callback to execute when the service is bound to this activity. You may only need this
+     * if you need to consume data from MonkeyKit API in an activity that starts after your main
+     * chat activity. After this callback executes you can safely start calling API methods.
+     */
+    var onMonkeyKitServiceReadyListener: OnMonkeyKitServiceReadyListener? = null
+
     val hasMessagesToForwardToService: Boolean
         get() = messagesToForwardToService.isNotEmpty()
     /**
@@ -66,6 +73,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             if (p1 != null) { //Unit tests will have null p1, let's ignore that.
                 val binder = p1 as MonkeyKitSocketService.MonkeyBinder
                 connectWithNewService(binder)
+                System.out.println("service connected")
+                onMonkeyKitServiceReadyListener?.onMonkeyKitServiceReady()
             }
 
         }
