@@ -193,6 +193,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         val deletes: HashMap<String, MutableList<MOKDelete>>
         val newMessages: HashMap<String, MutableList<MOKMessage>>
         val conversationsToUpdate: LinkedHashSet<String>
+        val missingConversations: HashSet<String>
         val users : HashSet<String>
         var newTimestamp: Long
 
@@ -217,8 +218,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             conversationsToUpdate = LinkedHashSet()
             users = HashSet()
             newTimestamp = response?.newTimestamp() ?: 0L
-
-
+            missingConversations = HashSet()
 
             if(response != null) {
                 response.messages.forEach { message ->
