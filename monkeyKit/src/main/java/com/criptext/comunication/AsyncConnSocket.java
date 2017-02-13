@@ -411,7 +411,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 					return getKeysAndDecryptMOKMessage(remote, true);
 				} else {
 					Log.d("BatchGET", "Message discarded due to wrong keys");
-                    service.processMessageFromHandler(CBTypes.onMessageFailDecrypt, new Object[]{remote});
+                    service.delegateHandler.processMessageFromHandler(CBTypes.onMessageFailDecrypt, new Object[]{remote});
 					return null;
 				}
 			}

@@ -50,16 +50,16 @@ public class GroupManager extends AQueryHttp {
                         }
                         MOKConversation mokConversation = new MOKConversation(data.getString("group_id"),
                                 gsonObject, arrayList.toArray(new String[arrayList.size()]), null, 0, 0, 0 );
-                        service.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{
                                 mokConversation, null});
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        service.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{
                                 new MOKConversation(monkeyid), e});
                     }
                 }
                 else{
-                    service.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{new MOKConversation(monkeyid),
+                    service.delegateHandler.processMessageFromHandler(CBTypes.onGetGroupInfo, new Object[]{new MOKConversation(monkeyid),
                         new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                 }
             }
@@ -87,9 +87,9 @@ public class GroupManager extends AQueryHttp {
                         return;
 
                     if(response!=null)
-                        service.processMessageFromHandler(CBTypes.onUpdateGroupData, new Object[]{monkeyId, null});
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onUpdateGroupData, new Object[]{monkeyId, null});
                     else
-                        service.processMessageFromHandler(CBTypes.onUpdateGroupData, new Object[]{monkeyId,
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onUpdateGroupData, new Object[]{monkeyId,
                                 new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                 }
             });
@@ -131,16 +131,16 @@ public class GroupManager extends AQueryHttp {
 
                     if (response != null) {
                         try {
-                            service.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
                                     members, group_name, response.getJSONObject("data").getString("group_id"), null});
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            service.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
                                     members, group_name, group_id!=null?group_id:null, e});
                         }
                     }
                     else{
-                        service.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onCreateGroup, new Object[]{
                                 members, group_name, group_id!=null?group_id:null, new Exception("Error code:"+status.getCode()+
                                 " -  Error msg:"+status.getMessage())});
                     }
@@ -174,16 +174,16 @@ public class GroupManager extends AQueryHttp {
 
                     if (response != null) {
                         try {
-                            service.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
                                     group_id, monkey_id, response.getJSONObject("data").getString("members"), null});
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            service.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
                                     group_id, monkey_id, null, e});
                         }
                     }
                     else{
-                        service.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onRemoveGroupMember, new Object[]{
                                 group_id, monkey_id, null, new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                     }
                 }
@@ -219,16 +219,16 @@ public class GroupManager extends AQueryHttp {
 
                     if (response != null) {
                         try {
-                            service.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
                                     group_id, new_member, response.getJSONObject("data").getString("members"), null});
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            service.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
                                     group_id, new_member, null, e});
                         }
                     }
                     else{
-                        service.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onAddGroupMember, new Object[]{
                                 group_id, new_member, null, new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                     }
                 }

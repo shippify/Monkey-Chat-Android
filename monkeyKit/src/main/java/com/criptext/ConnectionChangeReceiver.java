@@ -46,8 +46,8 @@ public class ConnectionChangeReceiver extends BroadcastReceiver {
                 }
             } else {
                 //Disconnected
-                if(service!=null && service.getDelegate()!=null)
-                    service.getDelegate().onSocketDisconnected();
+                if(service!=null && service.delegateHandler.getConnectionDelegate() != null)
+                    service.delegateHandler.getConnectionDelegate().onSocketDisconnected();
             }
 
             sLastType = currentType;

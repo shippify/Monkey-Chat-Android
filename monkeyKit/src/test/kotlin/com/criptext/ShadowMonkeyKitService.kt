@@ -63,7 +63,7 @@ class ShadowMonkeyKitService {
             ShadowMonkeyKitService.clearRequestedSync()
             msg.what = MessageTypes.MOKProtocolSync
             msg.obj = nextResponse
-            service.processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(nextResponse))
+            service.delegateHandler.processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(nextResponse))
         }
 
         /**

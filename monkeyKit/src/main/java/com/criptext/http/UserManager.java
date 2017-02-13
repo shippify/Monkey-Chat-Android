@@ -72,9 +72,9 @@ public class UserManager extends AQueryHttp {
                         return;
 
                     if(response!=null)
-                        service.processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{monkeyId, null});
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{monkeyId, null});
                     else
-                        service.processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onUpdateUserData, new Object[]{
                                 monkeyId, new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                 }
             });
@@ -101,16 +101,16 @@ public class UserManager extends AQueryHttp {
                     try {
                         JsonParser jsonParser = new JsonParser();
                         JsonObject gsonObject = (JsonObject)jsonParser.parse(response.getJSONObject("data").toString());
-                        service.processMessageFromHandler(CBTypes.onGetUserInfo, new Object[]{
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onGetUserInfo, new Object[]{
                                 new MOKUser(monkeyid, gsonObject), null});
                     } catch (Exception e) {
                         e.printStackTrace();
-                        service.processMessageFromHandler(CBTypes.onGetUserInfo, new Object[]{
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onGetUserInfo, new Object[]{
                                 new MOKUser(monkeyid), e});
                     }
                 }
                 else{
-                    service.processMessageFromHandler(CBTypes.onGetUserInfo, new Object[]{
+                    service.delegateHandler.processMessageFromHandler(CBTypes.onGetUserInfo, new Object[]{
                             new MOKUser(monkeyid), "Error code:"+status.getCode()+" -  Error msg:"+status.getMessage()});
                 }
             }
@@ -146,15 +146,15 @@ public class UserManager extends AQueryHttp {
                                 mokUserArrayList.add(new MOKUser(gsonObject.get("monkey_id").getAsString(), gsonObject));
                             }
 
-                            service.processMessageFromHandler(CBTypes.onGetUsersInfo, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onGetUsersInfo, new Object[]{
                                     mokUserArrayList, null});
                         } catch (Exception e) {
                             e.printStackTrace();
-                            service.processMessageFromHandler(CBTypes.onGetUsersInfo, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onGetUsersInfo, new Object[]{
                                     null, e});
                         }
                     } else {
-                        service.processMessageFromHandler(CBTypes.onGetUsersInfo, new Object[]{
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onGetUsersInfo, new Object[]{
                                 new Exception("Error code:" + status.getCode() + " -  Error msg:" + status.getMessage())});
                     }
                 }
@@ -255,7 +255,7 @@ public class UserManager extends AQueryHttp {
                             protected void onPostExecute(Exception e) {
                                 MonkeyKitSocketService service = serviceRef.get();
                                 if (service != null)
-                                    service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
+                                    service.delegateHandler.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
                                         conversationList, e});
                             }
 
@@ -263,7 +263,7 @@ public class UserManager extends AQueryHttp {
                     else {
                         MonkeyKitSocketService service = serviceRef.get();
                         if (service != null)
-                            service.processMessageFromHandler(CBTypes.onGetConversations,
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onGetConversations,
                                     new Object[]{new ArrayList<MOKConversation>(), new Exception(
                                     "Error code:" + status.getCode() + " -  Error msg:" + status.getMessage())});
                     }
@@ -358,14 +358,14 @@ public class UserManager extends AQueryHttp {
 
                         @Override
                         protected void onPostExecute(Exception e) {
-                            service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{
                                     conversationId, messageList, null});
                         }
                     }.execute("");
 
                 }
                 else
-                    service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{new ArrayList<MOKMessage>(),
+                    service.delegateHandler.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{new ArrayList<MOKMessage>(),
                             new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
             }
         });
@@ -394,15 +394,15 @@ public class UserManager extends AQueryHttp {
 
                     if(response!=null)
                         try {
-                            service.processMessageFromHandler(CBTypes.onDeleteConversation, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onDeleteConversation, new Object[]{
                                     response.getJSONObject("data").getString("conversation"), null});
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            service.processMessageFromHandler(CBTypes.onDeleteConversation, new Object[]{
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onDeleteConversation, new Object[]{
                                     conversation_id, e});
                         }
                     else{
-                        service.processMessageFromHandler(CBTypes.onDeleteConversation, new Object[]{conversation_id,
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onDeleteConversation, new Object[]{conversation_id,
                                 new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
                     }
                 }

@@ -17,11 +17,7 @@ import java.lang.ref.WeakReference
  */
 
 class FileBroadcastReceiver(service: MonkeyKitSocketService) : BroadcastReceiver(){
-    val serviceRef: WeakReference<MonkeyKitSocketService>
-
-    init {
-        serviceRef = WeakReference(service)
-    }
+    val serviceRef: WeakReference<MonkeyKitSocketService> = WeakReference(service)
 
     override fun onReceive(p0: Context?, p1: Intent?) {
         val intent = p1!!
@@ -34,14 +30,14 @@ class FileBroadcastReceiver(service: MonkeyKitSocketService) : BroadcastReceiver
                      val jsonResp = parser.parse(response).asJsonObject
                      handleSentFile(jsonResp, mokMessage)
                  } else
-                     serviceRef.get()?.processMessageFromHandler(CBTypes.onFileFailsUpload,
+                     serviceRef.get()?.delegateHandler?.processMessageFromHandler(CBTypes.onFileFailsUpload,
                              arrayOf(mokMessage))
              }
              MonkeyFileService.DOWNLOAD_ACTION -> {
                  val msgId = intent.getStringExtra(MOKMessage.ID_KEY)
                  val timeorder = intent.getLongExtra(MOKMessage.DATESORT_KEY, 0L)
                  val convId = intent.getStringExtra(MOKMessage.CONVERSATION_KEY)
-                 serviceRef.get()?.processMessageFromHandler(CBTypes.onFileDownloadFinished,
+                 serviceRef.get()?.delegateHandler?.processMessageFromHandler(CBTypes.onFileDownloadFinished,
                          arrayOf(msgId, timeorder, convId, response != null))
 
              }
@@ -54,7 +50,7 @@ class FileBroadcastReceiver(service: MonkeyKitSocketService) : BroadcastReceiver
                 val props = JsonObject();
                 props.addProperty("status", MessageTypes.Status.delivered);
                 props.addProperty("old_id", newMessage.message_id);
-                serviceRef.get()?.processMessageFromHandler(CBTypes.onAcknowledgeReceived
+                serviceRef.get()?.delegateHandler?.processMessageFromHandler(CBTypes.onAcknowledgeReceived
                         , arrayOf(newMessage.rid, newMessage.sid, response.get("messageId").asString
                                     ,newMessage.message_id, false, 2));
 

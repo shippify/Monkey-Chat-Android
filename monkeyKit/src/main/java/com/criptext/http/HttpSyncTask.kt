@@ -37,7 +37,7 @@ class HttpSyncTask(service: MonkeyKitSocketService, val since: Long, val qty: In
     override fun onPostExecute(result: HttpSync.SyncData?) {
         val service = serviceRef.get()
         if(result != null)
-            service?.processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(result))
+            service?.delegateHandler?.processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(result))
     }
 
 }

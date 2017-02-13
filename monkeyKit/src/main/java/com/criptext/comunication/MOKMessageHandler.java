@@ -24,8 +24,6 @@ public class MOKMessageHandler extends Handler {
             serviceRef = new WeakReference<>(service);
         }
 
-
-
         public void clearServiceReference(){
             serviceRef.clear();
         }
@@ -47,13 +45,13 @@ public class MOKMessageHandler extends Handler {
                             if (message.getProps().has("file_type")) {
                                 type = message.getProps().get("file_type").getAsInt();
                                 if (type <= 4 && type >= 0)
-                                    service.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
+                                    service.delegateHandler.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
                                 else
                                     System.out.println("MONKEY - archivo no soportado");
                             } else if (message.getProps().has("type")) {
                                 type = message.getProps().get("type").getAsInt();
                                 if (type == 2 || type == 1)
-                                    service.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
+                                    service.delegateHandler.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
                             } else if (message.getProps().has("monkey_action")) {
                                 type = message.getProps().get("monkey_action").getAsInt();
                                 message.setMonkeyAction(type);
@@ -63,13 +61,13 @@ public class MOKMessageHandler extends Handler {
                                 try {
                                     switch (type) {
                                         case com.criptext.comunication.MessageTypes.MOKGroupCreate:
-                                            service.processMessageFromHandler(CBTypes.onGroupAdded, new Object[]{message.getProps().get("group_id").getAsString(), message.getProps().get("members").getAsString(), message.getProps().get("info")});
+                                            service.delegateHandler.processMessageFromHandler(CBTypes.onGroupAdded, new Object[]{message.getProps().get("group_id").getAsString(), message.getProps().get("members").getAsString(), message.getProps().get("info")});
                                             break;
                                         case com.criptext.comunication.MessageTypes.MOKGroupNewMember:
-                                            service.processMessageFromHandler(CBTypes.onGroupNewMember, new Object[]{message.getRid(), message.getProps().get("new_member").getAsString()});
+                                            service.delegateHandler.processMessageFromHandler(CBTypes.onGroupNewMember, new Object[]{message.getRid(), message.getProps().get("new_member").getAsString()});
                                             break;
                                         case com.criptext.comunication.MessageTypes.MOKGroupRemoveMember:
-                                            service.processMessageFromHandler(CBTypes.onGroupRemovedMember, new Object[]{message.getRid(), message.getSid()});
+                                            service.delegateHandler.processMessageFromHandler(CBTypes.onGroupRemovedMember, new Object[]{message.getRid(), message.getSid()});
                                             break;
                                     }
                                 }
@@ -77,11 +75,11 @@ public class MOKMessageHandler extends Handler {
                                     e.printStackTrace();
                                 }
                             } else
-                                service.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message.getMessage_id(), message.getSid(), message.getRid(), message.getParams(), message.getDatetime()});
+                                service.delegateHandler.processMessageFromHandler(CBTypes.onNotificationReceived, new Object[]{message.getMessage_id(), message.getSid(), message.getRid(), message.getParams(), message.getDatetime()});
                         }
                         break;
                     case MessageTypes.MOKProtocolMessageHasKeys:
-                        service.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onMessageReceived, new Object[]{message});
                         break;
                     case MessageTypes.MOKProtocolMessageNoKeys:
                     case MessageTypes.MOKProtocolMessageWrongKeys:
@@ -95,19 +93,19 @@ public class MOKMessageHandler extends Handler {
                                     ? message.getProps().get("members_online").getAsString() : "";
                                 String last_seen = MonkeyJson.Companion
                                     .getLastSeenFromOpenResponseProps(props);
-                                service.processMessageFromHandler(CBTypes.onConversationOpenResponse
+                                service.delegateHandler.processMessageFromHandler(CBTypes.onConversationOpenResponse
                                     , new Object[]{message.getSid()
                                         , props.get("online").getAsString().compareTo("1")==0
                                         , last_seen
                                         , props.has("last_open_me") ?
-                                                props.get("last_open_me").getAsString() : null
+                                                props.get("last_open_me").getAsLong() : null
                                         , members_online});
                             }
                             else {
                                 //The acknowledge message has the id of the successfully sent message in
                                 //the Msg field. We'll use that to update our pending messages list.
                                 service.removePendingMessage(message.getMsg());
-                                service.processMessageFromHandler(CBTypes.onAcknowledgeReceived
+                                service.delegateHandler.processMessageFromHandler(CBTypes.onAcknowledgeReceived
                                         , new Object[]{message.getSid()
                                                 ,message.getRid(),message.getMessage_id()
                                                 ,message.getOldId(),message.getStatus() == 52
@@ -129,28 +127,28 @@ public class MOKMessageHandler extends Handler {
                             else
                                 System.out.println("MONKEY - llego open pero ya tengo las claves");
                             //MANDAR AL APP QUE PONGA LEIDO TODOS LOS MENSAJES
-                            service.processMessageFromHandler(CBTypes.onContactOpenMyConversation, new Object[]{message.getSid()});
+                            service.delegateHandler.processMessageFromHandler(CBTypes.onContactOpenMyConversation, new Object[]{message.getSid()});
                         }
                         break;
                     }
                     case MessageTypes.MOKProtocolDelete:{
-                        service.processMessageFromHandler(CBTypes.onDeleteReceived, new Object[]{message.getMessage_id(), message.getSid(), message.getRid(), message.getDatetime()});
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onDeleteReceived, new Object[]{message.getMessage_id(), message.getSid(), message.getRid(), message.getDatetime()});
                         break;
                     }
                     case MessageTypes.MessageSocketConnected:{
-                        service.processMessageFromHandler(CBTypes.onSocketConnected, new Object[]{""});
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onSocketConnected, new Object[]{""});
                         break;
                     }
                     case MessageTypes.MessageSocketUnauthorized:{
-                        service.processMessageFromHandler(CBTypes.onConnectionRefused, new Object[]{""});
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onConnectionRefused, new Object[]{""});
                         break;
                     }
                     case MessageTypes.MessageSocketDisconnected:{
-                        service.processMessageFromHandler(CBTypes.onSocketDisconnected, new Object[]{""});//new Object[]{""}
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onSocketDisconnected, new Object[]{""});//new Object[]{""}
                         break;
                     }
                     case MessageTypes.MOKProtocolSync: {
-                        service.processMessageFromHandler(CBTypes.onNotificationReceived,
+                        service.delegateHandler.processMessageFromHandler(CBTypes.onNotificationReceived,
                             new Object[]{message.getMessage_id(), message.getSid(), message.getRid(),
                                     message.getParams(), message.getDatetime()});
                         break;

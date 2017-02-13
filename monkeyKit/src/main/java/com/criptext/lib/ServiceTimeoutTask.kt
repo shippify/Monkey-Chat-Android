@@ -10,9 +10,9 @@ import java.lang.ref.WeakReference
  */
 
 class ServiceTimeoutTask(service: MonkeyKitSocketService): AsyncTask<Int, Int, Int>(){
-    private val serviceRef: WeakReference<MonkeyKitSocketService>
+    private val serviceRef: WeakReference<MonkeyKitSocketService> = WeakReference(service)
+
     init {
-        serviceRef = WeakReference(service)
         //Every time we create a new task reset the start time
         // so that we can keep the service alive longer
         startTime = System.currentTimeMillis();
@@ -24,7 +24,7 @@ class ServiceTimeoutTask(service: MonkeyKitSocketService): AsyncTask<Int, Int, I
 
     override fun onPostExecute(result: Int?) {
         val service = serviceRef.get()
-        if(service != null && service.delegate == null){
+        if(service != null && service.delegateHandler.newMessageDelegate == null){
             val currentTime = System.currentTimeMillis();
             if(currentTime - startTime > TIMEOUT) {
                 Log.d("TIMEOUT", "kill service")
