@@ -978,7 +978,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
 
     @Override
-    public void onConversationOpenResponse(String senderId, Boolean isOnline, String lastSeen,
+    public void onConversationOpenResponse(String senderId, boolean isOnline, String lastSeen,
                                            String lastOpenMe, String members_online) {
         if(monkeyFragmentManager!=null && monkeyChatFragment!=null) {
             if(!monkeyChatFragment.getConversationId().equals(senderId)){

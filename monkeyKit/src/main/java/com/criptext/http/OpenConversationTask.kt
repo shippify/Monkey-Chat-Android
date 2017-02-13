@@ -82,7 +82,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
             KeyStoreCriptext.putString(service, openconvData.conversationId, openconvData.validKey)
             if(openconvData.messageOkDecrypted!=null)
                 service.processMessageFromHandler(CBTypes.onMessageReceived, Array<Any>(1, { i -> openconvData.messageOkDecrypted}))
-            else if(openconvData.messageFailDecrypted!=null)
+            else if(openconvData.messageFailDecrypted!=null) //TODO Handle onMessageFailDecrypt
                 service.processMessageFromHandler(CBTypes.onMessageFailDecrypt, Array<Any>(1, { i -> openconvData.messageFailDecrypted}))
         }
     }

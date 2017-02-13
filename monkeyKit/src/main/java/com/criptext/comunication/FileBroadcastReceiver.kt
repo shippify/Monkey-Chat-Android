@@ -17,11 +17,7 @@ import java.lang.ref.WeakReference
  */
 
 class FileBroadcastReceiver(service: MonkeyKitSocketService) : BroadcastReceiver(){
-    val serviceRef: WeakReference<MonkeyKitSocketService>
-
-    init {
-        serviceRef = WeakReference(service)
-    }
+    val serviceRef: WeakReference<MonkeyKitSocketService> = WeakReference(service)
 
     override fun onReceive(p0: Context?, p1: Intent?) {
         val intent = p1!!

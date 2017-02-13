@@ -85,6 +85,11 @@ class ShadowMonkeyKitService {
     }
 
     @Implementation
+    fun sendSync(){
+        requestedSync = true
+    }
+
+    @Implementation
     fun sendSync(since: Long, qty: Int){
         requestedSync = true
     }

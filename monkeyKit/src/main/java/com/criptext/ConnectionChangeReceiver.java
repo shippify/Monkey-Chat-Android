@@ -8,6 +8,7 @@ import android.net.NetworkInfo;
 import android.util.Log;
 
 import com.criptext.comunication.AsyncConnSocket;
+import com.criptext.comunication.CBTypes;
 
 /**
  * Created by danieltigse on 8/3/16.
@@ -46,10 +47,9 @@ public class ConnectionChangeReceiver extends BroadcastReceiver {
                 }
             } else {
                 //Disconnected
-                if(service!=null && service.getDelegate()!=null)
-                    service.getDelegate().onSocketDisconnected();
+                if(service!=null)
+                    service.processMessageFromHandler(CBTypes.onSocketDisconnected, new Object[]{""});
             }
-
             sLastType = currentType;
         }
 

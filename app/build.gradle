@@ -46,6 +46,7 @@ android {
 
     sourceSets {
         test.java.srcDirs += 'src/test/kotlin'
+        main.java.srcDirs += 'src/main/kotlin'
     }
 }
 
@@ -72,4 +73,5 @@ dependencies {
     compile('com.crashlytics.sdk.android:crashlytics:2.6.5@aar') {
         transitive = true;
     }
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }

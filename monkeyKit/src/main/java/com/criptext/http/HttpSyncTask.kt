@@ -12,7 +12,7 @@ import java.net.SocketTimeoutException
  */
 
 class HttpSyncTask(service: MonkeyKitSocketService, val since: Long, val qty: Int): AsyncTask<Void, Void, HttpSync.SyncData>() {
-    val serviceRef: WeakReference<MonkeyKitSocketService>;
+    val serviceRef: WeakReference<MonkeyKitSocketService>
     val clientData: ClientData
 
     init {
@@ -22,7 +22,7 @@ class HttpSyncTask(service: MonkeyKitSocketService, val since: Long, val qty: In
 
     fun execHttpSync(): HttpSync.SyncData? {
         try {
-            val httpSync = HttpSync.newInstance(serviceRef.get(), clientData)
+            val httpSync = HttpSync.SyncData.newInstance(serviceRef.get(), clientData)
             return httpSync?.execute(since, qty)
         } catch (ex: SocketTimeoutException) {
             return execHttpSync()

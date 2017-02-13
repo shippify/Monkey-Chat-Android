@@ -15,10 +15,8 @@ import javax.crypto.BadPaddingException
  */
 
 class DecryptTask(service: MonkeyKitSocketService): AsyncTask<EncryptedMsg, MOKMessage, Int>(){
-    val serviceRef: WeakReference<MonkeyKitSocketService>
-    init {
-        serviceRef = WeakReference(service)
-    }
+    val serviceRef: WeakReference<MonkeyKitSocketService> = WeakReference(service)
+
     override fun doInBackground(vararg p0: EncryptedMsg?): Int? {
         for(encrypted in p0){
             if(decryptMessage(encrypted!!))
@@ -30,7 +28,8 @@ class DecryptTask(service: MonkeyKitSocketService): AsyncTask<EncryptedMsg, MOKM
 
     override fun onProgressUpdate(vararg values: MOKMessage?) {
         val service = serviceRef.get()
-        service?.processMessageFromHandler(CBTypes.onMessageReceived, Array(0, { i -> values[i] as Any}));
+        service?.processMessageFromHandler(CBTypes.onMessageReceived,
+                Array(0, { i -> values[i] as Any}));
     }
 
     companion object {

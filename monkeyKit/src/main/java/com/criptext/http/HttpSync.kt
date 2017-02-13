@@ -189,30 +189,30 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
     }
 
     class SyncData(val monkeyId: String, response: SyncResponse?) {
-        val notifications: List<MOKNotification>
+        val notifications: MutableList<MOKNotification>
         val deletes: HashMap<String, MutableList<MOKDelete>>
         val newMessages: HashMap<String, MutableList<MOKMessage>>
         val conversationsToUpdate: LinkedHashSet<String>
         val missingConversations: HashSet<String>
-        val users : HashSet<String>
+        val users: HashSet<String>
         var newTimestamp: Long
 
-        private fun getMessageList(conversationId: String): MutableList<MOKMessage>{
-            if(!newMessages.containsKey(conversationId))
+        private fun getMessageList(conversationId: String): MutableList<MOKMessage> {
+            if (!newMessages.containsKey(conversationId))
                 newMessages[conversationId] = LinkedList()
 
             return newMessages[conversationId]!!
         }
 
-        private fun getDeleteList(conversationId: String): MutableList<MOKDelete>{
-            if(!deletes.containsKey(conversationId))
+        private fun getDeleteList(conversationId: String): MutableList<MOKDelete> {
+            if (!deletes.containsKey(conversationId))
                 deletes[conversationId] = LinkedList()
 
             return deletes[conversationId]!!
         }
 
         init {
-            notifications = response?.notifications ?: listOf()
+            notifications = if (response != null) ArrayList(response.notifications) else mutableListOf()
             deletes = hashMapOf()
             newMessages = hashMapOf()
             conversationsToUpdate = LinkedHashSet()
@@ -220,7 +220,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             newTimestamp = response?.newTimestamp() ?: 0L
             missingConversations = HashSet()
 
-            if(response != null) {
+            if (response != null) {
                 response.messages.forEach { message ->
                     val convId = message.getConversationID(monkeyId)
                     val list = getMessageList(convId)
@@ -244,23 +244,38 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             list.add(message)
         }
 
+        fun addDelete(delete: MOKDelete) = {
+            val list = getDeleteList(delete.getConversationID(monkeyId))
+            list.add(delete)
+        }
+
         fun addMessages(messages: List<MOKMessage>) {
             messages.forEach { m -> addMessage(m) }
         }
 
-        fun addUser(monkeyId : String) = {
-            users.add(monkeyId)
+        fun addDeletes(deletes: List<MOKDelete>) {
+            deletes.forEach { m -> addDelete(m) }
         }
 
-    }
-
-    companion object {
-        fun newInstance(ctx: Context?, clientData: ClientData): HttpSync?{
-            if(ctx != null) {
-                val aesUtil = AESUtil(ctx, clientData.monkeyId)
-                return HttpSync(ctx, clientData, aesUtil)
+        fun addNotifications(notificationsList: List<MOKNotification>) {
+            fun addNotifications(notificationsList: List<MOKNotification>) {
+                notifications.addAll(notificationsList)
             }
-            return null
+
+            fun addUser(monkeyId: String) = {
+                users.add(monkeyId)
+            }
+
+        }
+
+        companion object {
+            fun newInstance(ctx: Context?, clientData: ClientData): HttpSync? {
+                if (ctx != null) {
+                    val aesUtil = AESUtil(ctx, clientData.monkeyId)
+                    return HttpSync(ctx, clientData, aesUtil)
+                }
+                return null
+            }
         }
     }
 }

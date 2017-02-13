@@ -45,7 +45,7 @@ class TestDelegateActivity() : MKDelegateActivity() {
     override fun onContactOpenMyConversation(monkeyId: String) {
     }
 
-    override fun onConversationOpenResponse(senderId: String, isOnline: Boolean?, lastSeen: String?, lastOpenMe: String?, members_online: String) {
+    override fun onConversationOpenResponse(senderId: String, isOnline: Boolean, lastSeen: String, lastOpenMe: String?, members_online: String) {
     }
 
     override fun onCreateGroup(groupMembers: String?, groupName: String?, groupID: String?, e: Exception?) {
