@@ -537,10 +537,8 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun sendSync() {
-        if(status != ServiceStatus.initializing) {
-            status = ServiceStatus.initializing
-            sendSync(lastTimeSynced, 50)
-        }
+        status = ServiceStatus.initializing
+        sendSync(lastTimeSynced, 50)
     }
 
     /**

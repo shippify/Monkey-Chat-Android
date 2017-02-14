@@ -1355,6 +1355,46 @@ class `DelegateHandler Test` {
         latestId `should equal` "2"
     }
 
+    @Test
+    fun `should process multiple delegates`() {
+        var synced = false
+        var connected = false
+
+        fun setDelegate(d: Any) {
+            if (d is ConnectionDelegate)
+                delegateHandler.setDelegate(d)
+            if (d is SyncDelegate)
+                delegateHandler.setDelegate(d)
+        }
+
+        val delegate = object : SyncDelegate, ConnectionDelegate {
+            override fun onSyncComplete(data: HttpSync.SyncData) {
+                synced = true
+            }
+
+            override fun onConnectionRefused() {
+                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun onSocketConnected() {
+                connected = true
+            }
+
+            override fun onSocketDisconnected() {
+                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+        }
+
+        setDelegate(delegate)
+
+        delegateHandler.processMessageFromHandler(CBTypes.onSocketConnected,
+                arrayOf(Any()))
+        connected `should equal` true
+        delegateHandler.processMessageFromHandler(CBTypes.onSyncComplete,
+                arrayOf(HttpSync.SyncData("1", null)))
+        synced `should equal` true
+    }
+
 
 
 }
