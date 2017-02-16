@@ -98,7 +98,7 @@ public class MOKMessageHandler extends Handler {
                                         , props.get("online").getAsString().compareTo("1")==0
                                         , last_seen
                                         , props.has("last_open_me") ?
-                                                props.get("last_open_me").getAsLong() : null
+                                                props.get("last_open_me").getAsString() : null
                                         , members_online});
                             }
                             else {
