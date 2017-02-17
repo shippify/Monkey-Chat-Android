@@ -6,7 +6,6 @@ import android.os.AsyncTask
 import android.os.Binder
 import android.os.IBinder
 import android.os.PowerManager
-import android.preference.PreferenceManager
 import android.support.v4.content.LocalBroadcastManager
 import android.util.Base64
 import android.util.Log
@@ -359,6 +358,10 @@ abstract class MonkeyKitSocketService : Service() {
         registerReceiver(receiver, conn_changereceived)
     }
 
+    fun removeDelegates() {
+        delegateHandler.clear()
+    }
+
     inner class MonkeyBinder : Binder() {
 
         fun getService(delegate: Any): MonkeyKitSocketService{
@@ -367,6 +370,8 @@ abstract class MonkeyKitSocketService : Service() {
             if (delegate is ConnectionDelegate)
                 this@MonkeyKitSocketService.delegateHandler.setDelegate(delegate)
             if (delegate is ConversationDelegate)
+                this@MonkeyKitSocketService.delegateHandler.setDelegate(delegate)
+            if (delegate is ConversationOpenDelegate)
                 this@MonkeyKitSocketService.delegateHandler.setDelegate(delegate)
             if (delegate is FileDelegate)
                 this@MonkeyKitSocketService.delegateHandler.setDelegate(delegate)

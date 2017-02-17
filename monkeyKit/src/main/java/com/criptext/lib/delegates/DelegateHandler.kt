@@ -40,6 +40,14 @@ class DelegateHandler() {
                 pendingConversationActions.clear()
             }
         }
+    var conversationOpenDelegate: ConversationOpenDelegate? = null
+    private set (value) {
+        field = value
+        if (value != null) {
+            pendingConversationOpenActions.forEach(Runnable::run)
+            pendingConversationOpenActions.clear()
+        }
+    }
     var fileDelegate: FileDelegate? = null
         private set (value) {
             field = value
@@ -95,6 +103,7 @@ class DelegateHandler() {
     private val pendingAcknowledgeActions: LinkedList<Runnable> = LinkedList()
     private val pendingConnectionActions: LinkedList<Runnable> = LinkedList()
     private val pendingConversationActions: LinkedList<Runnable> = LinkedList()
+    private val pendingConversationOpenActions: LinkedList<Runnable> = LinkedList()
     private val pendingFileActions: LinkedList<Runnable> = LinkedList()
     private val pendingGroupActions: LinkedList<Runnable> = LinkedList()
     private val pendingNewMessageActions: LinkedList<Runnable> = LinkedList()
@@ -114,6 +123,10 @@ class DelegateHandler() {
 
     fun setDelegate(delegate: ConversationDelegate) {
         conversationDelegate = delegate
+    }
+
+    fun setDelegate(delegate: ConversationOpenDelegate) {
+        conversationOpenDelegate = delegate
     }
 
     fun setDelegate(delegate: FileDelegate) {
@@ -143,6 +156,8 @@ class DelegateHandler() {
     val hasDelegate: Boolean
     get() = acknowledgeDelegate != null
         || connectionDelegate != null
+        || conversationDelegate != null
+        || conversationOpenDelegate != null
         || fileDelegate != null
         || groupDelegate != null
         || newMessageDelegate != null
@@ -153,6 +168,8 @@ class DelegateHandler() {
     fun clear() {
         acknowledgeDelegate = null
         connectionDelegate = null
+        conversationDelegate == null
+        conversationOpenDelegate == null
         fileDelegate = null
         groupDelegate = null
         newMessageDelegate = null
@@ -214,16 +231,16 @@ class DelegateHandler() {
                 else pendingConversationActions.add(pendingRunnable)
             }
             CBTypes.onConversationOpenResponse -> {
-                if (conversationDelegate != null)
-                    conversationDelegate!!.onConversationOpenResponse(info[0] as String,
+                if (conversationOpenDelegate != null)
+                    conversationOpenDelegate!!.onConversationOpenResponse(info[0] as String,
                             info[1] as Boolean, info[2] as String, info[3] as String?, info[4] as String)
                 else
-                    pendingConversationActions.add(pendingRunnable);
+                    pendingConversationOpenActions.add(pendingRunnable);
             }
             CBTypes.onContactOpenMyConversation -> {
-                if (conversationDelegate != null)
-                    conversationDelegate!!.onContactOpenMyConversation(info[0] as String)
-                else pendingConversationActions.add(pendingRunnable)
+                if (conversationOpenDelegate != null)
+                    conversationOpenDelegate!!.onContactOpenMyConversation(info[0] as String)
+                else pendingConversationOpenActions.add(pendingRunnable)
             }
             CBTypes.onGetUserInfo-> {
                 if (conversationDelegate != null)
@@ -275,10 +292,10 @@ class DelegateHandler() {
                 else pendingGroupActions.add(pendingRunnable)
             }
             CBTypes.onGetConversations -> {
-                if (monkeyKitDelegate != null)
-                    monkeyKitDelegate!!.onGetConversations(info[0] as ArrayList<MOKConversation>,
+                if (conversationDelegate != null)
+                    conversationDelegate!!.onGetConversations(info[0] as ArrayList<MOKConversation>,
                         info[1] as Exception?)
-                else pendingMonkeyKitActions.add(pendingRunnable)
+                else pendingConversationActions.add(pendingRunnable)
             }
             CBTypes.onDeleteReceived -> {
                 if (monkeyKitDelegate != null)

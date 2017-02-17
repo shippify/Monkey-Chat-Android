@@ -184,37 +184,12 @@ class `DelegateHandler Test` {
     @Test
     fun `should process onConversationOpenResponse`() {
         var mLastSeen = ""
-        val delegate = object : ConversationDelegate {
-            override fun onUpdateUserData(monkeyId: String, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-            override fun onUpdateGroupData(groupId: String, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-            override fun onGetUserInfo(mokUser: MOKUser, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
+        val delegate = object : ConversationOpenDelegate {
             override fun onConversationOpenResponse(senderId: String, isOnline: Boolean, lastSeen: String, lastOpenMe: String?, members_online: String) {
                 mLastSeen = lastSeen
             }
 
             override fun onContactOpenMyConversation(monkeyId: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onDeleteConversation(conversationId: String, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGetGroupInfo(mokConversation: MOKConversation, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGetConversations(conversations: ArrayList<MOKConversation>, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGetUsersInfo(mokUsers: ArrayList<MOKUser>, e: Exception?) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
         }
@@ -244,14 +219,6 @@ class `DelegateHandler Test` {
             override fun onGetUserInfo(mokUser: MOKUser, e: Exception?) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
-            override fun onConversationOpenResponse(senderId: String, isOnline: Boolean, lastSeen: String, lastOpenMe: String?, members_online: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onContactOpenMyConversation(monkeyId: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
             override fun onDeleteConversation(conversationId: String, e: Exception?) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
@@ -294,14 +261,6 @@ class `DelegateHandler Test` {
             override fun onGetUserInfo(mokUser: MOKUser, e: Exception?) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
-            override fun onConversationOpenResponse(senderId: String, isOnline: Boolean, lastSeen: String, lastOpenMe: String?, members_online: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onContactOpenMyConversation(monkeyId: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
             override fun onDeleteConversation(conversationId: String, e: Exception?) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
@@ -334,7 +293,7 @@ class `DelegateHandler Test` {
     @Test
     fun `should process contactOpenMyConversation`() {
         var latestId = ""
-        val delegate = object : ConversationDelegate {
+        val delegate = object : ConversationOpenDelegate {
             override fun onContactOpenMyConversation(monkeyId: String) {
                 latestId = monkeyId
             }
@@ -343,33 +302,6 @@ class `DelegateHandler Test` {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
 
-            override fun onDeleteConversation(conversationId: String, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGetConversations(conversations: ArrayList<MOKConversation>, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGetGroupInfo(mokConversation: MOKConversation, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGetUserInfo(mokUser: MOKUser, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGetUsersInfo(mokUsers: ArrayList<MOKUser>, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onUpdateUserData(monkeyId: String, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onUpdateGroupData(groupId: String, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
         }
 
         delegateHandler.processMessageFromHandler(CBTypes.onContactOpenMyConversation,
@@ -388,14 +320,6 @@ class `DelegateHandler Test` {
     fun `should process getUserInfo`() {
         var latestId = ""
         val delegate = object : ConversationDelegate {
-            override fun onContactOpenMyConversation(monkeyId: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onConversationOpenResponse(senderId: String, isOnline: Boolean, lastSeen: String, lastOpenMe: String?, members_online: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
             override fun onDeleteConversation(conversationId: String, e: Exception?) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
@@ -441,14 +365,6 @@ class `DelegateHandler Test` {
     fun `should process getUsersInfo`() {
         var latestId = ""
         val delegate = object : ConversationDelegate {
-            override fun onContactOpenMyConversation(monkeyId: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onConversationOpenResponse(senderId: String, isOnline: Boolean, lastSeen: String, lastOpenMe: String?, members_online: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
             override fun onDeleteConversation(conversationId: String, e: Exception?) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
@@ -494,14 +410,6 @@ class `DelegateHandler Test` {
     fun `should process getGroupInfo`() {
         var latestId = ""
         val delegate = object : ConversationDelegate {
-            override fun onContactOpenMyConversation(monkeyId: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onConversationOpenResponse(senderId: String, isOnline: Boolean, lastSeen: String, lastOpenMe: String?, members_online: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
             override fun onDeleteConversation(conversationId: String, e: Exception?) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }

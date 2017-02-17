@@ -559,7 +559,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 		if(evid==ComMessageProtocol.LOGGINMSG_ID){
 			//Este es el mensaje que indica que ya estoy conectado
 			socketStatus = Status.conectado;
-			System.out.println("Conectado al Socket!");
+			System.out.println("Conectado al Socket! " + (mainMessageHandler != null));
 			Message msg = mainMessageHandler.obtainMessage();			      
 			msg.what=MessageTypes.MessageSocketConnected;
 			mainMessageHandler.sendMessage(msg);

@@ -178,6 +178,7 @@ public class UserManager extends AQueryHttp {
             Map<String, Object> params = new HashMap<String, Object>();
             params.put("data", localJSONObject1.toString());
 
+            Log.d("ServiceStartup", "getConversations " + qty);
             aq.auth(handle).ajax(urlconnect, params, JSONObject.class, new AjaxCallback<JSONObject>() {
                 @Override
                 public void callback(String url, final JSONObject response, AjaxStatus status) {
@@ -185,6 +186,7 @@ public class UserManager extends AQueryHttp {
                     if (serviceRef.get() == null)
                         return;
 
+                    Log.d("ServiceStartup", "getConversations resp");
                     if (response != null)
                         new AsyncTask<Object, String, Exception>(){
 
@@ -254,6 +256,7 @@ public class UserManager extends AQueryHttp {
                             @Override
                             protected void onPostExecute(Exception e) {
                                 MonkeyKitSocketService service = serviceRef.get();
+                                Log.d("ServiceStartup", "getConversations post exec " + (service != null));
                                 if (service != null)
                                     service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
                                         conversationList, e});
@@ -262,6 +265,7 @@ public class UserManager extends AQueryHttp {
                         }.execute("");
                     else {
                         MonkeyKitSocketService service = serviceRef.get();
+                        Log.d("ServiceStartup", "failiure " + (service != null));
                         if (service != null)
                             service.processMessageFromHandler(CBTypes.onGetConversations,
                                     new Object[]{new ArrayList<MOKConversation>(), new Exception(

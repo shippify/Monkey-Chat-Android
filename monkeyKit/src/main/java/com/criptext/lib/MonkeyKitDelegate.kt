@@ -10,7 +10,9 @@ import com.criptext.lib.delegates.*
 import java.util.*
 
 interface MonkeyKitDelegate: SyncDelegate, GroupDelegate, ConnectionDelegate, ConversationDelegate,
-        NewMessageDelegate, NewNotificationDelegate, AcknowledgeDelegate, FileDelegate {
+        ConversationOpenDelegate, NewMessageDelegate, NewNotificationDelegate, AcknowledgeDelegate,
+        FileDelegate {
+
 
     /**
      * This function is executed when you receive all your conversation messages.
