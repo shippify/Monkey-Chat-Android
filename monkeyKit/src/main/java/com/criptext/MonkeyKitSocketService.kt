@@ -161,7 +161,7 @@ abstract class MonkeyKitSocketService : Service() {
         messagesReceivedDuringSync.clear()
     }
 
-    fun processMessageFromHandler(method: CBTypes, info: Array<Any>) {
+    fun processMessageFromHandler(method: CBTypes, info: Array<Any?>) {
         when (method) {
             CBTypes.onSocketConnected -> {
                 playPendingActions()

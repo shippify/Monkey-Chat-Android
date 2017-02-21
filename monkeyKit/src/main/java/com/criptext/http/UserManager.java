@@ -1,5 +1,6 @@
 package com.criptext.http;
 
+import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Base64;
 import android.util.Log;
@@ -41,15 +42,11 @@ public class UserManager extends AQueryHttp {
     }
 
     private MOKMessage decryptMessage(MOKMessage remote) {
-        String existingKey = KeyStoreCriptext.getString(serviceRef.get(), remote.getSid());
-        String validKey = OpenConversationTask.Companion.attemptToDecrypt(remote, clientData,
-                aesUtil, existingKey);
-        if(validKey != null && !validKey.equals(existingKey))
-            KeyStoreCriptext.putString(serviceRef.get(),
-                    remote.getSid(), validKey);
-        else if(validKey == null)
-            remote = null;
-        return remote;
+        Context c = serviceRef.get();
+        if (c != null)
+            return OpenConversationTask.Companion.attemptToDecryptAndUpdateKeyStore(remote, c,
+                    clientData, aesUtil);
+        else return null;
     }
 
     public void updateUserData(final String monkeyId, JSONObject info){
@@ -167,75 +164,9 @@ public class UserManager extends AQueryHttp {
     }
 
     public void getConversations(String monkeyid, int qty, long timestamp){
-
-        String urlconnect = MonkeyKitSocketService.Companion.getHttpsURL()+"/user/conversations";
-
-        try {
-            JSONObject localJSONObject1 = new JSONObject();
-            localJSONObject1.put("monkeyId", monkeyid);
-            localJSONObject1.put("qty", qty);
-            localJSONObject1.put("timestamp", timestamp);
-
-            Map<String, Object> params = new HashMap<String, Object>();
-            params.put("data", localJSONObject1.toString());
-
-            Log.d("ServiceStartup", "getConversations " + qty);
-            aq.auth(handle).ajax(urlconnect, params, JSONObject.class, new AjaxCallback<JSONObject>() {
-                @Override
-                public void callback(String url, final JSONObject response, AjaxStatus status) {
-
-                    if (serviceRef.get() == null)
-                        return;
-
-                    if (response != null)
-                        new AsyncTask<Object, String, Exception>(){
-
-                            List<MOKConversation> conversationList = new ArrayList<MOKConversation>();
-
-                            @Override
-                            protected Exception doInBackground(Object... p) {
-
-                                try {
-                                    JSONArray jsonArrayConversations = response.getJSONObject("data")
-                                                            .getJSONArray("conversations");
-                                    ArrayList<MOKConversation>[] lists = MonkeyJson.Companion
-                                            .parseConversationsList(jsonArrayConversations.toString());
-                                    conversationList = lists[0];
-                                    List<MOKConversation> conversationsToDecrypt = lists[1];
-                                    for (MOKConversation conversation: conversationsToDecrypt)
-                                        decryptMessage(conversation.getLastMessage());
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                    return e;
-                                }
-
-                                return null;
-                            }
-
-                            @Override
-                            protected void onPostExecute(Exception e) {
-                                MonkeyKitSocketService service = serviceRef.get();
-                                Log.d("ServiceStartup", "getConversations post exec " + (service != null));
-                                if (service != null)
-                                    service.processMessageFromHandler(CBTypes.onGetConversations, new Object[]{
-                                        conversationList, e});
-                            }
-
-                        }.execute("");
-                    else {
-                        MonkeyKitSocketService service = serviceRef.get();
-                        Log.d("ServiceStartup", "failiure " + (service != null));
-                        if (service != null)
-                            service.processMessageFromHandler(CBTypes.onGetConversations,
-                                    new Object[]{new ArrayList<MOKConversation>(), new Exception(
-                                    "Error code:" + status.getCode() + " -  Error msg:" + status.getMessage())});
-                    }
-                }
-            });
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
+        GetConversationsTask getConversationsTask = new GetConversationsTask(serviceRef, clientData, aesUtil,
+                monkeyid, qty, timestamp);
+        getConversationsTask.execute();
     }
 
     public void getConversationMessages(String monkeyid, final String conversationId, int numberOfMessages

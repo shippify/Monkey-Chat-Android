@@ -179,7 +179,7 @@ class DelegateHandler() {
         monkeyKitDelegate = null
     }
 
-    fun processMessageFromHandler(method: CBTypes, info:Array<Any>) {
+    fun processMessageFromHandler(method: CBTypes, info:Array<Any?>) {
         if(status < MonkeyKitSocketService.ServiceStatus.initializing)
             return //There's no point in doing anything with the delegates if the service is dead.
 

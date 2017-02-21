@@ -81,9 +81,9 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
         if(service != null && openconvData!= null){
             KeyStoreCriptext.putString(service, openconvData.conversationId, openconvData.validKey)
             if(openconvData.messageOkDecrypted!=null)
-                service.processMessageFromHandler(CBTypes.onMessageReceived, Array<Any>(1, { i -> openconvData.messageOkDecrypted}))
+                service.processMessageFromHandler(CBTypes.onMessageReceived, Array<Any?>(1, { i -> openconvData.messageOkDecrypted}))
             else if(openconvData.messageFailDecrypted!=null) //TODO Handle onMessageFailDecrypt
-                service.processMessageFromHandler(CBTypes.onMessageFailDecrypt, Array<Any>(1, { i -> openconvData.messageFailDecrypted}))
+                service.processMessageFromHandler(CBTypes.onMessageFailDecrypt, Array<Any?>(1, { i -> openconvData.messageFailDecrypted}))
         }
     }
 
@@ -213,6 +213,18 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
                 return null
             }
+        }
+
+        fun attemptToDecryptAndUpdateKeyStore(remote: MOKMessage, ctx: Context,
+                                          clientData: ClientData, aesutil: AESUtil): MOKMessage? {
+            val existingKey = KeyStoreCriptext.getString(ctx, remote.sid)
+            val validKey = OpenConversationTask.Companion.attemptToDecrypt(remote, clientData,
+            aesutil, existingKey);
+            if(validKey != null && validKey != existingKey)
+                KeyStoreCriptext.putString(ctx, remote.sid, validKey);
+            else if(validKey == null)
+                return null
+            return remote
         }
     }
 

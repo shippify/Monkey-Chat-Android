@@ -64,14 +64,18 @@ class MonkeyJson {
         }
 
         /**
-         * Parses de arraay from getConversations response.
+         * Parses de array from getConversations response.
+         * @param resp the response fro the get conversations endpoint
          * @return an array with 2 lists of MOKConversation. The first list is the parsed conversations
          * and the second list is a subset of the first list, containing conversations whose lastmessage
          * needs to be decrypted.
          */
-        fun parseConversationsList(jsonArrayStr: String): Array<ArrayList<MOKConversation>> {
+        fun parseConversationsList(resp: String): Array<List<MOKConversation>> {
             val parser = JsonParser()
-            val array = parser.parse(jsonArrayStr).asJsonArray
+            val jsonResponse = parser.parse(resp).asJsonObject
+            val array = jsonResponse.get("data").asJsonObject
+                        .get("conversations").asJsonArray
+
             val conversationList = ArrayList<MOKConversation>()
             val conversationsToDecrypt = ArrayList<MOKConversation>()
 
