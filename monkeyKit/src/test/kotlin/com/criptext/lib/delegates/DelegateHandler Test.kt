@@ -707,40 +707,8 @@ class `DelegateHandler Test` {
     @Test
     fun `should process getConversations`() {
         var latestId = ""
-        val delegate = object : MonkeyKitDelegate {
-            override fun onDeleteReceived(messageId: String, senderId: String, recipientId: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGetConversationMessages(conversationId: String, messages: ArrayList<MOKMessage>, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onSyncComplete(data: HttpSync.SyncData) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onConnectionRefused() {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onSocketConnected() {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onSocketDisconnected() {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onContactOpenMyConversation(monkeyId: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
+        val delegate = object : ConversationDelegate {
             override fun onDeleteConversation(conversationId: String, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onConversationOpenResponse(senderId: String, isOnline: Boolean, lastSeen: String, lastOpenMe: String?, members_online: String) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
 
@@ -765,50 +733,6 @@ class `DelegateHandler Test` {
             }
 
             override fun onUpdateGroupData(groupId: String, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onMessageReceived(message: MOKMessage) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onNotificationReceived(messageId: String, senderId: String, recipientId: String, params: JsonObject, datetime: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onAcknowledgeRecieved(senderId: String, recipientId: String, newId: String, oldId: String, read: Boolean, messageType: Int) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onFileDownloadFinished(fileMessageId: String, fileMessageTimestamp: Long, conversationId: String, success: Boolean) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onFileFailsUpload(message: MOKMessage) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onCreateGroup(groupMembers: String?, groupName: String?, groupID: String?, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onAddGroupMember(groupID: String?, newMember: String?, members: String?, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGroupAdded(groupID: String, members: String, info: JsonObject) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGroupNewMember(groupID: String, new_member: String) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onRemoveGroupMember(groupID: String?, removedMember: String?, members: String?, e: Exception?) {
-                throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onGroupRemovedMember(groupID: String, removed_member: String) {
                 throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
             }
 

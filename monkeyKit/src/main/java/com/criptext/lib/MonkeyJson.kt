@@ -1,8 +1,16 @@
 package com.criptext.lib
 
+import android.util.Base64
+import android.util.Log
+import com.criptext.comunication.AsyncConnSocket
+import com.criptext.comunication.MOKConversation
+import com.criptext.comunication.MOKMessage
+import com.criptext.comunication.MessageTypes
+import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import java.util.*
 
 /**
  * Created by gabriel on 2/3/17.
@@ -53,6 +61,76 @@ class MonkeyJson {
 
         fun sanitizePendingMsgsForFile(list: List<JsonObject>): List<JsonObject> {
             return list.filter { it -> it.entrySet().size > 0 && it.has("args") }
+        }
+
+        /**
+         * Parses de arraay from getConversations response.
+         * @return an array with 2 lists of MOKConversation. The first list is the parsed conversations
+         * and the second list is a subset of the first list, containing conversations whose lastmessage
+         * needs to be decrypted.
+         */
+        fun parseConversationsList(jsonArrayStr: String): Array<ArrayList<MOKConversation>> {
+            val parser = JsonParser()
+            val array = parser.parse(jsonArrayStr).asJsonArray
+            val conversationList = ArrayList<MOKConversation>()
+            val conversationsToDecrypt = ArrayList<MOKConversation>()
+
+            for (jsonMessage in array) {
+                var currentConv: JsonObject?
+                var currentMessage: JsonObject?
+                var remote: MOKMessage? = null
+                try {
+                    currentConv = jsonMessage.asJsonObject
+                    currentMessage = currentConv.getAsJsonObject("last_message")!!
+                    val paramsStr = currentMessage.get("params")?.asString
+                    //init params props
+                    val params = when (paramsStr) {
+                        null -> null
+                        "{}" -> null
+                        "null" -> null
+                        else -> parser.parse(paramsStr).asJsonObject
+                    }
+                    val propsStr = currentMessage.get("props")?.asString
+                    val props = if (propsStr != null) parser.parse(propsStr).asJsonObject else null
+                    val currentMsgType = currentMessage.get("type")?.asString
+
+
+                    val jsonArray = currentConv.get("members")?.asJsonArray ?: JsonArray()
+                    val arrayList = ArrayList<String>()
+                    for (member in jsonArray) {
+                        arrayList.add(member.asString)
+                    }
+
+                    val newConv = MOKConversation(
+                        conversationId = currentConv.get("id").asString,
+                        info = currentConv.get("info").asJsonObject,
+                        members = arrayList.toTypedArray(),
+                        lastMessage = remote,
+                        lastSeen = currentConv.get("last_seen").asDouble.toLong() * 1000,
+                        unread = currentConv.get("unread").asInt,
+                        lastModified = currentConv.get("last_modified")?.asDouble?.toLong() ?: 0L)
+
+                    conversationList.add(newConv)
+
+                    if (currentMsgType == MessageTypes.MOKText || currentMsgType == MessageTypes.MOKFile) {
+                        remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true)
+                        newConv.lastMessage = remote
+                        if (props?.get("encr")?.asInt == 1) {
+                            conversationsToDecrypt.add(newConv)
+                        } else if (remote.type != MessageTypes.MOKFile
+                                && props?.get("encoding")?.asString == "base64") {
+                            remote.msg = String(Base64.decode(remote.msg.toByteArray(), Base64.NO_WRAP))
+                        }
+                    }
+                } catch (ex: IllegalArgumentException) {
+                    Log.e("MonkeyKit", "Error fetching conversation: " + ex.message)
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                }
+            }
+
+            return arrayOf(conversationList, conversationsToDecrypt)
+
         }
     }
 }

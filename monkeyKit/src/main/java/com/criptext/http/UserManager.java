@@ -14,6 +14,7 @@ import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MOKUser;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.lib.KeyStoreCriptext;
+import com.criptext.lib.MonkeyJson;
 import com.criptext.security.AESUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -186,7 +187,6 @@ public class UserManager extends AQueryHttp {
                     if (serviceRef.get() == null)
                         return;
 
-                    Log.d("ServiceStartup", "getConversations resp");
                     if (response != null)
                         new AsyncTask<Object, String, Exception>(){
 
@@ -196,55 +196,14 @@ public class UserManager extends AQueryHttp {
                             protected Exception doInBackground(Object... p) {
 
                                 try {
-                                    JsonParser parser = new JsonParser();
-                                    JsonObject props = new JsonObject(), params = new JsonObject();
-                                    JSONArray jsonArrayConversations = response.getJSONObject("data").getJSONArray("conversations");
-                                    JsonArray array = (JsonArray) parser.parse(jsonArrayConversations.toString());
-                                    for (int i = 0; i < array.size(); i++) {
-                                        JsonObject currentConv = null;
-                                        JsonObject currentMessage = null;
-                                        MOKMessage remote = null;
-                                        try {
-                                            JsonElement jsonMessage = array.get(i);
-                                            currentConv = jsonMessage.getAsJsonObject();
-                                            currentMessage = currentConv.getAsJsonObject("last_message");
-                                            //init params props
-                                            if (currentMessage.has("params") && !currentMessage.get("params").isJsonNull() && !parser.parse(currentMessage.get("params").getAsString()).isJsonNull())
-                                                if (parser.parse(currentMessage.get("params").getAsString()) instanceof JsonObject)
-                                                    params = (JsonObject) parser.parse(currentMessage.get("params").getAsString());
-                                            if (currentMessage.has("props") && !currentMessage.get("props").isJsonNull() && !parser.parse(currentMessage.get("props").getAsString()).isJsonNull())
-                                                props = (JsonObject) parser.parse(currentMessage.get("props").getAsString());
-
-                                            if (currentMessage.has("type") && (currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKText) == 0
-                                                    || currentMessage.get("type").getAsString().compareTo(MessageTypes.MOKFile) == 0)) {
-
-                                                remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true);
-                                                if (remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1") == 0) {
-                                                    remote = decryptMessage(remote);
-                                                } else if (remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)) {
-                                                    if (remote.getProps().get("encoding").getAsString().equals("base64"))
-                                                        remote.setMsg(new String(Base64.decode(remote.getMsg().getBytes(), Base64.NO_WRAP)));
-                                                }
-                                            }
-
-                                            JsonArray jsonArray = currentConv.has("members") ? currentConv.get("members").getAsJsonArray() : new JsonArray();
-                                            ArrayList<String> arrayList = new ArrayList<String>();
-                                            for(int j = 0; j<jsonArray.size(); j++){
-                                                arrayList.add(jsonArray.get(j).getAsString());
-                                            }
-                                            conversationList.add(new MOKConversation(currentConv.get("id").getAsString(),
-                                                    currentConv.get("info").getAsJsonObject(),
-                                                    arrayList.toArray(new String[arrayList.size()]),
-                                                    remote, currentConv.get("last_seen").getAsLong()*1000, currentConv.get("unread").getAsInt(),
-                                                    currentConv.has("last_modified") ? (long)currentConv.get("last_modified").getAsDouble()*1000 : 0));
-
-                                        } catch (IllegalArgumentException ex) {
-                                            Log.e("MonkeyKit", "Error fetching conversation: " +
-                                                    ex.getMessage());
-                                        } catch (Exception ex) {
-                                            ex.printStackTrace();
-                                        }
-                                    }
+                                    JSONArray jsonArrayConversations = response.getJSONObject("data")
+                                                            .getJSONArray("conversations");
+                                    ArrayList<MOKConversation>[] lists = MonkeyJson.Companion
+                                            .parseConversationsList(jsonArrayConversations.toString());
+                                    conversationList = lists[0];
+                                    List<MOKConversation> conversationsToDecrypt = lists[1];
+                                    for (MOKConversation conversation: conversationsToDecrypt)
+                                        decryptMessage(conversation.getLastMessage());
                                 } catch (JSONException e) {
                                     e.printStackTrace();
                                     return e;

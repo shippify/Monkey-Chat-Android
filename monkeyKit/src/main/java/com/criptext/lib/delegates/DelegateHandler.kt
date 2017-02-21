@@ -1,5 +1,6 @@
 package com.criptext.lib.delegates
 
+import android.util.Log
 import com.criptext.MonkeyKitSocketService
 import com.criptext.MonkeyKitSocketService.Companion.status
 import com.criptext.comunication.*
@@ -292,6 +293,7 @@ class DelegateHandler() {
                 else pendingGroupActions.add(pendingRunnable)
             }
             CBTypes.onGetConversations -> {
+
                 if (conversationDelegate != null)
                     conversationDelegate!!.onGetConversations(info[0] as ArrayList<MOKConversation>,
                         info[1] as Exception?)
