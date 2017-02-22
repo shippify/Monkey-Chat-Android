@@ -17,6 +17,10 @@ class TestDelegateActivity() : MKDelegateActivity() {
     private val messagesDB: HashMap<String, MOKMessage> = hashMapOf()
     private val pendingMessages: HashMap<String, MOKMessage> = hashMapOf()
 
+    fun keepAlive() {
+        keepServiceAlive = true
+    }
+
     fun getStoredMessage(messageID: String) = messagesDB[messageID]
     fun getStoredPendingMessage(messageID: String) = pendingMessages[messageID]
 

@@ -38,6 +38,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     private var lastMoreConversationsRequest: MoreDataRequest? = null
 
+    protected var keepServiceAlive = false
+
     /**
      * Callback to execute when the service is bound to this activity. You may only need this
      * if you need to consume data from MonkeyKit API in an activity that starts after your main
@@ -109,14 +111,16 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onStop() {
         super.onStop()
-        setOnline(false)
+        /* service should always be stopped except under 2 conditions:
+         * - The device changing configurations (ex. rotating)
+         * - The  developer wants to keep it alive (probably because it's going to start a new activity)
+         */
+        val serviceMustBeStopped = !this.isChangingConfigurations && !keepServiceAlive
+        setOnline(!serviceMustBeStopped)
         service = null
         unbindService(monkeyKitConnection)
-    }
-
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        stopMonkeyKitService()
+        if (serviceMustBeStopped)
+            stopMonkeyKitService()
     }
 
     fun stopMonkeyKitService() {

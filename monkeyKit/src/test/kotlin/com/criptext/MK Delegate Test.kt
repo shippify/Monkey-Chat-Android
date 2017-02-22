@@ -96,6 +96,26 @@ class `MK Delegate Test` {
     }
 
     @Test
+    fun `Should not stop service after user leaving if keepServiceAlive is true`() {
+        var act = controller.get()
+
+        ShadowMonkeyKitService.simulateConnectionProcess(service, HttpSync.SyncData("my_id",
+                HttpSync.SyncResponse(listOf(), listOf(), listOf())))
+
+        act.isSocketConnected `should equal` true
+        ShadowMonkeyKitService.isOnline `should equal` true
+
+        act.keepAlive()
+        act = controller.userLeaving().stop().get()
+
+        val shadowAct = Shadows.shadowOf(act)
+        val stopServiceIntent = shadowAct.nextStoppedService
+
+        stopServiceIntent `should be` null
+        ShadowMonkeyKitService.isOnline `should equal` true
+    }
+
+    @Test
     fun `Should send text messages to service and store them in local DB`() {
         var act = controller.get()
 

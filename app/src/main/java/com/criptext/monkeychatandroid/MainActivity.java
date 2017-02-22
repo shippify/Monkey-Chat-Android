@@ -1192,15 +1192,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onBackPressed() {
         final Stack stack = getState().mkFragmentStack;
-        if (!stack.isEmpty())
-            if (stack.peek() == MonkeyFragmentManager.FragmentTypes.chat) {
-                //user exit chat, clear active conversation
-                updateClosedConversation();
-                getState().activeConversationItem = null;
-            } else if(stack.peek() == MonkeyFragmentManager.FragmentTypes.conversations) {
-                //User exit app
-                stopMonkeyKitService();
-            }
+        if (!stack.isEmpty() && stack.peek() == MonkeyFragmentManager.FragmentTypes.chat) {
+            //user exit chat, clear active conversation
+            updateClosedConversation();
+            getState().activeConversationItem = null;
+        }
 
         super.onBackPressed();
     }
