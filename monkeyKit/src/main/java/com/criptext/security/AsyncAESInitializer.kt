@@ -60,8 +60,8 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
     public override fun onPostExecute(result: InitializerResult?) {
         val service = socketServiceRef.get()
         val messages = result!!.pendingMessages
-        if(messages != null && messages.isNotEmpty())
-            service?.addPendingMessages(messages)
+        if(messages != null)
+            service?.initPendingMessageStore(messages)
         if(result.hasSyncedBefore)
             service?.startSocketConnection(result.util!!, result.clientData, result.lastSync)
         else

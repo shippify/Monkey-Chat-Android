@@ -90,10 +90,9 @@ abstract class MonkeyKitSocketService : Service() {
     internal var wakeLock: PowerManager.WakeLock? = null
 
     /**
-     * List of messages that have not been successfully delivered yet
+     * Persists sent messages until they are acknowledged by server
      */
-    private val pendingMessages: LinkedList<JsonObject> = LinkedList();
-
+    lateinit var pendingMessageStore : PendingMessageStore
     /**
      * List of actions to execute after socket is connected and sync is complete.
      */
@@ -154,6 +153,10 @@ abstract class MonkeyKitSocketService : Service() {
         }
     }
 
+    fun initPendingMessageStore(list: List<JsonObject>) {
+        pendingMessageStore = PendingMessageStore(list)
+    }
+
 
     private fun addDataToSyncResponse(response: HttpSync.SyncData){
         response.addMessages(messagesReceivedDuringSync)
@@ -162,83 +165,91 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun processMessageFromHandler(method: CBTypes, info: Array<Any?>) {
-        when (method) {
-            CBTypes.onSocketConnected -> {
-                playPendingActions()
-                resendPendingMessages()
-                sendSync()
-                delegateHandler.processMessageFromHandler(method, info)
-            }
-            CBTypes.onSocketDisconnected -> {
-                //If socket disconnected and this handler is still alive we should reconnect
-                //immediately.
-                startSocketConnection()
-                delegateHandler.processMessageFromHandler(method, info)
-            }
-            CBTypes.onMessageReceived -> {
-                val message = info[0] as MOKMessage
-                if(status == ServiceStatus.initializing)
-                    messagesReceivedDuringSync.add(message)
-                else {
-                    val tipo = CriptextDBHandler.getMonkeyActionType(message);
-                    if (tipo == MessageTypes.blMessageAudio ||
-                            tipo == MessageTypes.blMessagePhoto ||
-                            tipo == MessageTypes.blMessageDocument ||
-                            tipo == MessageTypes.blMessageScreenCapture ||
-                            tipo == MessageTypes.blMessageShareAFriend ||
-                            tipo == MessageTypes.blMessageDefault)
-                        storeReceivedMessage(message, Runnable {
-                            //Message received and stored, update lastTimeSynced with with the timestamp
-                            //that the server gave the message
-                            lastTimeSynced = message.datetime.toLong();
-                            delegateHandler.processMessageFromHandler(method, info)
-                            if (startedManually && !delegateHandler.hasDelegate)  //if service started manually, stop it manually with a timeout task
-                                ServiceTimeoutTask(this).execute()
-                        })
-                }
-            }
-            CBTypes.onSyncComplete -> {
-                val batch = info[0] as HttpSync.SyncData;
-                status = if(delegateHandler.hasDelegate) MonkeyKitSocketService.ServiceStatus.bound
-                    else MonkeyKitSocketService.ServiceStatus.running
-                //add messages that were received while syncing
-                addDataToSyncResponse(batch)
-
-                syncDatabase(batch, Runnable {
-                    //At this point initialization is complete. We are ready to receive and send messages
-                    //since status could have changed from initializing to bound, or running, let's play pending actions.
-                    //this is needed for uploading photos.
+        try {
+            when (method) {
+                CBTypes.onSocketConnected -> {
                     playPendingActions()
+                    resendPendingMessages()
+                    sendSync()
                     delegateHandler.processMessageFromHandler(method, info)
-                    if(startedManually && !delegateHandler.hasDelegate)  //if service started manually, stop it manually with a timeout task
-                        ServiceTimeoutTask(this).execute()
-                })
-            }
-            CBTypes.onDeleteReceived -> {
-                lastTimeSynced = info[3].toString().toLong()
-                removePendingMessage(info[0] as String)
-                delegateHandler.processMessageFromHandler(method, info)
-            }
-            CBTypes.onGetConversations -> {
-                delegateHandler.processMessageFromHandler(method, info)
-                if (status == MonkeyKitSocketService.ServiceStatus.initializing) {
-                    //this is the first time service starts, so after adding all conversations, connect the socket
-                    startSocketConnection()
                 }
-            }
-            CBTypes.onNotificationReceived -> {
-                val messageId = info[0] as String
-                val senderId = info[1] as String
-                val receipientId = info[2] as String
-                val params = info[3] as JsonObject
-                val datetime = info[4] as String
+                CBTypes.onSocketDisconnected -> {
+                    //If socket disconnected and this handler is still alive we should reconnect
+                    //immediately.
+                    startSocketConnection()
+                    delegateHandler.processMessageFromHandler(method, info)
+                }
+                CBTypes.onMessageReceived -> {
+                    val message = info[0] as MOKMessage
+                    if (status == ServiceStatus.initializing)
+                        messagesReceivedDuringSync.add(message)
+                    else {
+                        val tipo = CriptextDBHandler.getMonkeyActionType(message);
+                        if (tipo == MessageTypes.blMessageAudio ||
+                                tipo == MessageTypes.blMessagePhoto ||
+                                tipo == MessageTypes.blMessageDocument ||
+                                tipo == MessageTypes.blMessageScreenCapture ||
+                                tipo == MessageTypes.blMessageShareAFriend ||
+                                tipo == MessageTypes.blMessageDefault)
+                            storeReceivedMessage(message, Runnable {
+                                //Message received and stored, update lastTimeSynced with with the timestamp
+                                //that the server gave the message
+                                lastTimeSynced = message.datetime.toLong()
+                                delegateHandler.processMessageFromHandler(method, info)
+                                if (startedManually && !delegateHandler.hasDelegate)  //if service started manually, stop it manually with a timeout task
+                                    ServiceTimeoutTask(this).execute()
+                            })
+                    }
+                }
+                CBTypes.onSyncComplete -> {
+                    val batch = info[0] as HttpSync.SyncData;
+                    status = if (delegateHandler.hasDelegate) MonkeyKitSocketService.ServiceStatus.bound
+                    else MonkeyKitSocketService.ServiceStatus.running
+                    //add messages that were received while syncing
+                    addDataToSyncResponse(batch)
 
-                if(status == MonkeyKitSocketService.ServiceStatus.initializing)
-                    notificationsReceivedDuringSync.add(MOKNotification(messageId, senderId,
-                            receipientId, params, JsonObject(), datetime.toLong()))
-                else delegateHandler.processMessageFromHandler(method, info)
+                    syncDatabase(batch, Runnable {
+                        //At this point initialization is complete. We are ready to receive and send messages
+                        //since status could have changed from initializing to bound, or running, let's play pending actions.
+                        //this is needed for uploading photos.
+                        playPendingActions()
+                        delegateHandler.processMessageFromHandler(method, info)
+                        if (startedManually && !delegateHandler.hasDelegate)  //if service started manually, stop it manually with a timeout task
+                            ServiceTimeoutTask(this).execute()
+                    })
+                }
+                CBTypes.onDeleteReceived -> {
+                    lastTimeSynced = info[3].toString().toLong()
+                    pendingMessageStore.removePendingMessage(info[0] as String, { watchdog?.cancel() })
+                    delegateHandler.processMessageFromHandler(method, info)
+                }
+                CBTypes.onGetConversations -> {
+                    delegateHandler.processMessageFromHandler(method, info)
+                    if (status == MonkeyKitSocketService.ServiceStatus.initializing) {
+                        //this is the first time service starts, so after adding all conversations, connect the socket
+                        startSocketConnection()
+                    }
+                }
+                CBTypes.onNotificationReceived -> {
+                    val messageId = info[0] as String
+                    val senderId = info[1] as String
+                    val receipientId = info[2] as String
+                    val params = info[3] as JsonObject
+                    val datetime = info[4] as String
+
+                    if (status == MonkeyKitSocketService.ServiceStatus.initializing)
+                        notificationsReceivedDuringSync.add(MOKNotification(messageId, senderId,
+                                receipientId, params, JsonObject(), datetime.toLong()))
+                    else delegateHandler.processMessageFromHandler(method, info)
+                }
+                CBTypes.onAcknowledgeReceived -> {
+                    pendingMessageStore.removePendingMessage(info[3] as String, { watchdog?.cancel() })
+                    delegateHandler.processMessageFromHandler(method, info)
+                }
+                else -> delegateHandler.processMessageFromHandler(method, info)
             }
-            else -> delegateHandler.processMessageFromHandler(method, info)
+        } catch (e: UninitializedPropertyAccessException) {
+            pendingActions.add(Runnable { processMessageFromHandler(method, info)})
         }
 
     }
@@ -315,6 +326,22 @@ abstract class MonkeyKitSocketService : Service() {
         return false
     }
 
+    fun persistUnsentMessages() {
+        try {
+            val sanitizedPendingMessages = MonkeyJson.sanitizePendingMsgsForFile(pendingMessageStore.toList())
+            if(sanitizedPendingMessages.isNotEmpty()){
+                //Log.d("serviceOnDestroy", "save messages")
+                val task = PendingMessageStore.AsyncStoreTask(this, sanitizedPendingMessages)
+                task.execute()
+            }else{
+                val task = PendingMessageStore.AsyncCleanTask(this)
+                task.execute()
+            }
+        } catch (e: UninitializedPropertyAccessException) {
+            e.printStackTrace()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         status = ServiceStatus.dead
@@ -330,15 +357,8 @@ abstract class MonkeyKitSocketService : Service() {
         delegateHandler.clear()
         watchdog?.cancel()
         //persist pending messages to a file
-        val sanitizedPendingMessages = MonkeyJson.sanitizePendingMsgsForFile(pendingMessages)
-        if(sanitizedPendingMessages.isNotEmpty()){
-            //Log.d("serviceOnDestroy", "save messages")
-            val task = PendingMessageStore.AsyncStoreTask(this, sanitizedPendingMessages)
-            task.execute()
-        }else{
-            val task = PendingMessageStore.AsyncCleanTask(this)
-            task.execute()
-        }
+        persistUnsentMessages()
+
         //unregister file broadcast receivers
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
         LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
@@ -430,41 +450,7 @@ abstract class MonkeyKitSocketService : Service() {
      * all the contained messages.
      */
     internal fun resendPendingMessages(){
-        val messages = pendingMessages.toList()
-        for(msg in messages)
-            sendJsonThroughSocket(msg)
-    }
-
-    fun addPendingMessages(messages: List<JsonObject>){
-        pendingMessages.addAll(0, messages)
-    }
-
-    /**
-     * get the id of a message
-     */
-    private fun getJsonMessageId(json: JsonObject) = json.get("args").asJsonObject.get("id").asString
-
-    /**
-     * Uses binary search to remove a message from the pending messages list.
-     * @param id id of the message to remove
-     */
-    fun removePendingMessage(id: String){
-        val index = pendingMessages.indexOfFirst { n ->
-            id.compareTo(getJsonMessageId(n)) == 0
-        }
-
-        if(index > -1) {
-            pendingMessages.removeAt(index)
-            clearWatchdog()
-        }
-    }
-
-
-    private fun clearWatchdog(){
-        if(pendingMessages.isEmpty()) {
-            watchdog?.cancel()
-            watchdog = null
-        }
+        pendingMessageStore.forEach { msg -> sendJsonThroughSocket(msg) }
     }
 
     /**
@@ -473,7 +459,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @throws JSONException
      */
     private fun addMessageToWatchdog(json: JsonObject) {
-        pendingMessages.add(json);
+        pendingMessageStore.add(this, json)
         startWatchdog()
     }
 
@@ -617,9 +603,6 @@ abstract class MonkeyKitSocketService : Service() {
 
             if(isSocketConnected()){
                 sendJsonThroughSocket(json)
-            }
-            else {
-                Thread.dumpStack()
             }
 
         } catch (e: Exception) {
@@ -802,10 +785,10 @@ abstract class MonkeyKitSocketService : Service() {
 
 
                 if(status == ServiceStatus.initializing) {
-                    pendingMessages.add(json)
+                    pendingMessageStore.add(this, json)
                 } else {
-                    addMessageToWatchdog(json);
-                    sendJsonThroughSocket(json);
+                    addMessageToWatchdog(json)
+                    sendJsonThroughSocket(json)
                 }
 
             }
@@ -947,7 +930,7 @@ abstract class MonkeyKitSocketService : Service() {
             json.addProperty("cmd", MessageTypes.MOKProtocolDelete)
 
             if(status == ServiceStatus.initializing) {
-                pendingMessages.add(json)
+                pendingMessageStore.add(this, json)
             } else {
                 addMessageToWatchdog(json);
                 sendJsonThroughSocket(json);

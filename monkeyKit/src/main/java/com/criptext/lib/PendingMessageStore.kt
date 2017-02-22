@@ -8,13 +8,58 @@ import com.google.gson.JsonParser
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.util.*
 
 /**
  * stores pending messages in memory and in disk.
  * Created by gesuwall on 6/15/16.
  */
 
-class PendingMessageStore {
+class PendingMessageStore(messages: List<JsonObject>) {
+    private val pendingMessages: LinkedList<JsonObject>
+    /**
+     * List of messages that have not been successfully delivered yet
+     */
+    fun add(ctx: Context, jsonMessage: JsonObject) {
+        pendingMessages.add(jsonMessage)
+        AsyncStoreTask(ctx, pendingMessages).execute()
+    }
+
+    init {
+        pendingMessages = LinkedList(messages)
+    }
+
+    /**
+     * get the id of a message
+     */
+    private fun getJsonMessageId(json: JsonObject) = json.get("args").asJsonObject.get("id").asString
+
+    /**
+     * Uses binary search to remove a message from the pending messages list.
+     * @param id id of the message to remove
+     * @param successAction action to execute if remove succeeds and clears the list
+     */
+    fun removePendingMessage(id: String, successAction: () -> Unit){
+        val index = pendingMessages.indexOfFirst { n ->
+            id.compareTo(getJsonMessageId(n)) == 0
+        }
+
+        if(index > -1) {
+            pendingMessages.removeAt(index)
+        }
+
+        if (pendingMessages.isEmpty())
+            successAction.invoke()
+    }
+
+    fun toList(): List<JsonObject> {
+        return pendingMessages.toList()
+
+    }
+
+    fun forEach(action: (JsonObject) -> Unit) {
+        pendingMessages.forEach { it -> action.invoke(it) }
+    }
 
     companion object {
         private val filename = "pending.txt";

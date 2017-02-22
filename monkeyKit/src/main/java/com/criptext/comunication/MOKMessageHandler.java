@@ -102,9 +102,6 @@ public class MOKMessageHandler extends Handler {
                                         , members_online});
                             }
                             else {
-                                //The acknowledge message has the id of the successfully sent message in
-                                //the Msg field. We'll use that to update our pending messages list.
-                                service.removePendingMessage(message.getMsg());
                                 service.processMessageFromHandler(CBTypes.onAcknowledgeReceived
                                         , new Object[]{message.getSid()
                                                 ,message.getRid(),message.getMessage_id()

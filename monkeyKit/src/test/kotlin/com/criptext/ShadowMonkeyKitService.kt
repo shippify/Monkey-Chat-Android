@@ -71,6 +71,7 @@ class ShadowMonkeyKitService {
          * simulateSyncComplete().
          */
         fun simulateConnectionProcess(service: MonkeyKitSocketService, nextResponse: HttpSync.SyncData) {
+            service.initPendingMessageStore(listOf())
             simulateSocketConnection(service)
             simulateSyncComplete(service, nextResponse)
         }
