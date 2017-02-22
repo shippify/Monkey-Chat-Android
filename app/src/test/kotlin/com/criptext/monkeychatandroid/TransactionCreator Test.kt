@@ -63,7 +63,6 @@ class `TransactionCreator Test` {
 
     @Test
     fun `fromContactOpenedConversation() should change conversation status from 'delivered' to 'read'`() {
-        val msgTime = 3L
         val c = ConversationItem("test", "0", 1L, "", 0, false, "", "", MonkeyConversation.ConversationStatus.deliveredMessage.ordinal)
         val t = TransactionCreator.fromContactOpenedConversation(6L)
         t.updateConversation(c)

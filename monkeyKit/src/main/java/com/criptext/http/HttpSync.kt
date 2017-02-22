@@ -45,43 +45,46 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         }
 
     private fun getBatch(since: Long, qty: Int): SyncResponse {
-            val parser = JsonParser()
+        val parser = JsonParser()
+
+        var remaining = qty
+        var _since = since
+        var batch = SyncResponse(listOf(), listOf(), listOf())
+
+        while (remaining > 0) {
             val request = Request.Builder()
                     .url(MonkeyKitSocketService.httpsURL + "/user/messages/" +
-                            "${clientData.monkeyId}/$since/$qty")
+                            "${clientData.monkeyId}/$_since/$remaining")
                     .build()
             var response: Response? = null
-
-            while (response == null){
+            while (response == null) {
+                Log.d("HttpSync", "new call. timeout is : $timeout")
                 val http = OpenConversationTask.authorizedHttpClient(clientData, timeout)
                 response = executeHttp(http, request)
                 timeout += 10
             }
 
-            if(response.isSuccessful) {
+            if (response.isSuccessful) {
                 val body = response.body()
                 val jsonResponse = parser.parse(body.string()).asJsonObject
+                Log.d("HttpSync", "new resp : $jsonResponse")
                 val data = jsonResponse.getAsJsonObject("data")
-                var batch = processBatch(data)
-                val remaining = data.get("remaining").asInt
-                if(remaining > 0) {
+                batch += processBatch(data)
+                remaining = data.get("remaining").asInt
+                if (remaining > 0) {
                     val array = data.get("messages").asJsonArray;
                     //All elements in the array of the Sync response should have a datetime field
-                    val newSinceValue = array[array.size() - 1].asJsonObject.get("datetime").asLong
-
-                    batch += getBatch(newSinceValue, Math.min(remaining, qty))
+                    _since = array[array.size() - 1].asJsonObject.get("datetime").asLong
                 }
                 body.close()
+            } else Log.e("HttpSync", "Sync response error. code: ${response.code()} ${response.body().string()}")
+        }
 
-                if (isFirstTime)
-                    KeyStoreCriptext.setFirstSyncSuccess(contextRef.get())
+        if (isFirstTime)
+            KeyStoreCriptext.setFirstSyncSuccess(contextRef.get())
 
-                return batch
-            } else {
-                Log.e("HttpSync", response.body().string())
-            }
-
-            return SyncResponse(listOf(), listOf(), listOf())
+        Log.d("HttpSync", "response is ready")
+        return batch
     }
 
     fun execute(since: Long, qty: Int) = SyncData(clientData.monkeyId, getBatch(since, qty))
@@ -258,14 +261,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         }
 
         fun addNotifications(notificationsList: List<MOKNotification>) {
-            fun addNotifications(notificationsList: List<MOKNotification>) {
                 notifications.addAll(notificationsList)
-            }
-
-            fun addUser(monkeyId: String) = {
-                users.add(monkeyId)
-            }
-
         }
 
         companion object {

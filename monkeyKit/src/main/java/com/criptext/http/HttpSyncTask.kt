@@ -36,7 +36,7 @@ class HttpSyncTask(service: MonkeyKitSocketService, val since: Long, val qty: In
 
     override fun onPostExecute(result: HttpSync.SyncData?) {
         val service = serviceRef.get()
-        if(result != null)
+        if(result != null) //result is only null if context died long ago
             service?.processMessageFromHandler(CBTypes.onSyncComplete, arrayOf(result))
     }
 

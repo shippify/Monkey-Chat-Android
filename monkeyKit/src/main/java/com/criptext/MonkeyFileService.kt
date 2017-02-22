@@ -57,7 +57,6 @@ abstract class MonkeyFileService: IntentService(TAG){
                 aesUtil = AESUtil(this, mokMessage.sid)
 
             val ext = FilenameUtils.getExtension(mokMessage.msg)
-            val name = FilenameUtils.getBaseName(mokMessage.msg)
             val rawByteData = IOUtils.toByteArray(FileInputStream(mokMessage.msg));
             val processedByteData = processSentBytes(intent.getBooleanExtra(ENCR_KEY, true), rawByteData)
             val data = createUploadDataJsonString(mokMessage, intent.getStringExtra(PUSH_KEY), rawByteData.size)
@@ -141,7 +140,7 @@ abstract class MonkeyFileService: IntentService(TAG){
     }
 
     private fun processReceivedBytes(downloadBytes: ByteArray?, mokDownload: MOKDownload, clientData: ClientData): String?{
-        var resultBytes: ByteArray? = null
+        var resultBytes: ByteArray?
         if(downloadBytes != null){
             val props = mokDownload.props
             if(props.get("encr").asString == "1"){//Decrypt

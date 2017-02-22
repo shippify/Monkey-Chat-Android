@@ -339,6 +339,7 @@ class DelegateHandler() {
                     fileDelegate!!.onFileFailsUpload(info[0] as MOKMessage)
                 else pendingFileActions.add(pendingRunnable)
             }
+            else -> Log.d("DelegateHandler", "unsupported: $method")
         }
     }
 }

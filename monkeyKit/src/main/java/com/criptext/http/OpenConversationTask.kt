@@ -123,9 +123,9 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
             val response = http.newCall(request).execute()
             if (response.isSuccessful) {
-                val body = response.body().string();
+                val respBody = response.body().string();
                 val parser = JsonParser()
-                return parser.parse(body).asJsonObject
+                return parser.parse(respBody).asJsonObject
             } else {
                 Log.e("sendOpenConversation", response.body().string())
                 return null

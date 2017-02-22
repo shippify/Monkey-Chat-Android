@@ -24,6 +24,7 @@ class `CreateMessage Test` {
                       type: String, props: JsonObject?, params: JsonObject?): MOKMessage {
         val mokMessage = MOKMessage(id, sid, rid, msg, "" + (timestamp/1000L),
                 MessageTypes.MOKText)
+        mokMessage.type = type
         mokMessage.datetimeorder = timestamp
         mokMessage.params = params
         mokMessage.props = props

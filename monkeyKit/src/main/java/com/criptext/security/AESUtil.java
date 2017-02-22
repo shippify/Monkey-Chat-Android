@@ -77,7 +77,7 @@ public class AESUtil {
                 KeyStoreCriptext.putString(context, sessionId, strKey + ":" + strIV);
         }
         else{
-            //System.out.println("AES - SI TIENE IV - ***"+KeyStoreCriptext.getString(context, sessionId).split(":")[1]+"***");
+            //System.out.println("AES - SI TIENE IV - ***"+KeyStoreCriptext.Companion.getString(context, sessionId).split(":")[1]+"***");
             //SI TIENE KEY
             strIV = AESUtil.stripGarbage(KeyStoreCriptext.getString(context, sessionId).split(":")[1]);
             Log.d("AESUtil", "generated key: " + strKey + " IV: " + strIV);
