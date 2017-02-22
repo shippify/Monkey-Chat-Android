@@ -11,6 +11,7 @@ import org.robolectric.annotation.Implements;
 @Implements(KeyStoreCriptext.class)
 public class ShadowKeyStore {
     static boolean syncedBefore = false;
+    static long lastSync = 0L;
 
     @Implementation
     public static String getString(Context context, String key) {
@@ -25,5 +26,16 @@ public class ShadowKeyStore {
     @Implementation
     public static void setFirstSyncSuccess(Context ctx) {
         syncedBefore = true;
+    }
+
+    @Implementation
+    public static void setLastSync(Context ctx, Long value) {
+        System.out.println("set " + value);
+        lastSync = value;
+    }
+
+    @Implementation
+    public static Long getLastSync(Context ctx) {
+        return lastSync;
     }
 }

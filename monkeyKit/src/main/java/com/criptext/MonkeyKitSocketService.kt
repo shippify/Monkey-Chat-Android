@@ -213,6 +213,7 @@ abstract class MonkeyKitSocketService : Service() {
                         //since status could have changed from initializing to bound, or running, let's play pending actions.
                         //this is needed for uploading photos.
                         lastTimeSynced = batch.newTimestamp
+                        KeyStoreCriptext.setLastSync(this, lastTimeSynced)
                         playPendingActions()
                         delegateHandler.processMessageFromHandler(method, info)
                         if (startedManually && !delegateHandler.hasDelegate)  //if service started manually, stop it manually with a timeout task

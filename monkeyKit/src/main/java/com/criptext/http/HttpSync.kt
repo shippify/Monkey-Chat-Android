@@ -40,7 +40,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         try {
             http.newCall(request).execute()
         } catch (ex: IOException) {
-            Log.d("HttpSync", "timed out: ${ex.message}")
+            //Log.d("HttpSync", "timed out: ${ex.message}")
             null
         }
 
@@ -58,7 +58,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
                     .build()
             var response: Response? = null
             while (response == null) {
-                Log.d("HttpSync", "new call. timeout is : $timeout")
+                //Log.d("HttpSync", "new call. timeout is : $timeout")
                 val http = OpenConversationTask.authorizedHttpClient(clientData, timeout)
                 response = executeHttp(http, request)
                 timeout += 10
@@ -67,7 +67,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             if (response.isSuccessful) {
                 val body = response.body()
                 val jsonResponse = parser.parse(body.string()).asJsonObject
-                Log.d("HttpSync", "new resp : $jsonResponse")
+                //Log.d("HttpSync", "new resp : $jsonResponse")
                 val data = jsonResponse.getAsJsonObject("data")
                 batch += processBatch(data)
                 remaining = data.get("remaining").asInt
@@ -83,7 +83,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         if (isFirstTime)
             KeyStoreCriptext.setFirstSyncSuccess(contextRef.get())
 
-        Log.d("HttpSync", "response is ready")
+        //Log.d("HttpSync", "response is ready")
         return batch
     }
 

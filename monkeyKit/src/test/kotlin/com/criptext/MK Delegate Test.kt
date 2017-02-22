@@ -4,6 +4,7 @@ import com.criptext.comunication.MessageTypes
 import com.criptext.comunication.PushMessage
 import com.criptext.http.HttpSync
 import com.criptext.lib.BuildConfig
+import com.criptext.lib.ShadowKeyStore
 import com.criptext.security.ShadowAESInitializer
 import com.criptext.security.ShadowAESUtil
 import com.google.gson.JsonObject
@@ -25,7 +26,7 @@ import org.robolectric.util.ActivityController
 
 @RunWith(RobolectricTestRunner::class)
 @Config(constants = BuildConfig::class, shadows=arrayOf(ShadowAESInitializer::class,
-        ShadowAESUtil::class, ShadowMonkeyKitService::class), manifest = "TestManifest.xml")
+        ShadowAESUtil::class, ShadowMonkeyKitService::class, ShadowKeyStore::class), manifest = "TestManifest.xml")
 class `MK Delegate Test` {
     lateinit var controller: ActivityController<TestDelegateActivity>
     lateinit var service: TestService
