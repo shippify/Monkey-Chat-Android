@@ -6,6 +6,7 @@ import com.criptext.monkeykitui.conversation.ConversationsList;
 import com.criptext.monkeykitui.conversation.DefaultGroupData;
 import com.criptext.monkeykitui.recycler.MessagesList;
 import com.criptext.monkeykitui.util.MonkeyFragmentManager;
+import com.criptext.monkeykitui.util.Utils;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -41,6 +42,12 @@ public class ChatState {
      */
     public String myName;
 
+
+    /**
+     * The connection status to be displayed in the UI
+     */
+    public Utils.ConnectionStatus connectionStatus;
+
     /**
      * A model of the fragment manager backstack. Useful to determine which fragment should be currently
      * visible.
@@ -53,7 +60,7 @@ public class ChatState {
         mkFragmentStack = new Stack<>();
         this.myMonkeyID = myMonkeyID;
         this.myName = myName;
-
+        connectionStatus = Utils.ConnectionStatus.connected;
     }
 
     /**

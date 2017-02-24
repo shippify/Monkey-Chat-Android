@@ -110,6 +110,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     private File downloadDir;
 
+    private CustomInputListener inputListener;
+
     /**
      * Class used to control the status bar that shows "Connecting.." and "Connected."
      */
@@ -156,8 +158,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         //wait for a timeout to show a "connecting" message
         syncStatus = new SyncStatus(monkeyFragmentManager);
         if(!isSocketConnected()) {
+            getState().connectionStatus = Utils.ConnectionStatus.connecting;
             syncStatus.delayConnectingMessage();
         }
+
+        inputListener = new CustomInputListener(this, getState());
     }
 
     public void registerWithGCM(){
@@ -214,10 +219,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     private boolean restoreState(){
         final ChatDataFragment retainedFragment =(ChatDataFragment) getSupportFragmentManager().findFragmentByTag(DATA_FRAGMENT);
         if(retainedFragment != null) {
-            if (monkeyChatFragment != null) {
-                monkeyChatFragment.setInputListener(initInputListener());
-                monkeyChatFragment.setVoiceNotePlayer(voiceNotePlayer);
-            }
             headlessFragment = retainedFragment;
             return true;
         } else {
@@ -264,111 +265,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      */
 
     /**
-     * Sets an InputListener to the InputView. This object listens for new messages that the user
-     * wants to send, regardless of the type. They can be text, audio or photo messages. The listener
-     * checks the type to figure out how to send it with MonkeyKit.
-     */
-    public InputListener initInputListener(){
-        return new InputListener() {
-            @Override
-            public void onStopTyping() {
-                JSONObject params = new JSONObject();
-                try {
-                    params.put("type", 20);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                if(getState().activeConversationItem != null){
-                    sendTemporalNotification(getState().activeConversationItem.getConvId(), params);
-                }
-            }
-
-            @Override
-            public void onTyping(@NotNull String text) {
-                JSONObject params = new JSONObject();
-                try {
-                    params.put("type", 21);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                if(getState().activeConversationItem != null){
-                    sendTemporalNotification(getState().activeConversationItem.getConvId(), params);
-                }
-            }
-
-            @Override
-            public void onNewItemFileError(int type) {
-                Toast.makeText(MainActivity.this, "Error writing file of type " +
-                        MonkeyItem.MonkeyItemType.values()[type], Toast.LENGTH_LONG).show();
-            }
-
-            @Override
-            public void onNewItem(@NotNull MonkeyItem item) {
-
-                String textTalk = null;
-                JsonObject params = new JsonObject();
-                MOKMessage mokMessage;
-
-                ConversationItem activeConv = getState().activeConversationItem; //should not be null
-                final String convId = activeConv.getConvId();
-                if(activeConv.isGroup())
-                    textTalk = activeConv.getName();
-
-
-                //Store the message in the DB and send it via MonkeyKit
-                switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
-                    case audio:
-                        params = new JsonObject();
-                        params.addProperty("length",""+item.getAudioDuration()/1000);
-
-                        mokMessage = persistFileMessageAndSend(item.getFilePath(), getState().myMonkeyID, convId,
-                            MessageTypes.FileTypes.Audio, params,
-                            new PushMessage(EmojiHandler.encodeJavaForPush(getState().myName) +
-                            (textTalk==null ? " sent you an audio" : "sent an audio to " + textTalk) ), true);
-                        break;
-                    case photo:
-                        mokMessage = persistFileMessageAndSend(item.getFilePath(), getState().myMonkeyID, convId,
-                            MessageTypes.FileTypes.Photo, new JsonObject(),
-                            new PushMessage(EmojiHandler.encodeJavaForPush(getState().myName) +
-                            (textTalk==null ? " sent you a photo" : "sent a photo to " + textTalk) ), true);
-                        break;
-                    default:
-                        mokMessage = persistMessageAndSend(item.getMessageText(), getState().myMonkeyID,
-                            convId, params, new PushMessage(EmojiHandler.encodeJavaForPush(getState().myName) +
-                            (textTalk==null ? " sent you a message" : " sent a message to " + textTalk) ), true);
-                        break;
-                }
-
-                //Now that the message was sent, create a MessageItem using the MOKMessage that MonkeyKit
-                //created. This MessageItem will be added to MonkeyAdapter so that it can be shown in
-                //the screen.
-                //USE THE DATETIMEORDER FROM MOKMESSAGE, NOT THE ONE FROM MONKEYITEM
-                MessageItem newItem = new MessageItem(getState().myMonkeyID, convId, mokMessage.getMessage_id(),
-                        item.getMessageText(), item.getMessageTimestamp(), mokMessage.getDatetimeorder(), item.isIncomingMessage(),
-                        MonkeyItem.MonkeyItemType.values()[item.getMessageType()]);
-                newItem.setParams(params.toString());
-                newItem.setProps(mokMessage.getProps().toString());
-
-                switch (MonkeyItem.MonkeyItemType.values()[item.getMessageType()]) {
-                    case audio:
-                        newItem.setAudioDuration(item.getAudioDuration()/1000);
-                        newItem.setMessageContent(item.getFilePath());
-                        newItem.setFileSize(mokMessage.getFileSize());
-                        break;
-                    case photo:
-                        newItem.setMessageContent(item.getFilePath());
-                        newItem.setFileSize(mokMessage.getFileSize());
-                        break;
-                }
-
-                Log.d("MonkeyChatFragment", "call smoothlyAddNewItem");
-                getState().messagesMap.get(convId).smoothlyAddNewItem(newItem);
-                updateConversationByMessage(newItem, false);
-            }
-        };
-    }
-
-    /**
      * Updates a conversation in the database and then optionally adds it to the conversation list.
      * If conversation is not found in the database, fetch the conversation from server. This
      * method should be used when we want to update a conversation that is not in our
@@ -394,7 +290,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }, ids, transaction);
     }
 
-    private  void updateConversationByMessage(MessageItem message, boolean read) {
+    public void updateConversationByMessage(MessageItem message, boolean read) {
         ConversationTransaction transaction = TransactionCreator.fromSentMessage(message, read);
         ConversationItem conversation = (ConversationItem) getState().conversations.findConversationById(message.conversationId);
         if (conversation != null) {
@@ -424,11 +320,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param status status of the connection
      */
     public void setStatusBarState(Utils.ConnectionStatus status){
-
-        if(monkeyFragmentManager==null)
-            return;
         monkeyFragmentManager.showStatusNotification(status);
-
     }
 
     /**
@@ -559,16 +451,6 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 downloadDir.getAbsolutePath(), getState().myMonkeyID));
     }
 
-    /******
-     * These are the methods that MonkeyKit calls to inform us about new events.
-     */
-
-    @Override
-    public void onSocketConnected() {
-        super.onSocketConnected();
-        setStatusBarState(Utils.ConnectionStatus.connected);
-    }
-
     @Override
     public void onSocketDisconnected() {
         setStatusBarState(Utils.ConnectionStatus.connecting);
@@ -668,12 +550,11 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * Update conversations in memory and the update the MonkeyConversationsFragment.
      */
     private void syncConversationsFragment() {
-        int totalConversations = getState().conversations.size();
+        final int totalConversations = getState().conversations.size();
         asyncDBHandler.getConversationPage(new GetConversationPageTask.OnQueryReturnedListener() {
             @Override
             public void onQueryReturned(List<ConversationItem> conversationPage) {
-                getState().conversations.setHasReachedEnd(true);
-                getState().conversations.insertConversations(conversationPage, conversationPage.size() == 0);
+                getState().conversations.insertConversations(conversationPage, true);
             }
         }, totalConversations, 0);
     }
@@ -737,6 +618,18 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     @Override
     public void onSyncComplete(@NonNull HttpSync.SyncData syncData) {
         syncStatus.cancelMessage();
+
+        if(getState().activeConversationItem != null){ //connection complete, send open
+            setOpenConversation(getState().activeConversationItem.getConvId());
+        }
+
+        //update connection status
+        final Utils.ConnectionStatus connStatus = Utils.ConnectionStatus.connected;
+        if (getState().connectionStatus != Utils.ConnectionStatus.connected) {
+            getState().connectionStatus = connStatus;
+            setStatusBarState(connStatus);
+        }
+
 
         int newMessagesForActiveConversation = SyncState.withNewMessages(getState(), syncData);
 
@@ -1206,7 +1099,22 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         setOpenConversation(conversationId);
         monkeyChatFragment = fragment;
         monkeyChatFragment.setVoiceNotePlayer(voiceNotePlayer);
-        monkeyChatFragment.setInputListener(initInputListener());
+        monkeyChatFragment.setInputListener(inputListener);
+
+        final MessageItem newFileMessage = inputListener.popNewFileMessage();
+        if (newFileMessage != null) {
+            final String id = newFileMessage.getConversationId();
+            final MessagesList convMessages = getState().getLoadedMessages(id);
+
+            //post for better performance
+            monkeyChatFragment.getRecyclerView().post(new Runnable() {
+                @Override
+                public void run() {
+                    convMessages.smoothlyAddNewItem(newFileMessage);
+                }
+            });
+        }
+
     }
 
     @Override
@@ -1225,6 +1133,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public ConversationsList onRequestConversations() {
         //TODO rewrite async
         final ConversationsList conversations = getState().conversations;
+        conversations.setHasReachedEnd(true);
         if(!conversations.isEmpty())
             return conversations;
         else {
@@ -1422,7 +1331,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 .build();
 
         getState().activeConversationItem = chat;
-        monkeyFragmentManager.setChatFragmentFromInfo(fragment, initInputListener(), voiceNotePlayer);
+        monkeyFragmentManager.setChatFragmentFromInfo(fragment, inputListener, voiceNotePlayer);
         monkeyInfoFragment = null;
     }
 

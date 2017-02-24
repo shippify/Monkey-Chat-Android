@@ -40,12 +40,13 @@ public class SyncStatus {
 
     public void cancelMessage() {
         cancelled = true;
+        /*
         if(System.currentTimeMillis() - startTime > WAIT_TIME) {
             MonkeyFragmentManager manager = managerRef.get();
             if (manager != null) {
                 manager.showStatusNotification(Utils.ConnectionStatus.connected);
             }
-        }
+        }*/
     }
 
 
