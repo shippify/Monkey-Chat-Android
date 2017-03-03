@@ -43,7 +43,7 @@ public class ConnectionChangeReceiver extends BroadcastReceiver {
                 MonkeyKitSocketService.ServiceStatus.initializing.ordinal()) {
             if (activeNetworkInfo != null) {
                 if (activeNetworkInfo.isConnectedOrConnecting() && service!=null) {
-                    service.startSocketConnection();
+                    service.retrySocketConnection();
                 }
             } else {
                 //Disconnected

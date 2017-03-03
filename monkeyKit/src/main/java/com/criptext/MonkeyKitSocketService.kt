@@ -172,6 +172,8 @@ abstract class MonkeyKitSocketService : Service() {
                     resendPendingMessages()
                     sendSync()
                     delegateHandler.processMessageFromHandler(method, info)
+                    //Now that we established connection, let's monitor it for changes.
+                    startConnectivityBroadcastReceiver()
                 }
                 CBTypes.onSocketDisconnected -> {
                     //If socket disconnected and this handler is still alive we should reconnect
@@ -314,9 +316,16 @@ abstract class MonkeyKitSocketService : Service() {
     fun startSocketConnection() {
         if(status == ServiceStatus.dead)
             return //status should be equal to initializing, if dead dont do anything
-        startConnectivityBroadcastReceiver() //start connectivity service after client data is initialized
         asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
         asyncConnSocket.conectSocket()
+    }
+
+    fun retrySocketConnection() {
+        try {
+            asyncConnSocket.conectSocket()
+        } catch (ex: UninitializedPropertyAccessException) {
+            startSocketConnection()
+        }
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
@@ -372,12 +381,11 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     private fun startConnectivityBroadcastReceiver(){
-
         if(receiver==null) {
             receiver = ConnectionChangeReceiver(this)
+            val conn_changereceived = IntentFilter("android.net.conn.CONNECTIVITY_CHANGE")
+            registerReceiver(receiver, conn_changereceived)
         }
-        val conn_changereceived = IntentFilter("android.net.conn.CONNECTIVITY_CHANGE")
-        registerReceiver(receiver, conn_changereceived)
     }
 
     fun removeDelegates() {

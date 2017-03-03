@@ -15,7 +15,7 @@ public class SyncStatus {
     Handler handler;
     private boolean cancelled;
     private long startTime;
-    private final long WAIT_TIME = 3000L;
+    private final long WAIT_TIME = 1000L;
 
     public SyncStatus(MonkeyFragmentManager fragmentManager) {
         managerRef = new WeakReference<>(fragmentManager);

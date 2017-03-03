@@ -59,7 +59,6 @@ public class AsyncConnSocket implements ComServerDelegate{
 		this.sport = cdata.getSport();
 		this.socketStatus = Status.sinIniciar;
 		this.service = service;
-		Log.d("AsyncConnSocket", "new socket");
 	}
 
 	@Override

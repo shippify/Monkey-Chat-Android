@@ -26,6 +26,7 @@ import com.criptext.comunication.PushMessage;
 import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.http.HttpSync;
 import com.criptext.lib.MKDelegateActivity;
+import com.criptext.lib.OnMonkeyKitServiceReadyListener;
 import com.criptext.monkeychatandroid.dialogs.SyncStatus;
 import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.AsyncDBHandler;
