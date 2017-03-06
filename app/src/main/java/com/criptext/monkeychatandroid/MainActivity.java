@@ -136,10 +136,21 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
     };
 
+    private void restartApplication() {
+        //App has been terminated. exit now
+        startActivity(new Intent(this, WelcomeActivity.class));
+        finish();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         boolean restored = restoreState();
+        if (restored && getState() == null) {
+            restartApplication();
+            return;
+        }
+
         downloadDir = MonkeyChat.getDownloadDir(this);
 
         //Check play services. if available try to register with GCM so that we get Push notifications
@@ -228,7 +239,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     private boolean restoreState(){
-        final ChatDataFragment retainedFragment =(ChatDataFragment) getSupportFragmentManager().findFragmentByTag(DATA_FRAGMENT);
+        final ChatDataFragment retainedFragment = (ChatDataFragment) getSupportFragmentManager().findFragmentByTag(DATA_FRAGMENT);
         if(retainedFragment != null) {
             headlessFragment = retainedFragment;
             return true;
@@ -246,7 +257,8 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         //sensorHandler.onDestroy();
         if(monkeyChatFragment != null)
             monkeyChatFragment.setInputListener(null);
-        asyncDBHandler.cancelAll();
+        if (asyncDBHandler != null)
+            asyncDBHandler.cancelAll();
     }
 
     @Override
