@@ -172,8 +172,6 @@ abstract class MonkeyKitSocketService : Service() {
                     resendPendingMessages()
                     sendSync()
                     delegateHandler.processMessageFromHandler(method, info)
-                    //Now that we established connection, let's monitor it for changes.
-                    startConnectivityBroadcastReceiver()
                 }
                 CBTypes.onSocketDisconnected -> {
                     //If socket disconnected and this handler is still alive we should reconnect
@@ -279,10 +277,6 @@ abstract class MonkeyKitSocketService : Service() {
     override fun onBind(intent: Intent?): IBinder? {
         if(status == ServiceStatus.dead)
             initializeMonkeyKitService()
-        else {
-            Log.d("SocketService", "binding with existing service, status: ${MonkeyKitSocketService.status}")
-            status = ServiceStatus.bound
-        }
 
         return MonkeyBinder()
     }
@@ -311,6 +305,7 @@ abstract class MonkeyKitSocketService : Service() {
     fun startSocketConnection(aesUtil: AESUtil, cdata: ClientData, lastSync: Long) {
         initialize(aesUtil, cdata, lastSync)
         startSocketConnection()
+        startConnectivityBroadcastReceiver()
     }
 
     fun startSocketConnection() {
@@ -318,14 +313,6 @@ abstract class MonkeyKitSocketService : Service() {
             return //status should be equal to initializing, if dead dont do anything
         asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
         asyncConnSocket.conectSocket()
-    }
-
-    fun retrySocketConnection() {
-        try {
-            asyncConnSocket.conectSocket()
-        } catch (ex: UninitializedPropertyAccessException) {
-            startSocketConnection()
-        }
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
@@ -394,7 +381,12 @@ abstract class MonkeyKitSocketService : Service() {
 
     inner class MonkeyBinder : Binder() {
 
-        fun getService(delegate: Any): MonkeyKitSocketService{
+        /**
+         * Sets delegates to the service, and returns this service instance so that the delegate
+         * may keep a reference to it and call service methods. Additionally if the service
+         * was already running but it is not connected, retry connection.
+         */
+        fun handshake(delegate: Any): MonkeyKitSocketService{
             if (delegate is AcknowledgeDelegate)
                 this@MonkeyKitSocketService.delegateHandler.setDelegate(delegate)
             if (delegate is ConnectionDelegate)
@@ -416,8 +408,9 @@ abstract class MonkeyKitSocketService : Service() {
             if (delegate is MonkeyKitDelegate)
                 this@MonkeyKitSocketService.delegateHandler.setDelegate(delegate)
 
-            if(status != ServiceStatus.initializing)
-                status = ServiceStatus.bound
+            if (status >= ServiceStatus.running && !isSocketConnected())
+                startSocketConnection()
+
             return this@MonkeyKitSocketService;
         }
 

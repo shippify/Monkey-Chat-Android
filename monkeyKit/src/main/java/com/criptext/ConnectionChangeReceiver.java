@@ -18,33 +18,38 @@ public class ConnectionChangeReceiver extends BroadcastReceiver {
 
     MonkeyKitSocketService service;
 
-    public ConnectionChangeReceiver(MonkeyKitSocketService service){
-        this.service = service;
-    }
-
     /** The absence of a connection type. */
     private static final int NO_CONNECTION_TYPE = -1;
 
     /** The last processed network type. */
     private static int sLastType = 1;
 
-    @Override
-    public void onReceive(Context context, Intent intent) {
+    public ConnectionChangeReceiver(MonkeyKitSocketService service){
+        this.service = service;
+        sLastType = getCurrentConnectivityType(service);
+    }
+
+    public int getCurrentConnectivityType(Context context) {
         ConnectivityManager connectivityManager = (ConnectivityManager)
                 context.getSystemService(Context.CONNECTIVITY_SERVICE);
 
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        final int currentType = activeNetworkInfo != null
-                ? activeNetworkInfo.getType() : NO_CONNECTION_TYPE;
+        return activeNetworkInfo != null ? activeNetworkInfo.getType() : NO_CONNECTION_TYPE;
+    }
 
+    @Override
+    public void onReceive(Context context, Intent intent) {
+
+        final int currentType = getCurrentConnectivityType(context);
         // Avoid handling multiple broadcasts for the same connection type
-        if (sLastType != currentType && service!=null
-                && MonkeyKitSocketService.Companion.getStatus().ordinal() >=
-                MonkeyKitSocketService.ServiceStatus.initializing.ordinal()) {
-            if (activeNetworkInfo != null) {
-                if (activeNetworkInfo.isConnectedOrConnecting() && service!=null) {
-                    service.retrySocketConnection();
-                }
+        if (sLastType != currentType) {
+            ConnectivityManager connectivityManager = (ConnectivityManager)
+                context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+
+            if (currentType != NO_CONNECTION_TYPE && activeNetworkInfo.isConnectedOrConnecting()
+                    && service!=null) {
+                service.startSocketConnection();
             } else {
                 //Disconnected
                 if(service!=null)

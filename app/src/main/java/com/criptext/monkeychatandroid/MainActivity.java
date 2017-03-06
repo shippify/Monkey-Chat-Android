@@ -164,6 +164,16 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
 
         inputListener = new CustomInputListener(this, getState());
+
+        setOnMonkeyKitServiceReadyListener(new OnMonkeyKitServiceReadyListener() {
+            @Override
+            public void onMonkeyKitServiceReady() {
+                final Utils.ConnectionStatus connStatus = isSocketConnected()
+                        ? Utils.ConnectionStatus.connected : Utils.ConnectionStatus.connecting;
+                setStatusBarState(connStatus);
+            }
+
+        });
     }
 
     public void registerWithGCM(){
@@ -321,7 +331,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
      * @param status status of the connection
      */
     public void setStatusBarState(Utils.ConnectionStatus status){
-        monkeyFragmentManager.showStatusNotification(status);
+        if (status != getState().connectionStatus) {
+            getState().connectionStatus = status;
+            monkeyFragmentManager.showStatusNotification(status);
+        }
     }
 
     /**
@@ -626,10 +639,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
         //update connection status
         final Utils.ConnectionStatus connStatus = Utils.ConnectionStatus.connected;
-        if (getState().connectionStatus != Utils.ConnectionStatus.connected) {
-            getState().connectionStatus = connStatus;
-            setStatusBarState(connStatus);
-        }
+        setStatusBarState(connStatus);
 
 
         int newMessagesForActiveConversation = SyncState.withNewMessages(getState(), syncData);

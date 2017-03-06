@@ -3,6 +3,7 @@ package com.criptext.lib
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
+import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.os.IBinder
 import android.util.Log
@@ -65,7 +66,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
                     s.closeConversation(field!!)
             }
             //service is only null during rotation, let's ignore that scenario for now, besides
-            // in the onSocketConnected callback this function is executed again, so we are safe.
+            // in the onSyncComplete callback this function is executed again, so we are safe.
             field = value
         }
 
@@ -74,9 +75,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
             if (p1 != null) { //Unit tests will have null p1, let's ignore that.
                 val binder = p1 as MonkeyKitSocketService.MonkeyBinder
-                connectWithNewService(binder)
-                System.out.println("service connected")
                 onMonkeyKitServiceReadyListener?.onMonkeyKitServiceReady()
+                connectWithNewService(binder)
             }
 
         }
@@ -91,7 +91,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * @param socketService reference to the socketService that just bound with this delegate
      */
    fun connectWithNewService(binder: MonkeyKitSocketService.MonkeyBinder){
-        val socketService = binder.getService(this@MKDelegateActivity)
+        val socketService = binder.handshake(this@MKDelegateActivity)
         service = socketService
         var i = messagesToForwardToService.size - 1
         while(i > -1){
@@ -103,10 +103,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onStart() {
         super.onStart()
-        if (MonkeyKitSocketService.status == MonkeyKitSocketService.ServiceStatus.dead) {
-            startService(Intent(this, serviceClassName))
-        }
+        startService(Intent(this, serviceClassName))
         MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName)
+
     }
 
     override fun onStop() {
@@ -121,6 +120,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         unbindService(monkeyKitConnection)
         if (serviceMustBeStopped)
             stopMonkeyKitService()
+        keepServiceAlive = false
     }
 
     fun stopMonkeyKitService() {
