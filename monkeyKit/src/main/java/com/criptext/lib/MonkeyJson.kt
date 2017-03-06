@@ -27,9 +27,11 @@ class MonkeyJson {
      * @param props props object of the open response
      * @return
      */
-        public fun getLastSeenFromOpenResponseProps(props: JsonObject): String? {
-            if (!props.has("last_seen"))
-                return null
+        public fun getLastSeenFromOpenResponseProps(props: JsonObject): String {
+            //if user is online there is no "last_seen". Return current time
+            val onlineStatus = props.get("online")
+            if (onlineStatus != null && onlineStatus.asInt == 1)
+                return "" + System.currentTimeMillis()
 
             try {
                 val lastSeenObj = props.get("last_seen").asJsonObject
@@ -39,7 +41,8 @@ class MonkeyJson {
                     result = Math.min(it.next().value.asLong, result)
 
                 if (result == Long.MAX_VALUE)
-                    return null
+                    return "0"
+
                 else return "" + result;
             } catch (ex: IllegalStateException){
                 return props.get("last_seen").asString

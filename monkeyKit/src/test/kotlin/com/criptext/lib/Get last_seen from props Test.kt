@@ -3,6 +3,8 @@ package com.criptext.lib
 import com.google.gson.JsonParser
 import org.amshove.kluent.`should be`
 import org.amshove.kluent.`should equal`
+import org.amshove.kluent.`should not be`
+import org.amshove.kluent.`should not equal`
 import org.junit.Test
 
 /**
@@ -14,7 +16,7 @@ class `Get last_seen from props Test` {
 
     @Test
     fun `returns the minimum last_seen value in a group conversations open response`() {
-        val props = parser.parse("{\"online\":\"1\",\"members_online\":\"idm0yzeb459zpefgg3rw9udi,"
+        val props = parser.parse("{\"members_online\":\"idm0yzeb459zpefgg3rw9udi,"
            + "imic29drtsv4z2nj5n42huxr,ife4c0qdb0dopbg538lg14i\",\"last_seen\":{\"idm0yzeb459zpefg"
            + "g3rw9udi\":\"1486149945\",\"iq3z0iac52afgopoa28uayvi\":\"1486139357\",\"idkh61jqs9ia"
            + "151u7edhd7vi\":\"1486142078\",\"ikitzrp5cszzy0qctq4ims4i\":\"1486151284\",\"imic29dr"
@@ -28,7 +30,7 @@ class `Get last_seen from props Test` {
 
     @Test
     fun `returns the string last_seen value in a normal conversation open response`() {
-        val props = parser.parse("{\"online\":\"1\",\"last_seen\": \"1486149945\"}")
+        val props = parser.parse("{\"last_seen\": \"1486149945\"}")
                 .asJsonObject
 
         val last_seen = MonkeyJson.Companion.getLastSeenFromOpenResponseProps(props)
@@ -36,18 +38,13 @@ class `Get last_seen from props Test` {
     }
 
     @Test
-    fun `returns null if there is no last_seen value`() {
+    fun `returns null if there is no last_seen value but online is 1`() {
         val props = parser.parse("{\"online\":\"1\",\"members_online\":\"idm0yzeb459zpefgg3rw9udi\"}")
                 .asJsonObject
         val last_seen = MonkeyJson.Companion.getLastSeenFromOpenResponseProps(props)
-        last_seen `should be` null
+        last_seen `should not be` null
+        last_seen.length `should not equal` 0
+
     }
 
-    @Test
-    fun `returns null if last_seen object is empty`() {
-        val props = parser.parse("{\"online\":\"1\",\"last_seen\": {}}")
-                .asJsonObject
-        val last_seen = MonkeyJson.Companion.getLastSeenFromOpenResponseProps(props)
-        last_seen `should be` null
-    }
 }
