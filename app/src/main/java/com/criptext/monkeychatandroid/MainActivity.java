@@ -1392,4 +1392,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     public void removeMember(@NotNull String monkeyId) {
 
    }
+
+    @Override
+    public void startMonkeyActivityForResult(Intent intent, int requestCode) {
+        setKeepServiceAlive(true);
+        startActivityForResult(intent, requestCode);
+    }
 }

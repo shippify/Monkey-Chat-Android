@@ -381,12 +381,14 @@ abstract class MonkeyKitSocketService : Service() {
 
     inner class MonkeyBinder : Binder() {
 
+        val service: MonkeyKitSocketService
+            get() = this@MonkeyKitSocketService
         /**
-         * Sets delegates to the service, and returns this service instance so that the delegate
-         * may keep a reference to it and call service methods. Additionally if the service
-         * was already running but it is not connected, retry connection.
+         * Sets delegates to the service. The delegate must hold a reference to this service before
+         * calling this method. Additionally if the service was already running but it is not
+         * connected, retry connection.
          */
-        fun handshake(delegate: Any): MonkeyKitSocketService{
+        fun setDelegate(delegate: Any){
             if (delegate is AcknowledgeDelegate)
                 this@MonkeyKitSocketService.delegateHandler.setDelegate(delegate)
             if (delegate is ConnectionDelegate)
@@ -410,8 +412,6 @@ abstract class MonkeyKitSocketService : Service() {
 
             if (status >= ServiceStatus.running && !isSocketConnected())
                 startSocketConnection()
-
-            return this@MonkeyKitSocketService;
         }
 
     }

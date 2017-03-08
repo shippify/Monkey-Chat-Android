@@ -3,7 +3,6 @@ package com.criptext.lib
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.os.IBinder
 import android.util.Log
@@ -91,13 +90,19 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
      * @param socketService reference to the socketService that just bound with this delegate
      */
    fun connectWithNewService(binder: MonkeyKitSocketService.MonkeyBinder){
-        val socketService = binder.handshake(this@MKDelegateActivity)
+        val socketService = binder.service
         service = socketService
+
+        binder.setDelegate(this@MKDelegateActivity)
         var i = messagesToForwardToService.size - 1
         while(i > -1){
             val msg = messagesToForwardToService.removeAt(i)
             socketService.sendMessage(msg.message, msg.push, msg.isEncrypted)
             i -= 1
+        }
+
+        for(file in pendingFiles.values){
+            service!!.sendFileMessage(file.message, file.push, file.isEncrypted)
         }
     }
 
@@ -245,7 +250,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
         pendingFiles[newMessage.message_id] = DelegateMOKMessage(newMessage, pushMessage, isEncrypted)
 
-        if(isSocketConnected){
+        if(service != null && isSocketConnected){
             service!!.sendFileMessage(newMessage, pushMessage, isEncrypted)
         }
 
