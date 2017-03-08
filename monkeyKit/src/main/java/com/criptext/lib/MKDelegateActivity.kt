@@ -69,21 +69,24 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             field = value
         }
 
-
-    val monkeyKitConnection = object : ServiceConnection {
-        override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
-            if (p1 != null) { //Unit tests will have null p1, let's ignore that.
-                val binder = p1 as MonkeyKitSocketService.MonkeyBinder
-                onMonkeyKitServiceReadyListener?.onMonkeyKitServiceReady()
-                connectWithNewService(binder)
+    fun newServiceConnection(): CancellableServiceConnection {
+        return object : CancellableServiceConnection() {
+            override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
+                if (!cancelled && p1 != null) { //Unit tests will have null p1, let's ignore that.
+                    val binder = p1 as MonkeyKitSocketService.MonkeyBinder
+                    onMonkeyKitServiceReadyListener?.onMonkeyKitServiceReady()
+                    connectWithNewService(binder)
+                }
             }
 
-        }
-
-        override fun onServiceDisconnected(p0: ComponentName?) {
-            service = null
+            override fun onServiceDisconnected(p0: ComponentName?) {
+                service = null
+            }
         }
     }
+
+    lateinit var monkeyKitConnection: CancellableServiceConnection
+
 
     /**
      * Forward to service all the messages that the delegate generated while the service was unavailable.
@@ -109,6 +112,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     override fun onStart() {
         super.onStart()
         startService(Intent(this, serviceClassName))
+        monkeyKitConnection = newServiceConnection()
         MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName)
 
     }
@@ -123,6 +127,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         setOnline(!serviceMustBeStopped)
         service = null
         unbindService(monkeyKitConnection)
+        monkeyKitConnection.cancelled = true
         if (serviceMustBeStopped)
             stopMonkeyKitService()
         keepServiceAlive = false
