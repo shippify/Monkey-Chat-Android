@@ -314,9 +314,15 @@ abstract class MonkeyKitSocketService : Service() {
     fun startSocketConnection() {
         if(status == ServiceStatus.dead)
             return //status should be equal to initializing, if dead dont do anything
-        Log.d("HttpSync", "start socket connection")
-        asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
-        asyncConnSocket.conectSocket()
+        try {
+            Log.d("HttpSync", "start socket connection")
+            asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
+            asyncConnSocket.conectSocket()
+        } catch (ex: UninitializedPropertyAccessException) {
+            //Sometimes service calls this function without previously initializing
+            Log.e("MonkeyKit", "service not initialized! ${ex.message}" )
+            initializeMonkeyKitService()
+        }
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
