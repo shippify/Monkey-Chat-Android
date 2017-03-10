@@ -7,6 +7,7 @@ import com.activeandroid.query.Delete;
 import com.activeandroid.query.From;
 import com.activeandroid.query.Select;
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MOKNotification;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.http.HttpSync;
 import com.criptext.monkeychatandroid.MonkeyChat;
@@ -17,12 +18,14 @@ import com.criptext.monkeykitui.conversation.holder.ConversationTransaction;
 import com.criptext.monkeykitui.recycler.EndItem;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 import com.criptext.monkeykitui.util.Utils;
+import com.google.gson.JsonObject;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by daniel on 4/26/16.
@@ -298,6 +301,50 @@ public class DatabaseHandler {
             default:
                 return monkeyItem.getMessageText();
         }
+    }
+
+    public static ConversationItem addGroupMember(String id, String newMember) {
+        ConversationItem conv = DatabaseHandler.getConversationById(id);
+        if (conv != null) {
+            conv.addMember(newMember);
+            conv.save();
+            return conv;
+        }
+        return null;
+    }
+
+    public static ConversationItem removeGroupMember(String id, String removedMember) {
+        ConversationItem conv = DatabaseHandler.getConversationById(id);
+        if (conv != null) {
+            conv.removeMember(removedMember);
+            conv.save();
+            return conv;
+        }
+        return null;
+    }
+
+     public static ConversationItem updateGroupWithCreateNotification(MOKNotification not){
+        String groupId = not.getReceiverId();
+        String memberIds = not.getProps().get("members").getAsString();
+        JsonObject info = not.getProps().getAsJsonObject("info");
+        String conv_name = info.get("name").getAsString();
+        String avatar_url = info.get("avatar").getAsString();
+
+        ConversationItem conv = getConversationById(groupId);
+
+        if(conv == null){
+            conv = new ConversationItem(groupId, conv_name, System.currentTimeMillis(),
+                    "Write to this group", 0, true, memberIds, avatar_url,
+                    MonkeyConversation.ConversationStatus.empty.ordinal());
+            conv.save();
+        }else{
+            conv.setName(conv_name);
+            conv.setGroupMembers(memberIds);
+            conv.setAvatarFilePath(avatar_url);
+        }
+        syncConversation(conv);
+
+        return conv;
     }
 
     public static ConversationTransaction newCopyTransaction(final ConversationItem itemToCopy) {

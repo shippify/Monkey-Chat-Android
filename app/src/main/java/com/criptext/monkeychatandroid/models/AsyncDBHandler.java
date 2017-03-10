@@ -5,6 +5,7 @@ import android.os.AsyncTask;
 import com.activeandroid.Model;
 import com.criptext.comunication.MOKUser;
 import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
+import com.criptext.monkeychatandroid.models.conversation.SyncMissingConversationTask;
 import com.criptext.monkeychatandroid.models.conversation.task.FindConversationTask;
 import com.criptext.monkeychatandroid.models.conversation.task.FindConversationsTask;
 import com.criptext.monkeychatandroid.models.conversation.task.GetConversationPageTask;
@@ -200,5 +201,22 @@ public class AsyncDBHandler {
         };
         newTask.onQueryReturnedListener = trueListener;
         newTask.execute(mokUsers);
+    }
+
+    public void syncMissingConversationTask(final SyncMissingConversationTask.OnQueryReturnedListener listener,
+                                            String id, ConversationTransaction transaction){
+        final SyncMissingConversationTask newTask = new SyncMissingConversationTask(transaction);
+        pendingTasks.add(newTask);
+        SyncMissingConversationTask.OnQueryReturnedListener trueListener = new SyncMissingConversationTask.OnQueryReturnedListener() {
+            @Override
+            public void onQueryReturned(ConversationItem result) {
+                pendingTasks.remove(newTask);
+                if(listener != null){
+                    listener.onQueryReturned(result);
+                }
+            }
+        };
+        newTask.onQueryReturnedListener = trueListener;
+        newTask.execute(id);
     }
 }

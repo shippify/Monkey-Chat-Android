@@ -5,11 +5,14 @@ import android.os.AsyncTask;
 import com.activeandroid.ActiveAndroid;
 import com.criptext.comunication.MOKDelete;
 import com.criptext.comunication.MOKMessage;
+import com.criptext.comunication.MOKNotification;
 import com.criptext.http.HttpSync;
+import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
 import com.criptext.monkeychatandroid.models.message.MessageItem;
 import com.criptext.monkeykitui.recycler.MonkeyItem;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 
@@ -61,6 +64,45 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
         }
     }
 
+    private void syncNotifications(HttpSync.SyncData syncData) {
+        List<MOKNotification> notifications = syncData.getNotifications();
+        Iterator<MOKNotification> notificationIterator = notifications.iterator();
+        while (notificationIterator.hasNext()) {
+            MOKNotification not = notificationIterator.next();
+            if (not.getProps().has("monkey_action")) {
+                int type = not.getProps().get("monkey_action").getAsInt();
+                try {
+                    switch (type) {
+                        case com.criptext.comunication.MessageTypes.MOKGroupNewMember: {
+                                String id = not.getReceiverId();
+                                ConversationItem conv = DatabaseHandler.addGroupMember(id,
+                                        not.getProps().get("new_member").getAsString());
+                                if (conv == null)
+                                    syncData.getMissingConversations().add(id);
+                            }
+                            break;
+                        case com.criptext.comunication.MessageTypes.MOKGroupRemoveMember: {
+                                String id = not.getReceiverId();
+                                ConversationItem conv = DatabaseHandler.removeGroupMember(id,
+                                        not.getSenderId());
+                                if (conv == null)
+                                    syncData.getMissingConversations().add(id);
+                            }
+                            break;
+                        case com.criptext.comunication.MessageTypes.MOKGroupCreate: {
+                            ConversationItem conv = DatabaseHandler.updateGroupWithCreateNotification(not);
+                            //remove created group from missing conversations
+                            syncData.getMissingConversations().remove(conv.getConvId());
+                        }
+                        break;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
     @Override
     protected Integer doInBackground(Void... params) {
         HashMap<String, List<MOKMessage>> newMessagesMap = syncData.getNewMessages();
@@ -98,6 +140,8 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
                     DatabaseHandler.syncConversation(convId, syncData);
             }
 
+            syncNotifications(syncData);
+
             ActiveAndroid.setTransactionSuccessful();
             return 1;
         } finally {
@@ -112,6 +156,7 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
 
     @Override
     protected void onPostExecute(Integer result) {
-        runnable.run();
+        if (runnable != null)
+            runnable.run();
     }
 }

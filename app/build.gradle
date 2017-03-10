@@ -60,7 +60,7 @@ dependencies {
     testCompile 'org.khronos:opengl-api:gl1.1-android-2.1_r1'
     compile 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
     compile project(':monkeyKit')
-    compile 'com.github.Criptext:Monkey-UI-Android:8eadd9ef66'
+    compile 'com.github.Criptext:Monkey-UI-Android:1576360973'
 
     //Monkey SDK makes build resolve to use appcompat 22, we need to force it to use 23 for tests
     compile ('com.android.support:appcompat-v7:23.4.0') {

@@ -170,6 +170,7 @@ abstract class MonkeyKitSocketService : Service() {
                 CBTypes.onSocketConnected -> {
                     playPendingActions()
                     resendPendingMessages()
+                    Log.d("HttpSync", "send sync")
                     sendSync()
                     delegateHandler.processMessageFromHandler(method, info)
                 }
@@ -207,6 +208,7 @@ abstract class MonkeyKitSocketService : Service() {
                     else MonkeyKitSocketService.ServiceStatus.running
                     //add messages that were received while syncing
                     addDataToSyncResponse(batch)
+                    Log.d("HttpSync", "sync resceived time for database sync")
 
                     syncDatabase(batch, Runnable {
                         //At this point initialization is complete. We are ready to receive and send messages
@@ -214,6 +216,7 @@ abstract class MonkeyKitSocketService : Service() {
                         //this is needed for uploading photos.
                         lastTimeSynced = batch.newTimestamp
                         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
+                        Log.d("HttpSync", "sync complete update: $lastTimeSynced")
                         playPendingActions()
                         delegateHandler.processMessageFromHandler(method, info)
                         if (startedManually && !delegateHandler.hasDelegate)  //if service started manually, stop it manually with a timeout task
@@ -311,6 +314,7 @@ abstract class MonkeyKitSocketService : Service() {
     fun startSocketConnection() {
         if(status == ServiceStatus.dead)
             return //status should be equal to initializing, if dead dont do anything
+        Log.d("HttpSync", "start socket connection")
         asyncConnSocket = AsyncConnSocket(clientData, messageHandler, this);
         asyncConnSocket.conectSocket()
     }

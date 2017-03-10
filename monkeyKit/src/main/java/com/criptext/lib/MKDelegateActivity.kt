@@ -126,8 +126,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         val serviceMustBeStopped = !this.isChangingConfigurations && !keepServiceAlive
         setOnline(!serviceMustBeStopped)
         service = null
-        unbindService(monkeyKitConnection)
         monkeyKitConnection.cancelled = true
+        unbindService(monkeyKitConnection)
         if (serviceMustBeStopped)
             stopMonkeyKitService()
         keepServiceAlive = false
@@ -624,6 +624,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         //don't accept repeated requests
         if(lastMoreConversationsRequest == null || lastMoreConversationsRequest!!.expired ||
                 lastMoreConversationsRequest!!.acknowledged && fromTimestamp != lastMoreConversationsRequest!!.timestamp) {
+            Log.d("HttpSync", "getConversationsFromServer $quantity $fromTimestamp")
             lastMoreConversationsRequest = MoreDataRequest(fromTimestamp)
             socketService?.getAllConversations(quantity, fromTimestamp)
         }

@@ -32,6 +32,8 @@ import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.AsyncDBHandler;
 import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
+import com.criptext.monkeychatandroid.models.conversation.FetchedConversationListData;
+import com.criptext.monkeychatandroid.models.conversation.SyncMissingConversationTask;
 import com.criptext.monkeychatandroid.models.conversation.TransactionCreator;
 import com.criptext.monkeychatandroid.models.conversation.task.FindConversationTask;
 import com.criptext.monkeychatandroid.models.conversation.task.GetConversationPageTask;
@@ -82,8 +84,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Stack;
 
 public class MainActivity extends MKDelegateActivity implements ChatActivity, ConversationsActivity,
@@ -641,6 +645,16 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         }
     }
 
+    /**
+     * get info for missing conversations.
+     * @param missingConversations ids of missing conversations
+     */
+    private void getMissingConversationsInfo(HashSet<String> missingConversations) {
+        for (String id : missingConversations) {
+            getConversationInfo(id);
+        }
+    }
+
     @Override
     public void onSyncComplete(@NonNull HttpSync.SyncData syncData) {
         syncStatus.cancelMessage();
@@ -667,6 +681,10 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                 }
             }, activeConversationId, newMessagesForActiveConversation, 0);
         }
+
+        HashSet<String> missingConversations = syncData.getMissingConversations();
+        if(!missingConversations.isEmpty())
+            getMissingConversationsInfo(missingConversations);
 
         if(!syncData.getUsers().isEmpty()){
             getUsersInfo(StringUtils.join(syncData.getUsers(), ","));
@@ -735,29 +753,17 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
 
     @Override
     public void onGetGroupInfo(@NotNull MOKConversation mokConversation, @Nullable Exception e) {
-        if(e==null){
-            String convName = "Unknown group";
-            String admins = "";
-            JsonObject userInfo = mokConversation.getInfo();
-            if(userInfo!=null && userInfo.has("name"))
-                convName = userInfo.get("name").getAsString();
-            ConversationItem conversationItem = new ConversationItem(mokConversation.getConversationId(),
-                    convName, System.currentTimeMillis(), "Write to this group",
-                    1, true, mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
-                    mokConversation.getAvatarURL(), MonkeyConversation.ConversationStatus.empty.ordinal());
-            if(userInfo!=null && userInfo.has("admin")) {
-                admins = userInfo.get("admin").getAsString();
-                conversationItem.setAdmins(admins);
-            }
 
-            asyncDBHandler.storeNewConversation(new StoreNewConversationTask.OnQueryReturnedListener() {
+        if(e==null){
+            asyncDBHandler.syncMissingConversationTask(new SyncMissingConversationTask.OnQueryReturnedListener() {
                 @Override
                 public void onQueryReturned(ConversationItem result) {
-                getState().conversations.addNewConversation(result); //TODO update silently?
+                    ConversationsList conversations = getState().conversations;
+                    conversations.insertOrUpdateConversation(result);
                 }
-            }, conversationItem);
-
+            }, mokConversation.getConversationId(), TransactionCreator.fromGroupInfo(mokConversation));
         }
+
     }
 
     @Override
@@ -774,7 +780,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             asyncDBHandler.storeNewConversation(new StoreNewConversationTask.OnQueryReturnedListener() {
                 @Override
                 public void onQueryReturned(ConversationItem result) {
-                getState().conversations.addNewConversation(result); //TODO update silently??
+                getState().conversations.addNewConversation(result);
                 }
             }, conversationItem);
         }
@@ -814,63 +820,28 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         super.onGetConversations(fetchedConversations, e);
         if(e!=null) {
             e.printStackTrace();
+            getState().conversations.setHasReachedEnd(true);
+            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
             return;
         }
 
-        if(fetchedConversations.isEmpty())
-          getState().conversations.setHasReachedEnd(true);
-        else
-            Log.d("MainActvity", "getconversations. first is " + fetchedConversations.get(0).getConversationId());
+        if(fetchedConversations.isEmpty()) {
+            getState().conversations.setHasReachedEnd(true);
+            return;
+        }
 
-        ArrayList<ConversationItem> monkeyConversations = new ArrayList<>();
-        for(MOKConversation mokConversation : fetchedConversations){
-            String convName = "Unknown";
-            String admins = null;
-            String secondaryText = "Write to this conversation";
-            if(mokConversation.isGroup())
-                secondaryText = "Write to this group";
-            JsonObject convInfo = mokConversation.getInfo();
-            if(convInfo!=null && convInfo.has("name"))
-                convName = convInfo.get("name").getAsString();
-            MessageItem lastItem = null;
-            if(mokConversation.getLastMessage() != null)
-            lastItem = DatabaseHandler.createMessage(mokConversation.getLastMessage(),
-                    downloadDir.getAbsolutePath(), getState().myMonkeyID);
-            ConversationItem conversationItem = new ConversationItem(mokConversation.getConversationId(),
-                    convName, mokConversation.getLastModified(),
-                    DatabaseHandler.getSecondaryTextByMessageType(lastItem, mokConversation.isGroup()),
-                    mokConversation.getUnread(),
-                    mokConversation.isGroup(), mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
-                    mokConversation.getAvatarURL(),
-                    MonkeyConversation.ConversationStatus.receivedMessage.ordinal());
-            if(convInfo!=null && convInfo.has("admin")) {
-                admins = convInfo.get("admin").getAsString();
-                conversationItem.setAdmins(admins);
-            }
-            if(mokConversation.getUnread()>0) {
-                conversationItem.status = MonkeyConversation.ConversationStatus.receivedMessage.ordinal();
-            }
-            else if(mokConversation.getLastMessage()!=null){
-                if(mokConversation.getLastMessage().isMyOwnMessage(getState().myMonkeyID)){
-                    conversationItem.status = MonkeyConversation.ConversationStatus.deliveredMessage.ordinal();
-                }
-                else{
-                    conversationItem.status = MonkeyConversation.ConversationStatus.receivedMessage.ordinal();
-                }
-            }
-            monkeyConversations.add(conversationItem);
-        }
-        final ConversationItem[] conversationItems = new ConversationItem[monkeyConversations.size()];
-        for(int i = 0; i < monkeyConversations.size(); i++){
-            conversationItems[i] = new ConversationItem(monkeyConversations.get(i));
-        }
+        final FetchedConversationListData listData = FetchedConversationListData.fromMOKConversationList(
+                fetchedConversations, downloadDir, getState().myMonkeyID);
+
+
+        final ConversationItem[] conversationItems = listData.fetchedConversations;
         if(conversationItems.length > 0)
             asyncDBHandler.storeConversationPage(new SaveModelTask.OnQueryReturnedListener() {
                 @Override
                 public void onQueryReturned(Model[] storedModels) {
                     ConversationItem[] storedConversations = (ConversationItem[]) storedModels;
                     getState().conversations.addOldConversations(Arrays.asList(storedConversations),
-                            conversationItems.length == 0);
+                            storedModels.length == 0);
                 }
             }, conversationItems);
     }
