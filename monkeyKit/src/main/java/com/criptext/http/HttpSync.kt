@@ -40,7 +40,6 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         try {
             http.newCall(request).execute()
         } catch (ex: IOException) {
-            //Log.d("HttpSync", "timed out: ${ex.message}")
             null
         }
 
@@ -58,7 +57,6 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
                     .build()
             var response: Response? = null
             while (response == null) {
-                Log.d("HttpSync", "new call. timeout is : $timeout")
                 val http = OpenConversationTask.authorizedHttpClient(clientData, timeout)
                 response = executeHttp(http, request)
                 timeout += 10
@@ -67,7 +65,6 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
             if (response.isSuccessful) {
                 val body = response.body()
                 val jsonResponse = parser.parse(body.string()).asJsonObject
-                Log.d("HttpSync", "new resp : $jsonResponse")
                 val data = jsonResponse.getAsJsonObject("data")
                 batch += processBatch(data)
                 remaining = data.get("remaining").asInt
@@ -83,7 +80,6 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         if (isFirstTime)
             KeyStoreCriptext.setFirstSyncSuccess(contextRef.get())
 
-        //Log.d("HttpSync", "response is ready")
         return batch
     }
 
@@ -120,15 +116,12 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
         val messageIsEncrypted = if(props?.has("encr") ?: false) props!!.get("encr").asInt == 1 else false
         val remote = AsyncConnSocket.createMOKMessageFromJSON(currentMessage, params, props, true)
         if (messageIsEncrypted){
-            Log.d("HttpSync", "decrypting message ${remote.message_id}")
             val existingKey = getKeyForConversation(remote.sid)
             val validKey = OpenConversationTask.attemptToDecrypt(remote, clientData, aesUtil, existingKey)
             if(validKey == null){
                 //No key could decrypt this message, discard
-                Log.d("HttpSync", "discard message ${remote.message_id}")
                 return 0L
             } else {
-                Log.d("HttpSync", "decrypt success message ${remote.message_id}")
                 if(validKey != existingKey)
                     keyMap.put(remote.sid, validKey) //update the keyMap with valid keys
             }
