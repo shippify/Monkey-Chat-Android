@@ -42,12 +42,11 @@ abstract class MonkeyGcmListenerService: GcmListenerService() {
      * @param loc_args argumentos loc-args separados por comas en un string
      * @return un array con todos los argumentos.
      */
-    protected fun getNotificationArgs(loc_args: String?): Array<String>?{
-        if(loc_args != null){
-            GcmNotificationParser().localizedArgumentsToArray(loc_args)
-        }
-        return null
+    protected fun getNotificationArgs(loc_args: String?): Array<String>{
+        if(loc_args != null)
+            return GcmNotificationParser().localizedArgumentsToArray(loc_args)
 
+        return arrayOf()
     }
 
     abstract val socketServiceClass : Class<*>
