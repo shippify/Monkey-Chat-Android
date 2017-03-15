@@ -44,8 +44,7 @@ abstract class MonkeyGcmListenerService: GcmListenerService() {
      */
     protected fun getNotificationArgs(loc_args: String?): Array<String>?{
         if(loc_args != null){
-            val newArgs = StringTokenizer(loc_args, ",");
-            return newArgs.toList().toTypedArray() as Array<String>;
+            GcmNotificationParser().localizedArgumentsToArray(loc_args)
         }
         return null
 
