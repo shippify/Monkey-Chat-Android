@@ -27,7 +27,10 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     val isSocketConnected: Boolean
         get () =  service?.isSocketConnected() ?:
-                (MonkeyKitSocketService.status >= MonkeyKitSocketService.ServiceStatus.running)
+                (MonkeyKitSocketService.status == MonkeyKitSocketService.ServiceStatus.running)
+
+    val isSyncing: Boolean
+        get() = MonkeyKitSocketService.status == MonkeyKitSocketService.ServiceStatus.syncing
 
     private val messagesToForwardToService = ArrayList<DelegateMOKMessage>()
     val pendingFiles = HashMap<String, DelegateMOKMessage>();

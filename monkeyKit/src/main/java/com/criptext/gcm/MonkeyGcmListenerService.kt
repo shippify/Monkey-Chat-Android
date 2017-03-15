@@ -19,7 +19,7 @@ abstract class MonkeyGcmListenerService: GcmListenerService() {
     override fun onMessageReceived(from: String?, data: Bundle?) {
         super.onMessageReceived(from, data)
         //Log.d("GCMListener", data!!.toString() + " should notify ${MonkeyKitSocketService.status}");
-        if(MonkeyKitSocketService.status < MonkeyKitSocketService.ServiceStatus.bound){
+        if(MonkeyKitSocketService.status < MonkeyKitSocketService.ServiceStatus.running){
             val args = getNotificationArgs(data!!.getString("loc-args"));
             val key = data.getString("loc-key");
             val message = data.getString("message");

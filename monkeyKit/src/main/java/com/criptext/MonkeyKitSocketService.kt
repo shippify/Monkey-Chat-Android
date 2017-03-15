@@ -126,7 +126,7 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun downloadFile(fileMessageId: String, fileName: String, props: String, monkeyId: String,
                      sortdate: Long, conversationId: String){
-        if(status == ServiceStatus.initializing){
+        if(!serviceAPIisReady){
             pendingActions.add(Runnable {
                 downloadFile(fileMessageId, fileName, props, monkeyId, sortdate, conversationId)
             })
@@ -181,7 +181,7 @@ abstract class MonkeyKitSocketService : Service() {
                 }
                 CBTypes.onMessageReceived -> {
                     val message = info[0] as MOKMessage
-                    if (status == ServiceStatus.initializing)
+                    if (status == ServiceStatus.syncing)
                         messagesReceivedDuringSync.add(message)
                     else {
                         val tipo = CriptextDBHandler.getMonkeyActionType(message);
@@ -203,8 +203,7 @@ abstract class MonkeyKitSocketService : Service() {
                 }
                 CBTypes.onSyncComplete -> {
                     val batch = info[0] as HttpSync.SyncData;
-                    status = if (delegateHandler.hasDelegate) MonkeyKitSocketService.ServiceStatus.bound
-                    else MonkeyKitSocketService.ServiceStatus.running
+                    status = MonkeyKitSocketService.ServiceStatus.running
                     //add messages that were received while syncing
                     addDataToSyncResponse(batch)
 
@@ -239,7 +238,7 @@ abstract class MonkeyKitSocketService : Service() {
                     val params = info[3] as JsonObject
                     val datetime = info[4] as String
 
-                    if (status == MonkeyKitSocketService.ServiceStatus.initializing)
+                    if (status == MonkeyKitSocketService.ServiceStatus.syncing)
                         notificationsReceivedDuringSync.add(MOKNotification(messageId, senderId,
                                 receipientId, params, JsonObject(), datetime.toLong()))
                     else delegateHandler.processMessageFromHandler(method, info)
@@ -275,9 +274,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        if(status == ServiceStatus.dead)
-            initializeMonkeyKitService()
-
+        initializeMonkeyKitService()
         return MonkeyBinder()
     }
 
@@ -323,7 +320,6 @@ abstract class MonkeyKitSocketService : Service() {
 
     override fun onUnbind(intent: Intent?): Boolean {
         delegateHandler.clear()
-        status = ServiceStatus.running
         if(startedManually) { //if service started manually, stop it manually with a timeout task
             ServiceTimeoutTask(this).execute()
         }
@@ -369,7 +365,7 @@ abstract class MonkeyKitSocketService : Service() {
         //persist last time synced
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
         //unregister connectivity change receiver
-        if(receiver!=null)
+        if(receiver != null)
             unregisterReceiver(receiver)
     }
 
@@ -416,7 +412,7 @@ abstract class MonkeyKitSocketService : Service() {
             if (delegate is MonkeyKitDelegate)
                 this@MonkeyKitSocketService.delegateHandler.setDelegate(delegate)
 
-            if (status >= ServiceStatus.running && !isSocketConnected())
+            if (status == ServiceStatus.running && !isSocketConnected())
                 startSocketConnection()
         }
 
@@ -433,7 +429,7 @@ abstract class MonkeyKitSocketService : Service() {
 
     private fun decryptAES(encryptedText: String) = aesutil.decrypt(encryptedText)
 
-    fun isSocketConnected() = status >= ServiceStatus.running && isAsyncSocketConnected()
+    fun isSocketConnected() = status > ServiceStatus.initializing && isAsyncSocketConnected()
 
     private fun isAsyncSocketConnected(): Boolean
      {
@@ -537,8 +533,8 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun sendSync() {
-        status = ServiceStatus.initializing
-        sendSync(lastTimeSynced, 50)
+        status = ServiceStatus.syncing
+        sendSync(lastTimeSynced, 100)
     }
 
     /**
@@ -625,7 +621,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyid monkeyid ID of the user or group.
      */
     fun getUserInfoById(monkeyId: String){
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 getUserInfoById(monkeyId)
             })
@@ -638,7 +634,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyIds string separate by coma with the monkey ids
      */
     fun getUsersInfo(monkeyIds: String){
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 getUsersInfo(monkeyIds)
             })
@@ -651,7 +647,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyid monkeyid ID of the user or group.
      */
     fun getGroupInfoById(monkeyId: String){
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 getGroupInfoById(monkeyId)
             })
@@ -665,7 +661,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param userInfo JSONObject that contains user data.
      */
     fun updateUserData(monkeyId: String, userInfo: JSONObject) {
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 updateUserData(monkeyId, userInfo)
             })
@@ -679,7 +675,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param groupInfo JSONObject that contains group data.
      */
     fun updateGroupData(monkeyId: String, groupInfo: JSONObject) {
-        if(status == ServiceStatus.initializing) {
+        if(status < ServiceStatus.initializing) {
             pendingActions.add(Runnable {
                 updateGroupData(monkeyId, groupInfo)
             })
@@ -702,7 +698,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param lastTimeStamp last timestamp of the message loaded.
      */
     fun getConversationMessages(conversationId: String, numberOfMessages: Int, lastTimeStamp: String){
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 getConversationMessages(conversationId, numberOfMessages, lastTimeStamp)
             })
@@ -716,7 +712,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param monkeyid monkeyid ID of the user.
      */
     fun deleteConversation(conversationId: String){
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 deleteConversation(conversationId)
             })
@@ -731,7 +727,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @param group_id String with the group id (optional)
      */
     fun createGroup(members: String, group_name: String, group_id: String?){
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 createGroup(members, group_name, group_id)
             })
@@ -793,7 +789,7 @@ abstract class MonkeyKitSocketService : Service() {
                         newMessage.params ?: JsonObject(), props, encrypted);
 
 
-                if(status == ServiceStatus.initializing) {
+                if(!serviceAPIisReady) {
                     pendingMessageStore.add(this, json)
                 } else {
                     addMessageToWatchdog(json)
@@ -810,7 +806,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun sendFileMessage(newMessage: MOKMessage, pushMessage: PushMessage, encrypted: Boolean){
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 sendFileMessage(newMessage, pushMessage, encrypted)
             })
@@ -832,7 +828,7 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun openConversation(conversationID: String){
 
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 openConversation(conversationID)
             })
@@ -864,7 +860,7 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun closeConversation(conversationId: String) {
 
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 closeConversation(conversationId)
             })
@@ -895,7 +891,7 @@ abstract class MonkeyKitSocketService : Service() {
      */
     fun setOnline(online: Boolean) {
 
-        if(status == ServiceStatus.initializing) {
+        if(!serviceAPIisReady) {
             pendingActions.add(Runnable {
                 setOnline(online)
             })
@@ -938,7 +934,7 @@ abstract class MonkeyKitSocketService : Service() {
             json.add("args", args)
             json.addProperty("cmd", MessageTypes.MOKProtocolDelete)
 
-            if(status == ServiceStatus.initializing) {
+            if(!serviceAPIisReady) {
                 pendingMessageStore.add(this, json)
             } else {
                 addMessageToWatchdog(json);
@@ -1090,6 +1086,9 @@ abstract class MonkeyKitSocketService : Service() {
         val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
         var status = ServiceStatus.dead
 
+        private val serviceAPIisReady: Boolean
+            get() = status == ServiceStatus.running
+
         fun bindMonkeyService(context:Context, connection: ServiceConnection, service:Class<*>) {
             val intent = Intent(context, service)
             context.bindService(intent, connection, Context.BIND_ADJUST_WITH_ACTIVITY)
@@ -1097,7 +1096,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     enum class ServiceStatus {
-        unauthorized, dead, initializing, running, bound
+        unauthorized, dead, initializing, syncing, running
     }
 
 }

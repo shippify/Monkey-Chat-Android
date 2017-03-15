@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 import com.activeandroid.Model;
 import com.criptext.ClientData;
+import com.criptext.MonkeyKitSocketService;
 import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
 import com.criptext.comunication.MOKNotification;
@@ -183,8 +184,13 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         setOnMonkeyKitServiceReadyListener(new OnMonkeyKitServiceReadyListener() {
             @Override
             public void onMonkeyKitServiceReady() {
-                final Utils.ConnectionStatus connStatus = isSocketConnected()
-                        ? Utils.ConnectionStatus.connected : Utils.ConnectionStatus.connecting;
+                final Utils.ConnectionStatus connStatus;
+                if (isSocketConnected())
+                    connStatus = Utils.ConnectionStatus.connected;
+                else if (isSyncing())
+                    connStatus = Utils.ConnectionStatus.syncing;
+                else
+                    connStatus = Utils.ConnectionStatus.connecting;
                 setStatusBarState(connStatus);
             }
 
@@ -253,6 +259,15 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             return false;
         }
 
+    }
+
+    @Override
+    public void onSocketConnected() {
+        super.onSocketConnected();
+        if(isSyncing())
+            setStatusBarState(Utils.ConnectionStatus.syncing);
+        else
+            setStatusBarState(Utils.ConnectionStatus.connected);
     }
 
     @Override
@@ -1046,6 +1061,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
                     messages.addOldMessages(new ArrayList<MonkeyItem>(messageItems), false);
                 }
                 else {
+                    if (isSyncing())
+                        Toast.makeText(MainActivity.this, "Can't load data from server during sync, please wait",
+                                Toast.LENGTH_LONG).show();
                     requestMessagesFromServer(conversationId);
                 }
             }
@@ -1175,6 +1193,9 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             public void onQueryReturned(List<ConversationItem> conversationPage) {
                 if(conversationPage.isEmpty()) {
                     MonkeyConversation lastItem;
+                    if (isSyncing())
+                        Toast.makeText(MainActivity.this, "Can't load data from server during sync, please wait",
+                                Toast.LENGTH_LONG).show();
                     if((lastItem = getState().conversations.getLastConversation()) != null) {
                         getConversationsFromServer(conversationsToRequest, lastItem.getDatetime() / 1000);
                     } else {

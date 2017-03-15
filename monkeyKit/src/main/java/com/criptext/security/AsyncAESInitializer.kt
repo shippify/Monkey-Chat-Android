@@ -34,7 +34,6 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
         socketServiceRef = WeakReference(socketService)
         appContextRef = WeakReference(socketService.applicationContext)
         isSyncService = socketService.startedManually
-                && MonkeyKitSocketService.status != MonkeyKitSocketService.ServiceStatus.bound
     }
 
     val clientData: ClientData
