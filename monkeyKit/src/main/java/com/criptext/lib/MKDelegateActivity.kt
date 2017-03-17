@@ -680,6 +680,25 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         socketService?.addGroupMember(new_member, group_id)
     }
 
+  /**
+     * Update the metada of a user
+     * @param monkeyid monkeyid ID of the user.
+     * @param userInfo JSONObject that contains user data.
+     */
+    fun updateUserData(monkeyId: String, userInfo: JSONObject) {
+        service?.updateUserData(monkeyId, userInfo)
+    }
+
+    /**
+     * Update the metada of a group
+     * @param monkeyid monkeyid ID of the user.
+     * @param groupInfo JSONObject that contains group data.
+     */
+    fun updateGroupData(monkeyId: String, groupInfo: JSONObject) {
+        service?.updateGroupData(monkeyId, groupInfo)
+    }
+
+
 
     /**
      * Requests from server necessary info about a list of users. This info is often used to render
