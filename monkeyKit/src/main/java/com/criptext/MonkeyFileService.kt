@@ -55,9 +55,10 @@ abstract class MonkeyFileService: IntentService(TAG){
             val mokMessage = MOKMessage(intent)
             if(aesUtil == null)
                 aesUtil = AESUtil(this, mokMessage.sid)
-
-            val ext = FilenameUtils.getExtension(mokMessage.msg)
-            val rawByteData = IOUtils.toByteArray(FileInputStream(mokMessage.msg));
+            val filepath = mokMessage.msg
+            checkFileToUpload(filepath)
+            val ext = FilenameUtils.getExtension(filepath)
+            val rawByteData = IOUtils.toByteArray(FileInputStream(filepath));
             val processedByteData = processSentBytes(intent.getBooleanExtra(ENCR_KEY, true), rawByteData)
             val data = createUploadDataJsonString(mokMessage, intent.getStringExtra(PUSH_KEY), rawByteData.size)
 
@@ -110,6 +111,13 @@ abstract class MonkeyFileService: IntentService(TAG){
 
     }
 
+    fun checkFileToUpload(filepath: String) {
+        val file = File(filepath)
+        if (!file.exists())
+            throw IllegalArgumentException("Attempted to upload non-existant file: $filepath")
+        if (file.isDirectory)
+            throw IllegalArgumentException("Attempted to upload directory: $filepath")
+    }
     /**
      * decrypts the bytes of a file download. If the decryption fails, or there are no valid keys
      * in the local storage, sends open conversation request to server to get keys. If new keys can't
@@ -143,7 +151,7 @@ abstract class MonkeyFileService: IntentService(TAG){
         var resultBytes: ByteArray?
         if(downloadBytes != null){
             val props = mokDownload.props
-            if(props.get("encr").asString == "1"){//Decrypt
+            if(props.get("encr")?.asString == "1"){//Decrypt
                 val claves = KeyStoreCriptext.getString(this, mokDownload.sid);
                 val claveArray = claves.split(":")
                 resultBytes = decryptFile(downloadBytes, claveArray, mokDownload, clientData)
@@ -151,7 +159,7 @@ abstract class MonkeyFileService: IntentService(TAG){
                 if(resultBytes == null)
                     return null //bad decrypt. exit.
 
-                if(props.get("device").asString == "web"){
+                if(props.get("device")?.asString == "web"){
                     var utf8str = resultBytes.toString(charset("utf8"))
                     utf8str = utf8str.substring(utf8str.indexOf(",") + 1, utf8str.length);
                     resultBytes = Base64.decode(utf8str.toByteArray(charset("utf8")), 0);
