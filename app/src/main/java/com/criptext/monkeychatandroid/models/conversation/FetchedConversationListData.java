@@ -30,6 +30,7 @@ public class FetchedConversationListData {
                                                                File downloadDir, String monkeyId) {
         final HashSet<String> usersToFetch = new HashSet<>();
         ArrayList<ConversationItem> monkeyConversations = new ArrayList<>();
+        final DatabaseHandler db = new DatabaseHandler();
         for(MOKConversation mokConversation : list){
             String convName = "Unknown";
             String admins;
@@ -38,11 +39,11 @@ public class FetchedConversationListData {
                 convName = convInfo.get("name").getAsString();
             MessageItem lastItem = null;
             if(mokConversation.getLastMessage() != null)
-            lastItem = DatabaseHandler.createMessage(mokConversation.getLastMessage(),
+            lastItem = db.createMessage(mokConversation.getLastMessage(),
                     downloadDir.getAbsolutePath(), monkeyId);
             ConversationItem conversationItem = new ConversationItem(mokConversation.getConversationId(),
                     convName, mokConversation.getLastModified() * 1000,
-                    DatabaseHandler.getSecondaryTextByMessageType(lastItem, mokConversation.isGroup()),
+                    db.getSecondaryTextByMessageType(lastItem, mokConversation.isGroup()),
                     mokConversation.getUnread(),
                     mokConversation.isGroup(), mokConversation.getMembers()!=null? TextUtils.join("," ,mokConversation.getMembers()):"",
                     mokConversation.getAvatarURL(),

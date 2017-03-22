@@ -20,6 +20,7 @@ import java.io.File;
 
 public class MyServiceClass extends MonkeyKitSocketService{
     private File _downloadDir;
+    private final DatabaseHandler db = new DatabaseHandler();
 
     private File getDownloadDir() {
         if(_downloadDir == null)
@@ -29,7 +30,7 @@ public class MyServiceClass extends MonkeyKitSocketService{
     @Override
     public void storeReceivedMessage(final MOKMessage message, final Runnable runnable) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        DatabaseHandler.saveIncomingMessage(DatabaseHandler.createMessage(message, getDownloadDir().getAbsolutePath(),
+        db.saveIncomingMessage(db.createMessage(message, getDownloadDir().getAbsolutePath(),
                 prefs.getString(MonkeyChat.MONKEY_ID, "")), runnable);
 
     }

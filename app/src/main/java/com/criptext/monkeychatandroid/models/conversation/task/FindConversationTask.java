@@ -21,7 +21,7 @@ public class FindConversationTask extends AsyncTask<String, Void, ConversationIt
     @Override
     protected ConversationItem doInBackground(String... params) {
         for(String s : params){
-            ConversationItem item = DatabaseHandler.getConversationById(s);
+            ConversationItem item = new DatabaseHandler().getConversationById(s);
             if(item != null)
                 return item;
         }

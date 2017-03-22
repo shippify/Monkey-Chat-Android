@@ -36,7 +36,7 @@ public class DatabaseHandler {
     ******* MESSAGES ******
     ***********************/
 
-    public static void saveIncomingMessage(MessageItem messageItem, Runnable runnable) {
+    public  void saveIncomingMessage(MessageItem messageItem, Runnable runnable) {
 
         if (!existMessage(messageItem.getMessageId())){ //NO DUPLICATED
             //TODO use a callback
@@ -45,12 +45,12 @@ public class DatabaseHandler {
         }
     }
 
-    public static void storeNewMessage(MessageItem messageItem) {
+    public  void storeNewMessage(MessageItem messageItem) {
         //Message doesn't exists in DB so we just use save function
         new SaveModelTask().execute(messageItem);
     }
 
-    public static void saveMessages(List<MessageItem> messageItems){
+    public  void saveMessages(List<MessageItem> messageItems){
         ActiveAndroid.beginTransaction();
         try {
             for(MessageItem messageItem: messageItems){
@@ -63,18 +63,18 @@ public class DatabaseHandler {
         }
     }
 
-    public static MessageItem getMessageById(String id) {
+    public  MessageItem getMessageById(String id) {
         if(id == null){
             return null;
         }
         return new Select().from(MessageItem.class).where("messageId = ?", id).executeSingle();
     }
 
-    public static boolean existMessage(String id) {
+    public  boolean existMessage(String id) {
         return getMessageById(id) != null;
     }
 
-    public static MessageItem createMessage(MOKMessage message, String pathToMessagesDir, String myMonkeyId){
+    public  MessageItem createMessage(MOKMessage message, String pathToMessagesDir, String myMonkeyId){
 
         MonkeyItem.MonkeyItemType type = MonkeyItem.MonkeyItemType.text;
         if (message.isMediaType()) {
@@ -122,7 +122,7 @@ public class DatabaseHandler {
         return item;
     }
 
-    public static List<MessageItem> getMessages(String conversationId, int rowsPerPage, int pageOffset){
+    public  List<MessageItem> getMessages(String conversationId, int rowsPerPage, int pageOffset){
             return new Select()
                     .from(MessageItem.class)
                     .where("conversationId = ?", conversationId)
@@ -132,7 +132,7 @@ public class DatabaseHandler {
                     .execute();
     }
 
-    public static MessageItem getLastMessage(String conversationId) {
+    public  MessageItem getLastMessage(String conversationId) {
         return new Select()
                 .from(MessageItem.class)
                 .where("conversationId = ?", conversationId)
@@ -140,11 +140,11 @@ public class DatabaseHandler {
                 .executeSingle();
     }
 
-    public static void deleteAll(@NotNull String conversationId){
+    public  void deleteAll(@NotNull String conversationId){
         new Delete().from(MessageItem.class).where("conversationId = ?", conversationId).execute();
     }
 
-    public static void updateMessageStatus(String messageId, String OldMessageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
+    public  void updateMessageStatus(String messageId, String OldMessageId, MonkeyItem.DeliveryStatus outgoingMessageStatus){
         MessageItem result = getMessageById(OldMessageId != null ? OldMessageId : messageId);
         if (result != null) {
             result.setStatus(outgoingMessageStatus.ordinal());
@@ -156,7 +156,7 @@ public class DatabaseHandler {
         }
     }
 
-    public static void markMessagesAsError(final ArrayList<MOKMessage> errorMessages) {
+    public  void markMessagesAsError(final ArrayList<MOKMessage> errorMessages) {
 
         ActiveAndroid.beginTransaction();
         try {
@@ -176,7 +176,7 @@ public class DatabaseHandler {
         }
     }
 
-    public static void deleteMessage(MessageItem message){
+    public  void deleteMessage(MessageItem message){
         new DeleteModelTask().execute(message);
     }
 
@@ -184,7 +184,7 @@ public class DatabaseHandler {
      ******* CONVERSATIONS ******
      ****************************/
 
-    public static List<ConversationItem> getConversations(int conversationsToLoad, int loadedConversations){
+    public  List<ConversationItem> getConversations(int conversationsToLoad, int loadedConversations){
 
         return new Select()
                 .from(ConversationItem.class)
@@ -194,15 +194,15 @@ public class DatabaseHandler {
                 .execute();
     }
 
-    public static void saveConversations(ConversationItem[] conversations){
+    public  void saveConversations(ConversationItem[] conversations){
         new SaveModelTask().execute(conversations);
     }
 
-    public static ConversationItem getConversationById(String id) {
+    public  ConversationItem getConversationById(String id) {
         return new Select().from(ConversationItem.class).where("idConv = ?", id).executeSingle();
     }
 
-    public static HashMap<String, ConversationItem> getConversationsById(String... ids){
+    public  HashMap<String, ConversationItem> getConversationsById(String... ids){
         HashMap<String, ConversationItem> result = new HashMap<>();
         for(String id : ids) {
             ConversationItem conversation = getConversationById(id);
@@ -212,7 +212,7 @@ public class DatabaseHandler {
         return result;
     }
 
-    public static void updateConversationWithSentMessage(ConversationItem conversation,
+    public  void updateConversationWithSentMessage(ConversationItem conversation,
                 final String secondaryText, final MonkeyConversation.ConversationStatus status,
                                     final int unread){
         conversation.setSecondaryText(secondaryText!=null?secondaryText:conversation.getSecondaryText());
@@ -224,11 +224,11 @@ public class DatabaseHandler {
         new SaveModelTask().execute(conversation);
     }
 
-    public static void updateConversation(ConversationItem conversation){
+    public  void updateConversation(ConversationItem conversation){
         new SaveModelTask().execute(conversation);
     }
 
-    public static List<MessageItem> getAllMessagesSince(String conversationId, long since) {
+    public  List<MessageItem> getAllMessagesSince(String conversationId, long since) {
         Log.d("allMessagesSince", "" + since);
         return new Select().from(MessageItem.class)
                     .where("conversationId = ?", conversationId)
@@ -236,12 +236,12 @@ public class DatabaseHandler {
                     .where("timestampOrder > ?", since).execute();
     }
 
-    public static void syncConversation(ConversationItem conversation) {
+    public  void syncConversation(ConversationItem conversation) {
         /*TODO don't calcuate the totalNewMessages value counting the unread messages in the local DB */
             List<MessageItem> unreadMessages = getAllMessagesSince(conversation.getConvId(), conversation.lastOpen);
             int unreadMessageCount = unreadMessages.size();
             conversation.setTotalNewMessage(unreadMessageCount);
-            MessageItem lastMessage = DatabaseHandler.getLastMessage(conversation.getConvId());
+            MessageItem lastMessage = getLastMessage(conversation.getConvId());
 
             int newStatus = MonkeyConversation.ConversationStatus.empty.ordinal();
             if(lastMessage == null) {
@@ -250,7 +250,7 @@ public class DatabaseHandler {
                     secondaryText = "Write to this group";
                 conversation.setSecondaryText(secondaryText);
             } else {
-                conversation.setSecondaryText(DatabaseHandler.getSecondaryTextByMessageType(lastMessage, conversation.isGroup()));
+                conversation.setSecondaryText(getSecondaryTextByMessageType(lastMessage, conversation.isGroup()));
                 conversation.setDatetime(lastMessage.getMessageTimestampOrder());
 
                 if (lastMessage.isIncomingMessage())
@@ -264,7 +264,7 @@ public class DatabaseHandler {
             conversation.save();
     }
 
-    public static void syncConversation(String id, HttpSync.SyncData syncData){
+    public  void syncConversation(String id, HttpSync.SyncData syncData){
         ConversationItem conversation = getConversationById(id);
         if(conversation != null) {
             syncConversation(conversation);
@@ -281,16 +281,16 @@ public class DatabaseHandler {
         }
     }
 
-    public static void updateConversationNewMessagesCount(ConversationItem conversationItem, int newMessages){
+    public  void updateConversationNewMessagesCount(ConversationItem conversationItem, int newMessages){
         conversationItem.setTotalNewMessage(newMessages);
         new SaveModelTask().execute(conversationItem);
     }
 
-    public static void deleteConversation(ConversationItem item){
+    public  void deleteConversation(ConversationItem item){
         new DeleteModelTask().execute(item);
     }
 
-    public static String getSecondaryTextByMessageType(MonkeyItem monkeyItem, boolean isGroup){
+    public  String getSecondaryTextByMessageType(MonkeyItem monkeyItem, boolean isGroup){
         if(monkeyItem == null || monkeyItem instanceof EndItem)
             return isGroup ? "Write to group" : "Write to contact";
         switch (MonkeyItem.MonkeyItemType.values()[monkeyItem.getMessageType()]) {
@@ -303,8 +303,8 @@ public class DatabaseHandler {
         }
     }
 
-    public static ConversationItem addGroupMember(String id, String newMember) {
-        ConversationItem conv = DatabaseHandler.getConversationById(id);
+    public  ConversationItem addGroupMember(String id, String newMember) {
+        ConversationItem conv = getConversationById(id);
         if (conv != null) {
             conv.addMember(newMember);
             conv.save();
@@ -313,8 +313,8 @@ public class DatabaseHandler {
         return null;
     }
 
-    public static ConversationItem removeGroupMember(String id, String removedMember) {
-        ConversationItem conv = DatabaseHandler.getConversationById(id);
+    public  ConversationItem removeGroupMember(String id, String removedMember) {
+        ConversationItem conv = getConversationById(id);
         if (conv != null) {
             conv.removeMember(removedMember);
             conv.save();
@@ -323,7 +323,7 @@ public class DatabaseHandler {
         return null;
     }
 
-     public static ConversationItem updateGroupWithCreateNotification(MOKNotification not){
+     public  ConversationItem updateGroupWithCreateNotification(MOKNotification not){
         String groupId = not.getReceiverId();
         String memberIds = not.getProps().get("members").getAsString();
         JsonObject info = not.getProps().getAsJsonObject("info");
@@ -347,7 +347,7 @@ public class DatabaseHandler {
         return conv;
     }
 
-    public static ConversationTransaction newCopyTransaction(final ConversationItem itemToCopy) {
+    public  ConversationTransaction newCopyTransaction(final ConversationItem itemToCopy) {
         return new ConversationTransaction() {
             @Override
             public void updateConversation(@NotNull MonkeyConversation conversation) {

@@ -22,7 +22,7 @@ public class FindConversationsTask extends AsyncTask<String, Void, HashMap<Strin
 
     @Override
     protected HashMap<String, ConversationItem> doInBackground(String... params) {
-        return DatabaseHandler.getConversationsById(params);
+        return new DatabaseHandler().getConversationsById(params);
     }
 
     @Override

@@ -22,7 +22,7 @@ public class GetConversationPageTask extends AsyncTask<Void, Void, List<Conversa
     }
     @Override
     protected List<ConversationItem> doInBackground(Void... params) {
-        return DatabaseHandler.getConversations(conversationsToLoad, loadedConversations);
+        return new DatabaseHandler().getConversations(conversationsToLoad, loadedConversations);
     }
 
     @Override

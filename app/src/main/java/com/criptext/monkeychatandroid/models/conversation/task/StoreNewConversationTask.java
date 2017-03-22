@@ -29,7 +29,7 @@ public class StoreNewConversationTask extends AsyncTask<ConversationItem, Void, 
         ConversationItem conv = params[0];
         ActiveAndroid.beginTransaction();
         try {
-            DatabaseHandler.syncConversation(conv);
+            new DatabaseHandler().syncConversation(conv);
             ActiveAndroid.setTransactionSuccessful();
             return conv;
         } finally {

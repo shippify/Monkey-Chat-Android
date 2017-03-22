@@ -24,7 +24,7 @@ public class UpdateMessageDeliveryStatusTask extends AsyncTask<String, Void, Mes
     @Override
     protected MessageItem doInBackground(String... params) {
         for(String s : params){
-            MessageItem item = DatabaseHandler.getMessageById(s);
+            MessageItem item = new DatabaseHandler().getMessageById(s);
             if(item != null) {
                 try {
                     ActiveAndroid.beginTransaction();

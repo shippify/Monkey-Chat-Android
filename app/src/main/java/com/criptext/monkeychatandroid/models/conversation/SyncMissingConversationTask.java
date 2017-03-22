@@ -22,7 +22,8 @@ public class SyncMissingConversationTask extends AsyncTask<String, Void, Convers
     protected ConversationItem doInBackground(String... params) {
         String groupid = params[0];
 
-        ConversationItem conv = DatabaseHandler.getConversationById(params[0]);
+        final DatabaseHandler db = new DatabaseHandler();
+        ConversationItem conv = db.getConversationById(params[0]);
         if (conv == null)
             conv = new ConversationItem(groupid, "Uknown ", System.currentTimeMillis(),
                     "Write to this conversation", 0, false, "", "",
@@ -31,7 +32,7 @@ public class SyncMissingConversationTask extends AsyncTask<String, Void, Convers
         ActiveAndroid.beginTransaction();
         try {
             transaction.updateConversation(conv);
-            DatabaseHandler.syncConversation(conv);
+            db.syncConversation(conv);
             ActiveAndroid.setTransactionSuccessful();
             return conv;
         } finally {

@@ -19,6 +19,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(constants = BuildConfig::class, shadows=arrayOf(ShadowModel::class))
 class `CreateMessage Test` {
+    private val db = DatabaseHandler()
 
     fun newMOKMessage(id: String, sid: String, rid: String, msg: String, timestamp: Long,
                       type: String, props: JsonObject?, params: JsonObject?): MOKMessage {
@@ -36,7 +37,7 @@ class `CreateMessage Test` {
         val mokMessage = newMOKMessage("0", "0", "1", "Hello World!", System.currentTimeMillis(),
                 MessageTypes.MOKText, JsonObject(), JsonObject())
 
-        val messageItem = DatabaseHandler.createMessage(mokMessage, "/path/to/av", "1")
+        val messageItem = db.createMessage(mokMessage, "/path/to/av", "1")
 
         messageItem.getMessageId() `should equal` mokMessage.message_id
         messageItem.getMessageText() `should equal` mokMessage.msg
@@ -61,7 +62,7 @@ class `CreateMessage Test` {
         val mokMessage = newMOKMessage("19539162", "0", "1", "f_ixulxdzio0tg1cmh9xcac3di", System.currentTimeMillis(),
                 MessageTypes.MOKFile, props, params)
 
-        val messageItem = DatabaseHandler.createMessage(mokMessage, "/path/to/av", "1")
+        val messageItem = db.createMessage(mokMessage, "/path/to/av", "1")
         messageItem.getMessageType() `should equal` MessageTypes.blMessageAudio
         messageItem.getAudioDuration() `should equal` 3000L
     }
@@ -77,7 +78,7 @@ class `CreateMessage Test` {
         val mokMessage = newMOKMessage("19539162", "0", "1", "f_ixulxdzio0tg1cmh9xcac3di", System.currentTimeMillis(),
                 MessageTypes.MOKFile, props, null)
 
-        val messageItem = DatabaseHandler.createMessage(mokMessage, "/path/to/av", "1")
+        val messageItem = db.createMessage(mokMessage, "/path/to/av", "1")
         messageItem.getMessageType() `should equal` MessageTypes.blMessageAudio
         messageItem.getAudioDuration() `should equal` 0L
     }

@@ -25,7 +25,8 @@ public class TransactionCreator {
                     conversation.setTotalNewMessage(0);
                 } else
                     conversation.setTotalNewMessage(conversation.getTotalNewMessages() + 1);
-                String secondaryText = DatabaseHandler.getSecondaryTextByMessageType(sentMessage, monkeyConversation.isGroup());
+                String secondaryText = new DatabaseHandler().getSecondaryTextByMessageType(
+                        sentMessage, monkeyConversation.isGroup());
                 conversation.setSecondaryText(secondaryText);
 
                 int newStatus;

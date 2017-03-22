@@ -29,7 +29,7 @@ public class GetMessagePageTask extends AsyncTask<Void, Void, List<MessageItem>>
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        return DatabaseHandler.getMessages(conversationId, rowsPerPage, pageOffset);
+        return new DatabaseHandler().getMessages(conversationId, rowsPerPage, pageOffset);
     }
 
     @Override

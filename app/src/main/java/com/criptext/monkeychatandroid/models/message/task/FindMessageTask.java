@@ -22,7 +22,7 @@ public class FindMessageTask extends AsyncTask<String, Void, MessageItem> {
     @Override
     protected MessageItem doInBackground(String... params) {
         for(String s : params){
-            MessageItem item = DatabaseHandler.getMessageById(s);
+            MessageItem item = new DatabaseHandler().getMessageById(s);
             if(item != null)
                 return item;
         }

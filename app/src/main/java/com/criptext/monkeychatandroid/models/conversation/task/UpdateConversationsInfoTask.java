@@ -35,7 +35,7 @@ public class UpdateConversationsInfoTask extends AsyncTask<ArrayList<MOKUser>, A
 
             ArrayList<MOKUser> mokUsers = params[0];
             for (MOKUser user : mokUsers) {
-                ConversationItem conversation = DatabaseHandler.getConversationById(user.getMonkeyId());
+                ConversationItem conversation = new DatabaseHandler().getConversationById(user.getMonkeyId());
                 if(conversation == null){
                     continue;
                 }

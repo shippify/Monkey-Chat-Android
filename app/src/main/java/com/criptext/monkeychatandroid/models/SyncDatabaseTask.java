@@ -24,6 +24,7 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
     private HttpSync.SyncData syncData;
     private String monkeyId, pathToMessages;
     private Runnable runnable;
+    private DatabaseHandler db = new DatabaseHandler();
 
     public SyncDatabaseTask(HttpSync.SyncData syncData, Runnable runnable) {
         this.syncData = syncData;
@@ -42,11 +43,11 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
         Iterator<MOKMessage> iterator = newMessages.iterator();
         while (iterator.hasNext()) {
             MOKMessage newMessage = iterator.next();
-            if(!DatabaseHandler.existMessage(newMessage.getMessage_id())) {
-                if(DatabaseHandler.existMessage(newMessage.getOldId())){
-                    DatabaseHandler.updateMessageStatus(newMessage.getMessage_id(), newMessage.getOldId(), MonkeyItem.DeliveryStatus.delivered);
+            if(!db.existMessage(newMessage.getMessage_id())) {
+                if(db.existMessage(newMessage.getOldId())){
+                    db.updateMessageStatus(newMessage.getMessage_id(), newMessage.getOldId(), MonkeyItem.DeliveryStatus.delivered);
                 }else {
-                    MessageItem newItem = DatabaseHandler.createMessage(newMessage, pathToMessages, monkeyId);
+                    MessageItem newItem = db.createMessage(newMessage, pathToMessages, monkeyId);
                     newItem.save();
                 }
             } else iterator.remove();
@@ -57,7 +58,7 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
         Iterator<MOKDelete> iterator = newDeletes.iterator();
         while (iterator.hasNext()) {
             MOKDelete newDelete = iterator.next();
-            MessageItem deletedItem = DatabaseHandler.getMessageById(newDelete.getMessageId());
+            MessageItem deletedItem = db.getMessageById(newDelete.getMessageId());
             if(deletedItem != null)
                 deletedItem.delete();
             else iterator.remove();
@@ -67,38 +68,12 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
     private void syncNotifications(HttpSync.SyncData syncData) {
         List<MOKNotification> notifications = syncData.getNotifications();
         Iterator<MOKNotification> notificationIterator = notifications.iterator();
+        HashSet<String> missingConversations = syncData.getMissingConversations();
         while (notificationIterator.hasNext()) {
             MOKNotification not = notificationIterator.next();
             if (not.getProps().has("monkey_action")) {
                 int type = not.getProps().get("monkey_action").getAsInt();
-                try {
-                    switch (type) {
-                        case com.criptext.comunication.MessageTypes.MOKGroupNewMember: {
-                                String id = not.getReceiverId();
-                                ConversationItem conv = DatabaseHandler.addGroupMember(id,
-                                        not.getProps().get("new_member").getAsString());
-                                if (conv == null)
-                                    syncData.getMissingConversations().add(id);
-                            }
-                            break;
-                        case com.criptext.comunication.MessageTypes.MOKGroupRemoveMember: {
-                                String id = not.getReceiverId();
-                                ConversationItem conv = DatabaseHandler.removeGroupMember(id,
-                                        not.getSenderId());
-                                if (conv == null)
-                                    syncData.getMissingConversations().add(id);
-                            }
-                            break;
-                        case com.criptext.comunication.MessageTypes.MOKGroupCreate: {
-                            ConversationItem conv = DatabaseHandler.updateGroupWithCreateNotification(not);
-                            //remove created group from missing conversations
-                            syncData.getMissingConversations().remove(conv.getConvId());
-                        }
-                        break;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                new NotificationMessages().parseGroupNotifications(missingConversations, not, type);
             }
         }
     }
@@ -137,7 +112,7 @@ public class SyncDatabaseTask extends AsyncTask<Void, Void, Integer> {
                 if(removed && !newMessagesMap.containsKey(convId) && !newDeletesMap.containsKey(convId))
                     iterator.remove();
                 else
-                    DatabaseHandler.syncConversation(convId, syncData);
+                    db.syncConversation(convId, syncData);
             }
 
             syncNotifications(syncData);
