@@ -66,6 +66,34 @@ class MonkeyJson {
             return list.filter { it -> it.entrySet().size > 0 && it.has("args") }
         }
 
+        fun getParamsFromLastMessage(parser: JsonParser, lastMessage: JsonObject): JsonObject? {
+            val paramsStr = lastMessage.get("params")?.asString
+            //init params props
+            return when (paramsStr) {
+                null -> null
+                "{}" -> null
+                else -> {
+                    val parsedElement = parser.parse(paramsStr)
+                    if (parsedElement.isJsonObject) parsedElement.asJsonObject
+                    else null
+                }
+            }
+        }
+
+        fun getPropsFromLastMessage(parser: JsonParser, lastMessage: JsonObject): JsonObject? {
+            val propsStr = lastMessage.get("props")?.asString
+            return if (propsStr != null) parser.parse(propsStr).asJsonObject else null
+        }
+
+        fun getConversationMembersArray(conversation: JsonObject): Array<String> {
+            val jsonMemberArray = conversation.get("members")?.asJsonArray ?: JsonArray()
+            val memberList = LinkedList<String>()
+            for (member in jsonMemberArray) {
+                memberList.add(member.asString)
+            }
+            return memberList.toTypedArray()
+        }
+
         /**
          * Parses de array from getConversations response.
          * @param resp the response fro the get conversations endpoint
@@ -89,29 +117,15 @@ class MonkeyJson {
                 try {
                     currentConv = jsonMessage.asJsonObject
                     currentMessage = currentConv.getAsJsonObject("last_message")!!
-                    val paramsStr = currentMessage.get("params")?.asString
-                    //init params props
-                    val params = when (paramsStr) {
-                        null -> null
-                        "{}" -> null
-                        "null" -> null
-                        else -> parser.parse(paramsStr).asJsonObject
-                    }
-                    val propsStr = currentMessage.get("props")?.asString
-                    val props = if (propsStr != null) parser.parse(propsStr).asJsonObject else null
+                    val params = getParamsFromLastMessage(parser, currentMessage)
+                    val props = getPropsFromLastMessage(parser, currentMessage)
                     val currentMsgType = currentMessage.get("type")?.asString
-
-
-                    val jsonArray = currentConv.get("members")?.asJsonArray ?: JsonArray()
-                    val arrayList = ArrayList<String>()
-                    for (member in jsonArray) {
-                        arrayList.add(member.asString)
-                    }
+                    val membersArray = getConversationMembersArray(currentConv)
 
                     val newConv = MOKConversation(
                         conversationId = currentConv.get("id").asString,
                         info = currentConv.get("info").asJsonObject,
-                        members = arrayList.toTypedArray(),
+                        members = membersArray,
                         lastMessage = remote,
                         lastSeen = currentConv.get("last_seen").asDouble.toLong() * 1000,
                         unread = currentConv.get("unread").asInt,

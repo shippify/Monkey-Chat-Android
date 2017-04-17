@@ -1,5 +1,7 @@
 package com.criptext.lib
 
+import com.google.gson.JsonParser
+import org.amshove.kluent.`should be`
 import org.amshove.kluent.`should equal`
 import org.amshove.kluent.`should not be`
 import org.junit.Test
@@ -8,7 +10,7 @@ import org.junit.Test
  * Created by gesuwall on 2/21/17.
  */
 
-class `Parse conversations array` {
+class `MonkeyJson Test` {
 
     @Test
     fun `should get all the conversations in the get conversations response`() {
@@ -23,6 +25,29 @@ class `Parse conversations array` {
 
         for (c in undecrypted)
             c.lastMessage `should not be` null
+    }
 
+    @Test
+    fun `getParamsFromLastMessage should return null if params is {}`() {
+        val parser = JsonParser()
+        val json = parser.parse("""{"id":"1234","params":"{}"}""").asJsonObject
+        val params = MonkeyJson.getParamsFromLastMessage(parser, json)
+        params `should be` null
+    }
+
+    @Test
+    fun `getParamsFromLastMessage should return null if params is empty string`() {
+        val parser = JsonParser()
+        val json = parser.parse("""{"id":"1234","params":""}""").asJsonObject
+        val params = MonkeyJson.getParamsFromLastMessage(parser, json)
+        params `should be` null
+    }
+
+    @Test
+    fun `getParamsFromLastMessage should return null if params is "null"`() {
+        val parser = JsonParser()
+        val json = parser.parse("""{"id":"1234","params":"null"}""").asJsonObject
+        val params = MonkeyJson.getParamsFromLastMessage(parser, json)
+        params `should be` null
     }
 }
