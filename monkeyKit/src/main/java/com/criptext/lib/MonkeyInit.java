@@ -108,6 +108,7 @@ public class MonkeyInit {
      * Debes de llamar a este metodo para que de forma asincrona se registre el usuario con MonkeyKit
      */
     public void register(){
+        System.out.println("registrateMonkey: "+urlUser+" - "+urlPass+" - "+userInfo+" - "+ignore_params);
         async.execute(urlUser, urlPass, userInfo, ignore_params);
     }
 

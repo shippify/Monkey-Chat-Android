@@ -183,15 +183,22 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
                         "key given by the Json object. All messages must have the same sender ID.")
 
             //the result of this decryption is a string key and IV separated by ':'. Ready to use
-            val conversationKey = aesutil.decrypt(encryptedKey);
 
-            val decrypted = attemptToDecryptWithNewKeys(pendingMessage, clientData, conversationKey)
-            if(decrypted)
-                return OpenConvData(pendingMessage, null, conversationKey, conversationId)
-            else {
-                Log.e("OpenConversationTask", "can't decrypt ${pendingMessage.message_id}. discarding")
-                return OpenConvData(null, pendingMessage, conversationKey, conversationId)
+            try {
+                val conversationKey = aesutil.decrypt(encryptedKey);
+                val decrypted = attemptToDecryptWithNewKeys(pendingMessage, clientData, conversationKey)
+                if(decrypted)
+                    return OpenConvData(pendingMessage, null, conversationKey, conversationId)
+                else {
+                    Log.e("OpenConversationTask", "can't decrypt ${pendingMessage.message_id}. discarding")
+                    return OpenConvData(null, pendingMessage, conversationKey, conversationId)
+                }
             }
+            catch(e:Exception) {
+                Log.e("OpenConversationTask", "can't decrypt ${pendingMessage.message_id}. discarding")
+            }
+
+            return null;
         }
 
         fun attemptToDecrypt(message: MOKMessage, clientData: ClientData, aesutil: AESUtil,

@@ -259,7 +259,7 @@ public class UserManager extends AQueryHttp {
 
                 }
                 else
-                    service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{new ArrayList<MOKMessage>(),
+                    service.processMessageFromHandler(CBTypes.onGetConversationMessages, new Object[]{"",new ArrayList<MOKMessage>(),
                             new Exception("Error code:"+status.getCode()+" -  Error msg:"+status.getMessage())});
             }
         });

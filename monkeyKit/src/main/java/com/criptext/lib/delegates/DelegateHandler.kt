@@ -183,6 +183,9 @@ class DelegateHandler() {
         if(status < MonkeyKitSocketService.ServiceStatus.initializing)
             return //There's no point in doing anything with the delegates if the service is dead.
 
+        if(info==null || info[0]==null)
+            return //There were several crashes where info[0] were null at onGetConversations
+
         val pendingRunnable = Runnable { processMessageFromHandler(method, info) }
 
         when (method) {
@@ -311,9 +314,11 @@ class DelegateHandler() {
                 else pendingMonkeyKitActions.add(pendingRunnable)
             }
             CBTypes.onGetConversationMessages -> {
-                if (monkeyKitDelegate != null)
+                if (monkeyKitDelegate != null) {
+                    print(info[0])
                     monkeyKitDelegate!!.onGetConversationMessages(info[0] as String,
-                        info[1] as ArrayList<MOKMessage>, info[2] as Exception?)
+                            info[1] as ArrayList<MOKMessage>, info[2] as Exception?)
+                }
                 else pendingMonkeyKitActions.add(pendingRunnable)
             }
             CBTypes.onNotificationReceived -> {

@@ -4,6 +4,7 @@ import android.util.Base64;
 import android.util.Log;
 
 import com.criptext.MonkeyKitSocketService;
+import com.criptext.comunication.MonkeyHttpResponse;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -66,9 +67,10 @@ public class MonkeyHttpClient {
                 throw new IllegalArgumentException(json);
             case 401:
                 throw new IllegalArgumentException("Server response: Unauthorized\n Please check your APP_ID and APP_KEY");
-
+            default:
+                throw new IllegalArgumentException("Unknown error");
         }
-        return null;
+        
     }
 
     public static void subscribePushHttp(String token, String sessionId, String urlUser, String urlPass, boolean override) throws JSONException,

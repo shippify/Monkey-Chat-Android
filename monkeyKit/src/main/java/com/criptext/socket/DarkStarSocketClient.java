@@ -175,10 +175,10 @@ public class DarkStarSocketClient implements DarkStarClient {
                     //http://stackoverflow.com/questions/36161105/socket-java-cant-receive-too-much-data/
                     int length = in.readShort() & 0xFFFF;
                     byte[] msgBytes = new byte[length];
-                    //Log.d("InputReader - run", "len: "+length);
+                    Log.e("InputReader - run", "len: "+length);
                     in.readFully(msgBytes);
                     MessageBuffer buf = new MessageBuffer(msgBytes);
-                    //Log.d("InputReader - run", "buf: "+buf);
+                    Log.e("InputReader - run", "buf: "+buf);
                     handleApplicationMessage(buf);
                 }
                 catch (EOFException ex) {

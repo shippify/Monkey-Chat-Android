@@ -179,10 +179,10 @@ public class AESUtil {
     }
     
     public String decrypt(String encryptedText) throws Exception {
- 
+
         byte[] encryptedTextBytes = Base64.decode(encryptedText.getBytes("UTF-8"), Base64.NO_WRAP); 
         byte[] decryptedTextBytes = null;
-        
+
         decryptedTextBytes = cipherDEC.doFinal(encryptedTextBytes);        
         return new String(decryptedTextBytes);
     }

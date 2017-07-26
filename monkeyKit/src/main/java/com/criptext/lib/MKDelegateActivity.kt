@@ -122,6 +122,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onStop() {
         super.onStop()
+        Log.d("MKDELEGATEACTIVITY","onStop");
         /* service should always be stopped except under 2 conditions:
          * - The device changing configurations (ex. rotating)
          * - The  developer wants to keep it alive (probably because it's going to start a new activity)
@@ -137,6 +138,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
     }
 
     fun stopMonkeyKitService() {
+        Log.d("MKDELEGATEACTIVITY","stopMonkeyKitService");
         stopService(Intent(this, serviceClassName))
     }
     /**
