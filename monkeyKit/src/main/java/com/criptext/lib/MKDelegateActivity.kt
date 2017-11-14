@@ -46,6 +46,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     protected var keepServiceAlive = false
 
+    protected var forceStopService = false
+
     /**
      * Callback to execute when the service is bound to this activity. You may only need this
      * if you need to consume data from MonkeyKit API in an activity that starts after your main
@@ -129,12 +131,17 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onStop() {
         super.onStop()
+        //This the old paradigm is stop always the service
         /* service should always be stopped except under 2 conditions:
          * - The device changing configurations (ex. rotating)
          * - The  developer wants to keep it alive (probably because it's going to start a new activity)
          */
-//        val serviceMustBeStopped = !this.isChangingConfigurations && !keepServiceAlive
-        val serviceMustBeStopped = !this.isChangingConfigurations
+        //val serviceMustBeStopped = !this.isChangingConfigurations && !keepServiceAlive
+
+        /*But the new paradigm is that the service must be always live and then if you need restart the service you need to set force Stop Service like true to be stopped
+         and call again( Note: It should be implement like a function to restart the service to get a new service more reliable, because sometime the service comes in a mode idle)
+        */
+        val serviceMustBeStopped = !this.isChangingConfigurations && forceStopService
         setOnline(!serviceMustBeStopped)
         //service = null
         monkeyKitConnection.cancelled = true
@@ -142,6 +149,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 //        if (serviceMustBeStopped)
 //            stopMonkeyKitService()
         keepServiceAlive = false
+
+        forceStopService = false
     }
 
     fun stopMonkeyKitService() {
