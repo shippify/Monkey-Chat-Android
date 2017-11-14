@@ -185,7 +185,7 @@ public class MonkeyInit {
         finalResult = finalResult.getJSONObject("data");
 
         final String keys = finalResult.getString("keys");
-        final long lastSync = finalResult.getLong("last_time_synced");
+        final long lastSync = finalResult.isNull("last_time_synced") ? 0 : finalResult.getLong("last_time_synced");
         String decriptedKey = rsaUtil.desencrypt(keys);
         KeyStoreCriptext.putString(ctxRef.get() ,monkeyId, decriptedKey);
         KeyStoreCriptext.setLastSync(ctxRef.get() , lastSync);
