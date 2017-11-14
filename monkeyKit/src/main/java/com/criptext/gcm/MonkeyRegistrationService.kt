@@ -45,7 +45,7 @@ abstract class MonkeyRegistrationService : IntentService(TAG){
             // [END get_token]
             Log.i(TAG, "GCM Registration Token: " + token);
 
-            MonkeyHttpClient.subscribePushHttp(token, monkeyId, appId, appKey, false)
+            MonkeyHttpClient.subscribePushHttp(token, monkeyId, appId, appKey, true)
 
             // You should store a boolean that indicates whether the generated token has been
             // sent to your server. If the boolean is false, send the token to your server,

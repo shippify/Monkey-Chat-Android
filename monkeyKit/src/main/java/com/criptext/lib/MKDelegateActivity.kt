@@ -1,6 +1,9 @@
 package com.criptext.lib
 
+import android.app.Activity
+import android.app.ActivityManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.support.v7.app.AppCompatActivity
@@ -77,8 +80,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
                 if (!cancelled && p1 != null) { //Unit tests will have null p1, let's ignore that.
                     val binder = p1 as MonkeyKitSocketService.MonkeyBinder
-                    onMonkeyKitServiceReadyListener?.onMonkeyKitServiceReady()
                     connectWithNewService(binder)
+                    onMonkeyKitServiceReadyListener?.onMonkeyKitServiceReady()
                 }
             }
 
@@ -114,9 +117,13 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     override fun onStart() {
         super.onStart()
-        startService(Intent(this, serviceClassName))
         monkeyKitConnection = newServiceConnection()
+        startService(Intent(this, serviceClassName))
         MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName)
+    }
+
+    override fun onPause() {
+        super.onPause()
 
     }
 
@@ -126,13 +133,14 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
          * - The device changing configurations (ex. rotating)
          * - The  developer wants to keep it alive (probably because it's going to start a new activity)
          */
-        val serviceMustBeStopped = !this.isChangingConfigurations && !keepServiceAlive
+//        val serviceMustBeStopped = !this.isChangingConfigurations && !keepServiceAlive
+        val serviceMustBeStopped = !this.isChangingConfigurations
         setOnline(!serviceMustBeStopped)
-        service = null
+        //service = null
         monkeyKitConnection.cancelled = true
-        unbindService(monkeyKitConnection)
-        if (serviceMustBeStopped)
-            stopMonkeyKitService()
+        //unbindService(monkeyKitConnection)
+//        if (serviceMustBeStopped)
+//            stopMonkeyKitService()
         keepServiceAlive = false
     }
 

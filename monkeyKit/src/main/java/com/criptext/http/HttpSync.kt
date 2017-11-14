@@ -225,6 +225,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
                     val list = getMessageList(convId)
                     list.add(message)
                     conversationsToUpdate.add(convId)
+                    users.add(convId)
                 }
 
                 response.deletes.forEach { del ->
@@ -233,6 +234,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
                     list.add(del)
                     conversationsToUpdate.add(convId)
                 }
+
             }
         }
 

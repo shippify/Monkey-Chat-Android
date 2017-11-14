@@ -103,9 +103,15 @@ class MonkeyJson {
          */
         fun parseConversationsList(resp: String): Array<List<MOKConversation>> {
             val parser = JsonParser()
-            val jsonResponse = parser.parse(resp).asJsonObject
-            val array = jsonResponse.get("data").asJsonObject
-                        .get("conversations").asJsonArray
+            var array = JsonArray()
+
+            try {
+                val jsonResponse = parser.parse(resp).asJsonObject
+                array = jsonResponse.get("data").asJsonObject.get("conversations").asJsonArray
+            } catch (ex: Exception){
+                ex.printStackTrace()
+            }
+
 
             val conversationList = ArrayList<MOKConversation>()
             val conversationsToDecrypt = ArrayList<MOKConversation>()
