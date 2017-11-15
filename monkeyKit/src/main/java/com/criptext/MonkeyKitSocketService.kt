@@ -294,7 +294,10 @@ abstract class MonkeyKitSocketService : Service() {
     fun startFirstSocketConnection(aesUtil: AESUtil, cdata: ClientData, lastSync: Long) {
         initialize(aesUtil, cdata, lastSync)
         //since this is the first time we are connecting, let's get all conversations before syncing
+        println("TRATANDO DE OBTENER CONVERSACIONES POR PRIMERA VEZ MONKEY ID:"+clientData.monkeyId)
+       // if(clientData.monkeyId != null && !clientData.monkeyId.equals("")) {
         userManager.getConversations(clientData.monkeyId, 30, 0)
+       // }
     }
     /**
      * This method gets called by the Async Intializer on its PostExecute method.

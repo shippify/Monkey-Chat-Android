@@ -1,6 +1,10 @@
 package com.criptext.lib
 
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.app.ActivityManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.support.v7.app.AppCompatActivity
@@ -43,6 +47,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
 
     protected var keepServiceAlive = false
 
+    protected var forceStopService = false
+
     /**
      * Callback to execute when the service is bound to this activity. You may only need this
      * if you need to consume data from MonkeyKit API in an activity that starts after your main
@@ -77,8 +83,8 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
             override fun onServiceConnected(p0: ComponentName?, p1: IBinder?) {
                 if (!cancelled && p1 != null) { //Unit tests will have null p1, let's ignore that.
                     val binder = p1 as MonkeyKitSocketService.MonkeyBinder
-                    onMonkeyKitServiceReadyListener?.onMonkeyKitServiceReady()
                     connectWithNewService(binder)
+                    onMonkeyKitServiceReadyListener?.onMonkeyKitServiceReady()
                 }
             }
 
@@ -112,28 +118,42 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
     }
 
+    @SuppressLint("MissingSuperCall")
     override fun onStart() {
         super.onStart()
-        startService(Intent(this, serviceClassName))
         monkeyKitConnection = newServiceConnection()
+        startService(Intent(this, serviceClassName))
         MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName)
+    }
+    @SuppressLint("MissingSuperCall")
+    override fun onPause() {
+        super.onPause()
 
     }
 
     override fun onStop() {
         super.onStop()
+        //This the old paradigm is stop always the service
         /* service should always be stopped except under 2 conditions:
          * - The device changing configurations (ex. rotating)
          * - The  developer wants to keep it alive (probably because it's going to start a new activity)
          */
-        val serviceMustBeStopped = !this.isChangingConfigurations && !keepServiceAlive
+        //val serviceMustBeStopped = !this.isChangingConfigurations && !keepServiceAlive
+
+        /*But the new paradigm is that the service must be always live and then if you need restart the service you need to set force Stop Service like true to be stopped
+         and call again( Note: It should be implement like a function to restart the service to get a new service more reliable, because sometime the service comes in a mode idle)
+        */
+        val serviceMustBeStopped = !this.isChangingConfigurations && forceStopService
         setOnline(!serviceMustBeStopped)
-        service = null
+        //service = null
         monkeyKitConnection.cancelled = true
-        unbindService(monkeyKitConnection)
-        if (serviceMustBeStopped)
+        //unbindService(monkeyKitConnection)
+        if (serviceMustBeStopped) {
             stopMonkeyKitService()
+        }
         keepServiceAlive = false
+
+        forceStopService = false
     }
 
     fun stopMonkeyKitService() {

@@ -294,7 +294,7 @@ class DelegateHandler() {
             }
             CBTypes.onGetConversations -> {
 
-                if (conversationDelegate != null)
+                if (conversationDelegate != null && info[0] != null)
                     conversationDelegate!!.onGetConversations(info[0] as ArrayList<MOKConversation>,
                         info[1] as Exception?)
                 else pendingConversationActions.add(pendingRunnable)

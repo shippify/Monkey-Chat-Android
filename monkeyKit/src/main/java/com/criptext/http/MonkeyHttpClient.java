@@ -90,7 +90,8 @@ public class MonkeyHttpClient {
             Log.d("subscribePushHttp", "Req: " + params.toString());
 
             JSONObject finalResult = getResponse(httpclient, httppost, params.toString());
-            Log.d("subscribePushHttp", finalResult.toString());
+            if(finalResult != null)
+                Log.d("subscribePushHttp", finalResult.toString());
 
     }
 
