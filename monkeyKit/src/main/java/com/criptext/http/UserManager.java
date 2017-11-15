@@ -164,11 +164,9 @@ public class UserManager extends AQueryHttp {
     }
 
     public void getConversations(String monkeyid, int qty, long timestamp){
-        if(monkeyid != null && !monkeyid.equalsIgnoreCase("")) {
             GetConversationsTask getConversationsTask = new GetConversationsTask(serviceRef, clientData, aesUtil,
                     monkeyid, qty, timestamp);
             getConversationsTask.execute();
-        }
     }
 
     public void getConversationMessages(String monkeyid, final String conversationId, int numberOfMessages
