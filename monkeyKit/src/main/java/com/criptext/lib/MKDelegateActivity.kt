@@ -1,5 +1,6 @@
 package com.criptext.lib
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.ComponentName
@@ -117,13 +118,14 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
     }
 
+    @SuppressLint("MissingSuperCall")
     override fun onStart() {
         super.onStart()
         monkeyKitConnection = newServiceConnection()
         startService(Intent(this, serviceClassName))
         MonkeyKitSocketService.bindMonkeyService(this, monkeyKitConnection, serviceClassName)
     }
-
+    @SuppressLint("MissingSuperCall")
     override fun onPause() {
         super.onPause()
 
@@ -146,8 +148,9 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         //service = null
         monkeyKitConnection.cancelled = true
         //unbindService(monkeyKitConnection)
-//        if (serviceMustBeStopped)
-//            stopMonkeyKitService()
+        if (serviceMustBeStopped) {
+            stopMonkeyKitService()
+        }
         keepServiceAlive = false
 
         forceStopService = false
