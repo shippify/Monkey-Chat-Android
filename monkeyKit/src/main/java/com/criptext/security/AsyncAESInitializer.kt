@@ -61,10 +61,10 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
         val messages = result!!.pendingMessages
         if(messages != null)
             service?.initPendingMessageStore(messages)
-        if(result.hasSyncedBefore)
+        //if(result.hasSyncedBefore)
             service?.startSocketConnection(result.util!!, result.clientData, result.lastSync)
-        else
-            service?.startFirstSocketConnection(result.util!!, result.clientData, result.lastSync)
+//        else
+//            service?.startFirstSocketConnection(result.util!!, result.clientData, result.lastSync)
     }
 
     data class InitializerResult(val pendingMessages: List<JsonObject>?, val util: AESUtil?,
