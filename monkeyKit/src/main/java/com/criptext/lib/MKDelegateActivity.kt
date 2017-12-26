@@ -266,6 +266,7 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
                                   params: JsonObject, pushMessage: PushMessage, isEncrypted: Boolean): MOKMessage{
         val newMessage = createMOKMessage(filePath, monkeyIDFrom, monkeyIDTo, fileType, params)
         val propsMessage = createSendProps(newMessage.message_id, isEncrypted);
+        propsMessage.addProperty("cmpr", "gzip");
         propsMessage.addProperty("file_type", fileType);
         propsMessage.addProperty("ext", FilenameUtils.getExtension(filePath));
         propsMessage.addProperty("filename", FilenameUtils.getName(filePath));
