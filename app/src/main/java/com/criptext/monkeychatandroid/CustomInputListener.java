@@ -86,18 +86,18 @@ public class CustomInputListener implements InputListener {
                         mokMessage = act.persistFileMessageAndSend(item.getFilePath(), state.myMonkeyID, convId,
                             MessageTypes.FileTypes.Audio, params,
                             new PushMessage(EmojiHandler.encodeJavaForPush(state.myName) +
-                            (textTalk==null ? " sent you an audio" : "sent an audio to " + textTalk) ), true);
+                            (textTalk==null ? " sent you an audio" : "sent an audio to " + textTalk) ), false);
                         break;
                     case photo:
                         mokMessage = act.persistFileMessageAndSend(item.getFilePath(), state.myMonkeyID, convId,
                             MessageTypes.FileTypes.Photo, new JsonObject(),
                             new PushMessage(EmojiHandler.encodeJavaForPush(state.myName) +
-                            (textTalk==null ? " sent you a photo" : "sent a photo to " + textTalk) ), true);
+                            (textTalk==null ? " sent you a photo" : "sent a photo to " + textTalk) ), false);
                         break;
                     default:
                         mokMessage = act.persistMessageAndSend(item.getMessageText(), state.myMonkeyID,
                             convId, params, new PushMessage(EmojiHandler.encodeJavaForPush(state.myName) +
-                            (textTalk==null ? " sent you a message" : " sent a message to " + textTalk) ), true);
+                            (textTalk==null ? " sent you a message" : " sent a message to " + textTalk) ), false);
                         break;
                 }
 
