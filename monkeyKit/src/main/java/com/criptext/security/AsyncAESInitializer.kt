@@ -36,35 +36,41 @@ class AsyncAESInitializer(socketService: MonkeyKitSocketService) : AsyncTask<Voi
         isSyncService = socketService.startedManually
     }
 
-    val clientData: ClientData
-    get() = socketServiceRef.get()!!.loadClientData()
+    val clientData: ClientData?
+    get() = socketServiceRef.get()?.loadClientData() ?: null
 
     override fun doInBackground(vararg voids: Void): InitializerResult? {
             //load client data, this may be expensive
+        if(clientData == null) {
+            return null
+        } else {
             val cData = clientData
-            Log.d("SocketService", "mid: ${cData.monkeyId}")
+            Log.d("SocketService", "mid: ${cData!!.monkeyId}")
             var pendingMessages: List<JsonObject>? = null
-            if(!isSyncService) //get pending messages if this service does more than just sync
+            if (!isSyncService) //get pending messages if this service does more than just sync
                 pendingMessages = PendingMessageStore.retrieve(appContextRef.get())
             //get the last sync timestamp from shared prefs
             val lastSync = KeyStoreCriptext.getLastSync(appContextRef.get())
             val hasSyncedBefore = KeyStoreCriptext.hasSyncedBefore(appContextRef.get())
             //send sync
-            return InitializerResult(pendingMessages, AESUtil(appContextRef.get(), clientData.monkeyId),
-                    hasSyncedBefore, lastSync, cData)
+            return InitializerResult(pendingMessages, AESUtil(appContextRef.get(), cData!!.monkeyId),
+                    hasSyncedBefore, lastSync, cData!!)
+        }
     }
 
     fun initialize() = execute()
 
     public override fun onPostExecute(result: InitializerResult?) {
-        val service = socketServiceRef.get()
-        val messages = result!!.pendingMessages
-        if(messages != null)
-            service?.initPendingMessageStore(messages)
-        if(result.hasSyncedBefore)
-            service?.startSocketConnection(result.util!!, result.clientData, result.lastSync)
-        else
-            service?.startFirstSocketConnection(result.util!!, result.clientData, result.lastSync)
+        if(result != null ){
+            val service = socketServiceRef.get()
+            val messages = result!!.pendingMessages
+            if(messages != null)
+                service?.initPendingMessageStore(messages)
+            if(result.hasSyncedBefore)
+                service?.startSocketConnection(result.util!!, result.clientData, result.lastSync)
+            else
+                service?.startFirstSocketConnection(result.util!!, result.clientData, result.lastSync)
+        }
     }
 
     data class InitializerResult(val pendingMessages: List<JsonObject>?, val util: AESUtil?,
