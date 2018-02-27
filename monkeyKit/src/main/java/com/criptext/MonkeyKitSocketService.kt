@@ -92,7 +92,7 @@ abstract class MonkeyKitSocketService : Service() {
     /**
      * Persists sent messages until they are acknowledged by server
      */
-    lateinit var pendingMessageStore : PendingMessageStore
+    var pendingMessageStore : PendingMessageStore? = null
     /**
      * List of actions to execute after socket is connected and sync is complete.
      */
@@ -221,7 +221,7 @@ abstract class MonkeyKitSocketService : Service() {
                 }
                 CBTypes.onDeleteReceived -> {
                     lastTimeSynced = info[3].toString().toLong()
-                    pendingMessageStore.removePendingMessage(info[0] as String, { watchdog?.cancel() })
+                    pendingMessageStore?.removePendingMessage(info[0] as String, { watchdog?.cancel() })
                     delegateHandler.processMessageFromHandler(method, info)
                 }
                 CBTypes.onGetConversations -> {
@@ -244,7 +244,7 @@ abstract class MonkeyKitSocketService : Service() {
                     else delegateHandler.processMessageFromHandler(method, info)
                 }
                 CBTypes.onAcknowledgeReceived -> {
-                    pendingMessageStore.removePendingMessage(info[3] as String, { watchdog?.cancel() })
+                    pendingMessageStore?.removePendingMessage(info[3] as String, { watchdog?.cancel() })
                     delegateHandler.processMessageFromHandler(method, info)
                 }
                 else -> delegateHandler.processMessageFromHandler(method, info)
@@ -331,7 +331,11 @@ abstract class MonkeyKitSocketService : Service() {
 
     fun persistUnsentMessages() {
         try {
-            val sanitizedPendingMessages = MonkeyJson.sanitizePendingMsgsForFile(pendingMessageStore.toList())
+            if(pendingMessageStore == null){
+                val task = PendingMessageStore.AsyncCleanTask(this)
+                task.execute()
+            }
+            val sanitizedPendingMessages = MonkeyJson.sanitizePendingMsgsForFile(pendingMessageStore?.toList()!!)
             if(sanitizedPendingMessages.isNotEmpty()){
                 //Log.d("serviceOnDestroy", "save messages")
                 val task = PendingMessageStore.AsyncStoreTask(this, sanitizedPendingMessages)
@@ -458,7 +462,7 @@ abstract class MonkeyKitSocketService : Service() {
      * all the contained messages.
      */
     internal fun resendPendingMessages(){
-        pendingMessageStore.forEach { msg -> sendJsonThroughSocket(msg) }
+        pendingMessageStore?.forEach { msg -> sendJsonThroughSocket(msg) }
     }
 
     /**
@@ -467,7 +471,7 @@ abstract class MonkeyKitSocketService : Service() {
      * @throws JSONException
      */
     private fun addMessageToWatchdog(json: JsonObject) {
-        pendingMessageStore.add(this, json)
+        pendingMessageStore?.add(this, json)
         startWatchdog()
     }
 
@@ -793,7 +797,7 @@ abstract class MonkeyKitSocketService : Service() {
 
 
                 if(!serviceAPIisReady) {
-                    pendingMessageStore.add(this, json)
+                    pendingMessageStore?.add(this, json)
                 } else {
                     addMessageToWatchdog(json)
                     sendJsonThroughSocket(json)
@@ -938,7 +942,7 @@ abstract class MonkeyKitSocketService : Service() {
             json.addProperty("cmd", MessageTypes.MOKProtocolDelete)
 
             if(!serviceAPIisReady) {
-                pendingMessageStore.add(this, json)
+                pendingMessageStore?.add(this, json)
             } else {
                 addMessageToWatchdog(json);
                 sendJsonThroughSocket(json);
