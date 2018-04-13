@@ -308,6 +308,7 @@ abstract class MonkeyKitSocketService : Service() {
     }
 
     fun startSocketConnection() {
+        println("START SOCKET CONNECTION")
         if(status == ServiceStatus.dead)
             return //status should be equal to initializing, if dead dont do anything
         try {
