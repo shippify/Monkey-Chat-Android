@@ -55,7 +55,7 @@ public class MonkeyInit {
 
     public MonkeyInit(Context context, String monkeyId, String user, String pass, JSONObject userInfo, JSONArray ignore_params){
 
-        this.myOldMonkeyId = monkeyId == null ? "" : monkeyId;
+        this.myOldMonkeyId = monkeyId == null ? null : monkeyId;
         this.urlUser = user;
         this.urlPass = pass;
         this.userInfo = userInfo;
@@ -77,13 +77,12 @@ public class MonkeyInit {
                 try {
                     //Generate keys
                     String session;
-                    if(myOldMonkeyId.isEmpty()) {
-                        aesUtil = new AESUtil(ctxRef.get(), myOldMonkeyId);
-                        return getSessionHTTP((String)params[0], (String)params[1],
+
+                        aesUtil = new AESUtil(ctxRef.get(), "temporal"); // deprecate
+
+                        return initUser((String)params[0], (String)params[1],
                                 (JSONObject)params[2], (JSONArray) params[3]);
-                    } else {
-                        return userSync(myOldMonkeyId);
-                    }
+
                 }catch(IllegalArgumentException ex){
                 } catch(Exception ex){
                     ex.printStackTrace();
@@ -116,28 +115,19 @@ public class MonkeyInit {
             async.cancel(true);
     }
 
-    private String storeKeysIV(String monkeyId, String pubKey){
-        //Encrypt workers
-        RSAUtil rsa = new RSAUtil(Base64.decode(pubKey.getBytes(),0));
-        String usk=rsa.encrypt(aesUtil.strKey+":"+aesUtil.strIV);
-        //Guardo mis key & Iv
-        KeyStoreCriptext.putString(ctxRef.get(), monkeyId, aesUtil.strKey+":"+aesUtil.strIV);
-        return usk;
-
-    }
-
-    private ServerResponse getSessionHTTP(String urlUser, String urlPass, JSONObject userInfo, JSONArray ignore_params) throws JSONException,
+    private ServerResponse initUser(String urlUser, String urlPass, JSONObject userInfo, JSONArray ignore_params) throws JSONException,
             UnsupportedEncodingException, ClientProtocolException, IOException{
         // Create a new HttpClient and Post Header
         HttpClient httpclient = MonkeyHttpClient.newClient();
         HttpPost httppost = MonkeyHttpClient.newPost(MonkeyKitSocketService.Companion.getHttpsURL() +
-                "/user/session", urlUser, urlPass);
+                "/user", urlUser, urlPass);
 
         JSONObject localJSONObject1 = new JSONObject();
 
-        localJSONObject1.put("username",urlUser);
-        localJSONObject1.put("password",urlPass);
-        localJSONObject1.put("monkey_id", myOldMonkeyId);
+        if(myOldMonkeyId!=null){
+            localJSONObject1.put("monkey_id", myOldMonkeyId);
+        }
+
         localJSONObject1.put("expiring","0");
         localJSONObject1.put("user_info",userInfo);
 
@@ -146,91 +136,16 @@ public class MonkeyInit {
         Log.d("getSessionHTTP", "Req: " + params.toString());
 
         JSONObject finalResult = MonkeyHttpClient.getResponse(httpclient, httppost, params.toString());
+        Log.d("getUserSesssionHTTP", finalResult.toString());
 
-        Log.d("getSesssionHTTP", finalResult.toString());
-        finalResult = finalResult.getJSONObject("data");
-
-        String monkeyId = finalResult.getString("monkeyId");
-        String pubKey = finalResult.getString("publicKey");
-        pubKey = pubKey.replace("-----BEGIN PUBLIC KEY-----\n", "").replace("\n-----END PUBLIC KEY-----", "");
-
-        String encriptedKeys = storeKeysIV(monkeyId, pubKey);
-
-        //retornar el session solo despues del connect exitoso
-        return connectHTTP(finalResult.getString("monkeyId"), encriptedKeys, ignore_params);
-
-    }
-
-    private ServerResponse userSync(final String monkeyId) throws Exception{
-
-        // Create a new HttpClient and Post Header
-        RSAUtil rsaUtil = new RSAUtil();
-        rsaUtil.generateKeys();
-
-        HttpClient httpclient = MonkeyHttpClient.newClient();
-        HttpPost httppost = MonkeyHttpClient.newPost(MonkeyKitSocketService.Companion.getHttpsURL() +
-                "/user/key/sync", urlUser, urlPass);
-
-        JSONObject localJSONObject1 = new JSONObject();
-
-        localJSONObject1.put("monkey_id", monkeyId);
-        localJSONObject1.put("public_key", "-----BEGIN PUBLIC KEY-----\n" + rsaUtil.getPublicKey() + "\n-----END PUBLIC KEY-----");
-        //System.out.println("-----BEGIN PUBLIC KEY-----\n" + rsaUtil.pubKeyStr + "\n-----END PUBLIC KEY-----");
-        JSONObject params = new JSONObject();
-        params.put("data", localJSONObject1.toString());
-        Log.d("userSyncMS", "Req: " + params.toString());
-
-        JSONObject finalResult = MonkeyHttpClient.getResponse(httpclient, httppost, params.toString());
-         Log.d("userSyncMS", finalResult.toString());
-        finalResult = finalResult.getJSONObject("data");
-
-        final String keys = finalResult.getString("keys");
-        final long lastSync = finalResult.isNull("last_time_synced") ? 0 : finalResult.getLong("last_time_synced");
-        String decriptedKey = rsaUtil.desencrypt(keys);
-        KeyStoreCriptext.putString(ctxRef.get() ,monkeyId, decriptedKey);
-        KeyStoreCriptext.setLastSync(ctxRef.get() , lastSync);
-
-        try {
-            aesUtil = new AESUtil(ctxRef.get(), monkeyId);
-        } catch (Exception ex){
-            ex.printStackTrace();
-            //Como fallo algo con esas keys las encero y creo unas nuevas
-            KeyStoreCriptext.putString(ctxRef.get(), monkeyId, "");
-            aesUtil = new AESUtil(ctxRef.get(), monkeyId);
-            return getSessionHTTP(this.urlUser, this.urlPass, this.userInfo, this.ignore_params);
-        }
-
-
-        final String domain = finalResult.getString("sdomain");
-        final int port = finalResult.getInt("sport");
-        return new ServerResponse(monkeyId, domain, port);
-    }
-
-    private ServerResponse connectHTTP(String monkeyId, String encriptedKeys, JSONArray ignore_params) throws JSONException,
-            IOException{
-
-        // Create a new HttpClient and Post Header
-        HttpClient httpclient = MonkeyHttpClient.newClient();
-        HttpPost httppost = MonkeyHttpClient.newPost(MonkeyKitSocketService.Companion.getHttpsURL() +
-                "/user/connect", urlUser, urlPass);
-
-        JSONObject localJSONObject1 = new JSONObject();
-
-        localJSONObject1.put("usk", encriptedKeys);
-        localJSONObject1.put("monkey_id", monkeyId);
-        localJSONObject1.put("ignore_params", ignore_params);
-
-        JSONObject params = new JSONObject();
-        params.put("data", localJSONObject1.toString());
-        Log.d("connectHTTP", "Req: " + params.toString());
-
-        JSONObject finalResult = MonkeyHttpClient.getResponse(httpclient, httppost, params.toString());
-         Log.d("connectHTTP", finalResult.toString());
         finalResult = finalResult.getJSONObject("data");
 
         prefs.edit().putString("sdomain", finalResult.getString("sdomain")).apply();
         prefs.edit().putString("sport", finalResult.getString("sport")).apply();
+        final long lastSync = finalResult.isNull("last_time_synced") ? 0 : finalResult.getLong("last_time_synced");
+        KeyStoreCriptext.setLastSync(ctxRef.get() , lastSync);
 
+        String monkeyId = finalResult.getString("monkeyId");
         final String domain = finalResult.getString("sdomain");
         final int port = finalResult.getInt("sport");
         return new ServerResponse(monkeyId, domain, port);

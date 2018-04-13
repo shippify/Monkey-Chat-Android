@@ -1089,7 +1089,7 @@ abstract class MonkeyKitSocketService : Service() {
         val lastSyncKey = "MonkeyKit.lastSyncKey";
 
 //        val httpsURL = "https://secure.criptext.com"
-        val httpsURL = "channel.talktolk.com"
+        val httpsURL = "https://api.talktolk.com"
 //        val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
         var status = ServiceStatus.dead
 
