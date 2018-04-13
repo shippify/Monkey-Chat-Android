@@ -294,7 +294,6 @@ abstract class MonkeyKitSocketService : Service() {
     fun startFirstSocketConnection(aesUtil: AESUtil, cdata: ClientData, lastSync: Long) {
         initialize(aesUtil, cdata, lastSync)
         //since this is the first time we are connecting, let's get all conversations before syncing
-        println("TRATANDO DE OBTENER CONVERSACIONES POR PRIMERA VEZ MONKEY ID:"+clientData.monkeyId)
         if(clientData.monkeyId != null && !clientData.monkeyId.equals("")) {
             userManager.getConversations(clientData.monkeyId, 30, 0)
         }
@@ -1089,8 +1088,9 @@ abstract class MonkeyKitSocketService : Service() {
         val lastSyncPrefs = "MonkeyKit.lastSyncTime";
         val lastSyncKey = "MonkeyKit.lastSyncKey";
 
-        val httpsURL = "a"
-        val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
+//        val httpsURL = "https://secure.criptext.com"
+        val httpsURL = "channel.talktolk.com"
+//        val SYNC_SERVICE_KEY = "SecureSocketService.SyncService"
         var status = ServiceStatus.dead
 
         private val serviceAPIisReady: Boolean
