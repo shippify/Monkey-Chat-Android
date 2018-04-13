@@ -125,7 +125,7 @@ public class MonkeyInit {
         JSONObject localJSONObject1 = new JSONObject();
 
         if(myOldMonkeyId!=null){
-            localJSONObject1.put("monkey_id", myOldMonkeyId);
+            localJSONObject1.put("monkeyId", myOldMonkeyId);
         }
 
         localJSONObject1.put("expiring","0");
@@ -147,7 +147,8 @@ public class MonkeyInit {
 
         String monkeyId = finalResult.getString("monkeyId");
         final String domain = finalResult.getString("sdomain");
-        final int port = finalResult.getInt("sport");
+//        final int port = finalResult.getInt("sport");
+        final int port = 80;
         return new ServerResponse(monkeyId, domain, port);
     }
 
