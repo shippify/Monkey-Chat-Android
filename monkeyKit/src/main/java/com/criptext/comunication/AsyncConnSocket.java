@@ -66,8 +66,10 @@ public class AsyncConnSocket implements ComServerDelegate{
 
 
 	public void fireInTheHole(){
-		if(shouldTryToConnect())
-			initConnection();
+		if(shouldTryToConnect()) {
+            System.out.printf("MK SHOULD_TRY_TO_CONNECT_1");
+            initConnection();
+        }
 		if(handlerThread != null){
 			handlerThread.quit();
 		}
@@ -104,6 +106,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 					else if(msg.obj.toString().compareTo("conectar")==0){
 
 						if(shouldTryToConnect()){
+							System.out.printf("MK SHOULD_TRY_TO_CONNECT_2");
 							initConnection();
 						}
 
@@ -111,11 +114,11 @@ public class AsyncConnSocket implements ComServerDelegate{
 					else{
 
 						if(isConnected()){
-							System.out.println("Socket - Sending Message: "+msg.obj.toString());
+							System.out.println("MK Socket - Sending Message: "+msg.obj.toString());
 							socketClient.sendToSession(MessageManager.encodeString(msg.obj.toString()));
 						}
 						else{
-							System.out.println("NO se pudo enviar mensaje Socket desconectado");
+							System.out.println("MK NO se pudo enviar mensaje Socket desconectado");
 						}
 
 					}
@@ -129,7 +132,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	}
 
 	public void initConnection(){
-    	System.out.println("INICIANDO CONEXION SOCKET");
+    	System.out.println("MK INICIANDO CONEXION SOCKET");
 		conexionRecursiva();
 
 	}
@@ -148,7 +151,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 
 					for(int i = 1; i <= STRIKES; i++)
                         if (AsyncConnSocket.this.getSocketStatus() != Status.conectado) {
-                            System.out.println("RECONNECTING - "+sessionId + " " + sdomain + " " + sport + " #" + i + " " + (System.currentTimeMillis()/1000));
+                            System.out.println("MK RECONNECTING - "+sessionId + " " + sdomain + " " + sport + " #" + i + " " + (System.currentTimeMillis()/1000));
                             socketClient.connect();
                             AsyncConnSocket.this.socketClient.login(AsyncConnSocket.this.sessionId, urlPassword);
 
@@ -340,7 +343,6 @@ public class AsyncConnSocket implements ComServerDelegate{
         String claves= KeyStoreCriptext.getString(service.getApplicationContext(), remote.getSid());
         if(claves.compareTo("")==0 && !remote.getSid().startsWith("legacy:")){
             if(remote.getProps()!=null && remote.getProps().has("encr") && remote.getProps().get("encr").getAsString().compareTo("1")==0) {
-                System.out.println("MONKEY - NO TENGO CLAVES DE AMIGO LAS MANDO A PEDIR");
                 return MessageTypes.MOKProtocolMessageNoKeys;
             }
             else if(remote.getProps()!=null && remote.getProps().has("encoding") && !remote.getType().equals(MessageTypes.MOKFile)){
@@ -605,8 +607,10 @@ public class AsyncConnSocket implements ComServerDelegate{
 
     @Override
 	public void disconnected(){
-		if(socketStatus != Status.desconectado && socketStatus != Status.reconectando)
-			initConnection();
+		if(socketStatus != Status.desconectado && socketStatus != Status.reconectando) {
+            System.out.println("MK WAS_DISCONNECTED");
+            initConnection();
+        }
 	}
 
 	/*****************************/
