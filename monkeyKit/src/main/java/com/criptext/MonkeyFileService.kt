@@ -248,8 +248,10 @@ abstract class MonkeyFileService: IntentService(TAG){
             val response = httpClient.newCall(request).execute();
             if(response != null && response.isSuccessful)
                 return response.body().string()
-            else
+            else {
+                println("UPLOADFILE RESPONES FAIL: "+ response.body().string())
                 Log.e("MonkeyFileService", "upload error. Unexpected code ${response.code()}")
+            }
         }catch(ex: Exception){
             ex.printStackTrace()
             return null
@@ -259,6 +261,7 @@ abstract class MonkeyFileService: IntentService(TAG){
 
         return null
     }
+
 
     private fun downloadFile(httpClient: OkHttpClient,credentials: String, url: String): ByteArray?{
         if(!hasPermissionsToDownloadFiles()) {
