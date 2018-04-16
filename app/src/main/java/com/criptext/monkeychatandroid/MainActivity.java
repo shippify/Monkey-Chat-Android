@@ -993,7 +993,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
             MOKMessage resendMessage = new MOKMessage(message.getMessageId(), getState().myMonkeyID,
                     getState().getActiveConversationId(), message.getMessageText(), "" + message.getMessageTimestamp(),
                     "" + message.getMessageType(), message.getJsonParams(), message.getJsonProps());
-            resendFile(resendMessage, new PushMessage("You have a new message from the sample app"), true);
+            resendFile(resendMessage, new PushMessage("You have a new message from the sample app"), false);
         }
     }
 

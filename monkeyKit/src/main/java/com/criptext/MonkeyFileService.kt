@@ -59,7 +59,7 @@ abstract class MonkeyFileService: IntentService(TAG){
             checkFileToUpload(filepath)
             val ext = FilenameUtils.getExtension(filepath)
             val rawByteData = IOUtils.toByteArray(FileInputStream(filepath));
-            val processedByteData = processSentBytes(intent.getBooleanExtra(ENCR_KEY, true), rawByteData)
+            val processedByteData = processSentBytes(intent.getBooleanExtra(ENCR_KEY, false), rawByteData)
             val data = createUploadDataJsonString(mokMessage, intent.getStringExtra(PUSH_KEY), rawByteData.size)
 
             val http = authorizedHttpClient(appId, appKey, 300L, 10L)
