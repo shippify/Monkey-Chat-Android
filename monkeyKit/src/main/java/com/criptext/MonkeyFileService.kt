@@ -231,6 +231,7 @@ abstract class MonkeyFileService: IntentService(TAG){
      */
     private fun uploadFile(httpClient: OkHttpClient,credentials: String, jsonData: String,
                    byteData: ByteArray, ext: String): String?{
+        println("UPLOAD FILE EXTENSION: "+ ext)
         val mimeType= MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
         val tempFileName = cacheDir.absolutePath + "/sendFile${System.currentTimeMillis()}.$ext"
         val sendFile = File(tempFileName)
