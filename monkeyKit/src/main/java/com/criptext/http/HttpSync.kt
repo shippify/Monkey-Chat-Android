@@ -46,6 +46,8 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
     private fun getBatch(since: Long, qty: Int): SyncResponse {
         val parser = JsonParser()
 
+        println("MESSAGES SINCE: "+ since)
+        println("REMAINING: "+ qty)
         var remaining = qty
         var _since = since
         var batch = SyncResponse(listOf(), listOf(), listOf())
