@@ -177,6 +177,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         setOnMonkeyKitServiceReadyListener(new OnMonkeyKitServiceReadyListener() {
             @Override
             public void onMonkeyKitServiceReady() {
+                socketStatus();
                 final Utils.ConnectionStatus connStatus;
                 if (isSocketConnected())
                     connStatus = Utils.ConnectionStatus.connected;

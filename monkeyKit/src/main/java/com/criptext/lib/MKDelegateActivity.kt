@@ -118,6 +118,10 @@ abstract class MKDelegateActivity : AppCompatActivity(), MonkeyKitDelegate {
         }
     }
 
+    fun socketStatus(){
+        println("MK SOCKET STATUS: "+ MonkeyKitSocketService.status.toString())
+    }
+
     @SuppressLint("MissingSuperCall")
     override fun onStart() {
         super.onStart()
