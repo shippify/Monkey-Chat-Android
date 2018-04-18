@@ -129,7 +129,7 @@ public class MonkeyInit {
         }
 
         localJSONObject1.put("expiring","0");
-        localJSONObject1.put("user_info",userInfo);
+        localJSONObject1.put("userInfo",userInfo);
 
         JSONObject params = new JSONObject();
         params.put("data", localJSONObject1.toString());
