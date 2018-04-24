@@ -136,7 +136,6 @@ public class MonkeyInit {
         Log.d("getSessionHTTP", "Req: " + params.toString());
 
         JSONObject finalResult = MonkeyHttpClient.getResponse(httpclient, httppost, params.toString());
-        Log.d("getUserSesssionHTTP", finalResult.toString());
 
         finalResult = finalResult.getJSONObject("data");
 

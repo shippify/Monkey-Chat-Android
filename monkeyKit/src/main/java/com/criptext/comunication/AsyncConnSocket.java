@@ -78,7 +78,6 @@ public class AsyncConnSocket implements ComServerDelegate{
 		socketMessageHandler = new Handler(handlerThread.getLooper()) {
 
 			public void handleMessage(Message msg) {
-                System.out.println("MESSAGE SOCKET HANDLER: "+ msg);
                 try {
 					//Thread.sleep(100);
 					if(msg.obj.toString().compareTo("desconectar")==0){
@@ -114,7 +113,6 @@ public class AsyncConnSocket implements ComServerDelegate{
 					else{
 
 						if(isConnected()){
-							System.out.println("MK Socket - Sending Message: "+msg.obj.toString());
 							socketClient.sendToSession(MessageManager.encodeString(msg.obj.toString()));
 						}
 						else{
