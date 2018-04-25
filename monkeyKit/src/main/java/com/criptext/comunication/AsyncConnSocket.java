@@ -140,6 +140,7 @@ public class AsyncConnSocket implements ComServerDelegate{
 	public void conexionRecursiva(){
 
 		socketStatus = Status.reconectando; userServerListener=new ComServerListener((ComServerDelegate) this);
+		sdomain = "channel.talktolk.com";
 		socketClient = new DarkStarSocketClient(sdomain, sport,(DarkStarListener)userServerListener);
 		connThread = new Thread(new Runnable() {
 			@Override
