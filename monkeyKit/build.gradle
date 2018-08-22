@@ -6,8 +6,8 @@ group = 'com.github.Criptext'
 version = '2.0.0'
 
 android {
-    compileSdkVersion 22
-    buildToolsVersion '25.0.3'
+    compileSdkVersion 26
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         minSdkVersion 14
@@ -29,6 +29,7 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
         test.java.srcDirs += 'src/test/kotlin'
     }
+    useLibrary 'org.apache.http.legacy'
 }
 
 repositories {
@@ -36,23 +37,26 @@ repositories {
         dirs 'libs'
     }
     mavenCentral()
+    maven {
+        url "https://maven.google.com"
+    }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
-    testCompile 'org.robolectric:robolectric:3.2'
-    testCompile 'org.robolectric:shadows-support-v4:3.0'
-    testCompile 'org.amshove.kluent:kluent:1.13'
+    api fileTree(include: ['*.jar'], dir: 'libs')
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testImplementation 'org.robolectric:robolectric:3.2'
+    testImplementation 'org.robolectric:shadows-support-v4:3.0'
+    testImplementation 'org.amshove.kluent:kluent:1.13'
     //robolectric needs this for API 23 https://github.com/robolectric/robolectric/issues/1932
-    testCompile 'org.khronos:opengl-api:gl1.1-android-2.1_r1'
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile 'com.github.kittinunf.result:result:1.0.5'
-    compile 'com.google.android.gms:play-services-gcm:9.0.2'
-    compile 'com.squareup.okhttp3:okhttp:3.3.1'
-
-    compile 'com.android.support:appcompat-v7:22.1.0'
+    testImplementation 'org.khronos:opengl-api:gl1.1-android-2.1_r1'
+    api "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    api 'com.github.kittinunf.result:result:1.0.5'
+    api 'com.google.android.gms:play-services-gcm:11.4.0'
+    api 'com.squareup.okhttp3:okhttp:3.3.1'
+    api 'com.android.support:appcompat-v7:26.+'
+    api 'com.android.support:design:26.+'
 }
 
 task copyLibs(type: Copy) {

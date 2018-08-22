@@ -41,6 +41,11 @@
             android:label="@string/register">
         </activity>
 
+        <activity
+            android:name=".LoginActivity"
+            android:label="@string/login">
+        </activity>
+
         <!-- Crop Image -->
         <activity
             android:name="com.soundcloud.android.crop.CropImageActivity"

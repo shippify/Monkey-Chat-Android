@@ -1,12 +1,18 @@
 buildscript {
+    ext.kotlin_version = '1.0.6'
     repositories {
+        jcenter()
         maven { url 'https://maven.fabric.io/public' }
+        google()
     }
-
     dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.4'
         classpath 'io.fabric.tools:gradle:1.+'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
     }
 }
+
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'io.fabric'
@@ -14,12 +20,13 @@ apply plugin: 'io.fabric'
 repositories {
     mavenCentral()
     mavenLocal()
-    maven {
-        url 'https://dl.bintray.com/criptext/maven'
-    }
-    maven { url "https://jitpack.io" }
     maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+    maven {
+        url "http://dl.bintray.com/lukaville/maven"
+    }
     maven { url 'https://maven.fabric.io/public' }
+    maven { url "https://jitpack.io" }
+    google()
 }
 
 configurations.all {
@@ -27,16 +34,17 @@ configurations.all {
 }
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.3"
+    compileSdkVersion 26
+    buildToolsVersion "27.0.3"
 
     defaultConfig {
         applicationId "com.criptext.monkeychatandroid"
-        minSdkVersion 15
+        minSdkVersion 18
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
     }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -51,25 +59,24 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
-    testCompile 'org.amshove.kluent:kluent:1.11'
-    testCompile 'org.robolectric:robolectric:3.2'
+    api fileTree(dir: 'libs', include: ['*.jar'])
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testImplementation 'org.amshove.kluent:kluent:1.13'
+    testImplementation 'org.robolectric:robolectric:3.2'
     //robolectric needs this for API 23 https://github.com/robolectric/robolectric/issues/1932
-    testCompile 'org.khronos:opengl-api:gl1.1-android-2.1_r1'
-    compile 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
-    compile project(':monkeyKit')
-    compile 'com.github.Criptext:Monkey-UI-Android:7de446e22c'
-    //Monkey SDK makes build resolve to use appcompat 22, we need to force it to use 23 for tests
-    compile ('com.android.support:appcompat-v7:23.4.0') {
-        force = true
+    testImplementation 'org.khronos:opengl-api:gl1.1-android-2.1_r1'
+    api 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
+    api project(':monkeyKit')
+//    implementation 'com.github.shippify:Monkey-UI-Android:new-ui-SNAPSHOT'
+    api 'com.github.shippify:Monkey-UI-Android:67bca8b'
+    //noinspection GradleCompatible
+    api 'com.android.support:appcompat-v7:26.1.0'
+    api 'com.android.support:support-annotations:27.1.1'
+    api('com.crashlytics.sdk.android:crashlytics:2.6.5@aar') {
+        transitive = true
     }
-    compile ('com.android.support:support-annotations:23.4.0') {
-        force = true
-    }
-    compile('com.crashlytics.sdk.android:crashlytics:2.6.5@aar') {
-        transitive = true;
-    }
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    api "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    api 'com.android.volley:volley:1.1.1'
+    api 'com.beust:klaxon:3.0.1'
 }

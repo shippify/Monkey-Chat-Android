@@ -257,4 +257,9 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
     public void setColor(int color) {
 
     }
+
+    @Override
+    public boolean isDeletable() {
+        return false;
+    }
 }
