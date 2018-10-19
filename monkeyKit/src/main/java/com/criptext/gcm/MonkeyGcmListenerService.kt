@@ -23,12 +23,11 @@ abstract class MonkeyGcmListenerService: GcmListenerService() {
             val args = getNotificationArgs(data!!.getString("loc-args"));
             val key = data.getString("loc-key");
             val message = data.getString("message");
-            if (key != null) {
+            if (key != null && message != null) {
                 createLocalizedNotification(key, args!!)
-            } else if (message != null) {
-                createSimpleNotification(message)
-            } else
+            } else {
                 Log.e("MonkeyGcmListenerServic", "could not create notification, 'message' and 'loc-key' are null")
+            }
         }
 
         if(MonkeyKitSocketService.status == MonkeyKitSocketService.ServiceStatus.dead){
