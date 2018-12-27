@@ -32,7 +32,7 @@ android {
 
     defaultConfig {
         applicationId "com.criptext.monkeychatandroid"
-        minSdkVersion 15
+        minSdkVersion 18
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -60,7 +60,7 @@ dependencies {
     testImplementation 'org.khronos:opengl-api:gl1.1-android-2.1_r1'
     implementation 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
     implementation project(':monkeyKit')
-    implementation 'com.github.Criptext:Monkey-UI-Android:7de446e22c'
+    implementation 'com.github.shippify:Monkey-UI-Android:1.4.7'
     //Monkey SDK makes build resolve to use appcompat 22, we need to force it to use 23 for tests
     implementation ('com.android.support:appcompat-v7:28.0.0') {
         force = true
