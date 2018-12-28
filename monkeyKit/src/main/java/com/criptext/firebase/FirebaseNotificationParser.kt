@@ -1,4 +1,4 @@
-package com.criptext.gcm
+package com.criptext.firebase
 
 import java.util.*
 
@@ -6,7 +6,7 @@ import java.util.*
  * Created by gesuwall on 3/15/17.
  */
 
-class GcmNotificationParser {
+class FirebaseNotificationParser {
 
     fun localizedArgumentsToArray(localizedArgumentsSeparatedByCommas: String): Array<String> {
         val newArgs = StringTokenizer(localizedArgumentsSeparatedByCommas, ",");

@@ -10,18 +10,18 @@ import android.net.Uri;
 import android.os.Build;
 import android.support.v4.app.NotificationCompat;
 
-import com.criptext.gcm.MonkeyGcmListenerService;
+import com.criptext.firebase.MonkeyFirebaseListenerService;
 
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Created by gesuwall on 6/24/16.
- */
-public class MyGcmListenerService extends MonkeyGcmListenerService {
+import static android.content.Context.NOTIFICATION_SERVICE;
+
+
+public class MyFirebaseListenerService extends MonkeyFirebaseListenerService {
     final int myNotificationID = 65489;
     static long lastNotificationTime = 0L;
     final static long timeBetweenNotifications = 10000L;
-    @NotNull
+
     @Override
     public Class<?> getSocketServiceClass() {
         return MyServiceClass.class;
@@ -70,7 +70,7 @@ public class MyGcmListenerService extends MonkeyGcmListenerService {
         n.ledOnMS = 1000;
         n.ledOffMS = 1000;
 
-        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        NotificationManager notificationManager = (NotificationManager) this.getSystemService(NOTIFICATION_SERVICE);
         notificationManager.notify(myNotificationID, n);
     }
 }

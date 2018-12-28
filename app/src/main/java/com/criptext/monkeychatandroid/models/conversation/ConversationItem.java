@@ -11,9 +11,6 @@ import com.criptext.monkeykitui.recycler.MonkeyInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Created by daniel on 8/24/16.
- */
 
 @Table(name = "ConversationItem")
 public class ConversationItem extends Model implements MonkeyConversation, MonkeyInfo{
@@ -48,6 +45,7 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
     public ConversationItem(){
         super();
     }
+
 
     public ConversationItem(String idConv, String name, long datetime, String secondaryText, int totalNewMessage,
                             boolean isGroup, String groupMembers, String avatarFilePath, int status) {
@@ -109,6 +107,10 @@ public class ConversationItem extends Model implements MonkeyConversation, Monke
 
     public void setGroup(boolean group) {
         isGroup = group;
+    }
+
+    public boolean isDeletable() {
+        return true;
     }
 
     public void setGroupMembers(String groupMembers) {

@@ -1,4 +1,4 @@
-package com.criptext.gcm
+package com.criptext.firebase
 
 import org.amshove.kluent.`should equal`
 import org.junit.Test
@@ -12,7 +12,7 @@ class `GcmNotificationParser Test`() {
     @Test
     fun `converts a string of arguments separated by comma to array`() {
         val csvArguments = "arg1,arg2,arg3,arg4"
-        val parser = GcmNotificationParser()
+        val parser = FirebaseNotificationParser()
         val arrayArguments = parser.localizedArgumentsToArray(csvArguments)
         arrayArguments.size `should equal` 4
         arrayArguments[1] `should equal` "arg2"

@@ -4,10 +4,12 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.IBinder;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -18,16 +20,13 @@ import com.activeandroid.Model;
 import com.criptext.ClientData;
 import com.criptext.comunication.MOKConversation;
 import com.criptext.comunication.MOKMessage;
-import com.criptext.comunication.MOKNotification;
 import com.criptext.comunication.MOKUser;
 import com.criptext.comunication.MessageTypes;
 import com.criptext.comunication.PushMessage;
-import com.criptext.gcm.MonkeyRegistrationService;
 import com.criptext.http.HttpSync;
 import com.criptext.lib.MKDelegateActivity;
 import com.criptext.lib.OnMonkeyKitServiceReadyListener;
 import com.criptext.monkeychatandroid.dialogs.SyncStatus;
-import com.criptext.monkeychatandroid.gcm.SampleRegistrationService;
 import com.criptext.monkeychatandroid.models.AsyncDBHandler;
 import com.criptext.monkeychatandroid.models.DatabaseHandler;
 import com.criptext.monkeychatandroid.models.conversation.ConversationItem;
@@ -152,7 +151,7 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
         downloadDir = MonkeyChat.getDownloadDir(this);
 
         //Check play services. if available try to register with GCM so that we get Push notifications
-        if(MonkeyRegistrationService.Companion.checkPlayServices(this))
+        if(MyFirebaseListenerService.Companion.checkPlayServices(this))
                 registerWithGCM();
 
         //Setup MonkeyKit UI fragments
@@ -192,10 +191,14 @@ public class MainActivity extends MKDelegateActivity implements ChatActivity, Co
     }
 
     public void registerWithGCM(){
-        Intent intent = new Intent(this, SampleRegistrationService.class);
-        intent.putExtra(ClientData.Companion.getAPP_ID_KEY(), SensitiveData.APP_ID);
-        intent.putExtra(ClientData.Companion.getAPP_KEY_KEY(), SensitiveData.APP_KEY);
-        intent.putExtra(ClientData.Companion.getMONKEY_ID_KEY(), getState().myMonkeyID);
+        Intent intent = new Intent(this, MyFirebaseListenerService.class);
+
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        sharedPreferences.edit().putString(ClientData.Companion.getAPP_ID_KEY(), SensitiveData.APP_ID).apply();
+        sharedPreferences.edit().putString(ClientData.Companion.getAPP_KEY_KEY(), SensitiveData.APP_KEY).apply();
+        sharedPreferences.edit().putString(ClientData.Companion.getMONKEY_ID_KEY(), getState().myMonkeyID).apply();
+
         startService(intent);
         Log.d("MainActivity", "Registering with GCM");
     }

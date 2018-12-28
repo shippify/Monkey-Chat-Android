@@ -123,11 +123,11 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
 
             val response = http.newCall(request).execute()
             if (response.isSuccessful) {
-                val respBody = response.body().string();
+                val respBody = response.body()!!.string();
                 val parser = JsonParser()
                 return parser.parse(respBody).asJsonObject
             } else {
-                Log.e("sendOpenConversation", response.body().string())
+                Log.e("sendOpenConversation", response.body()!!.string())
                 return null
             }
 
@@ -139,7 +139,7 @@ class OpenConversationTask(service: MonkeyKitSocketService, val undecrypted: MOK
             val request = Request.Builder()
                     .url(MonkeyKitSocketService.httpsURL + "/message/$msgId/open/secure")
                     .build()
-            val response = http.newCall(request).execute().body().string();
+            val response = http.newCall(request).execute().body()!!.string();
             val parser = JsonParser()
             val jsonResponse = parser.parse(response).asJsonObject
             val data = jsonResponse.getAsJsonObject("data")

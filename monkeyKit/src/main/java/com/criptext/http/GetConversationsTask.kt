@@ -39,7 +39,7 @@ class GetConversationsTask(val serviceRef: WeakReference<MonkeyKitSocketService>
         val client = OpenConversationTask.authorizedHttpClient(clientData)
         return Result.of { client.newCall(request).execute() }
             .map { res ->
-                val lists = MonkeyJson.parseConversationsList(res.body().string())
+                val lists = MonkeyJson.parseConversationsList(res.body()!!.string())
                 decryptMessages(lists) //mutate the objects in result list
                 lists[0]
             }

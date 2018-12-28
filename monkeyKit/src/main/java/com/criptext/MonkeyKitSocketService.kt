@@ -284,9 +284,9 @@ abstract class MonkeyKitSocketService : Service() {
         userManager = UserManager(this, aesUtil)
         groupManager = GroupManager(this, aesUtil)
         broadcastReceiver = FileBroadcastReceiver(this)
-        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver!!,
                 IntentFilter(MonkeyFileService.UPLOAD_ACTION))
-        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver,
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver!!,
                 IntentFilter(MonkeyFileService.DOWNLOAD_ACTION))
         this.aesutil = aesUtil
     }
@@ -367,8 +367,8 @@ abstract class MonkeyKitSocketService : Service() {
 //        persistUnsentMessages()
 
         //unregister file broadcast receivers
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver!!)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver!!)
         //persist last time synced
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
         //unregister connectivity change receiver

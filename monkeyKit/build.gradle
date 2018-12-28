@@ -12,6 +12,7 @@ android {
     defaultConfig {
         minSdkVersion 18
         targetSdkVersion 28
+        multiDexEnabled true
     }
 
     buildTypes {
@@ -29,6 +30,7 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
         test.java.srcDirs += 'src/test/kotlin'
     }
+    useLibrary 'org.apache.http.legacy'
 }
 
 repositories {
@@ -47,9 +49,10 @@ dependencies {
     testImplementation 'org.amshove.kluent:kluent:1.13'
     //robolectric needs this for API 23 https://github.com/robolectric/robolectric/issues/1932
     testImplementation 'org.khronos:opengl-api:gl1.1-android-2.1_r1'
+    implementation 'com.google.code.gson:gson:2.8.2'
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'com.github.kittinunf.result:result:1.0.5'
-    implementation 'com.google.android.gms:play-services-gcm:16.0.0'
+    implementation 'com.google.firebase:firebase-messaging:17.3.0'
     implementation 'com.squareup.okhttp3:okhttp:3.12.0'
     implementation 'com.android.support:appcompat-v7:28.0.0'
 }

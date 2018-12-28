@@ -64,7 +64,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
 
             if (response.isSuccessful) {
                 val body = response.body()
-                val jsonResponse = parser.parse(body.string()).asJsonObject
+                val jsonResponse = parser.parse(body!!.string()).asJsonObject
                 val data = jsonResponse.getAsJsonObject("data")
                 batch += processBatch(data)
                 remaining = data.get("remaining").asInt
@@ -74,7 +74,7 @@ class HttpSync(ctx: Context, val clientData: ClientData, val aesUtil: AESUtil) {
                     _since = array[array.size() - 1].asJsonObject.get("datetime").asLong
                 }
                 body.close()
-            } else Log.e("HttpSync", "Sync response error Message. code: ${response.code()} ${response.body().string()}")
+            } else Log.e("HttpSync", "Sync response error Message. code: ${response.code()} ${response.body()!!.string()}")
         }
 
         if (isFirstTime)

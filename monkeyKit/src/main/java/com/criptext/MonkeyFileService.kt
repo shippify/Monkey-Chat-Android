@@ -248,9 +248,9 @@ abstract class MonkeyFileService: IntentService(TAG){
         try {
             val response = httpClient.newCall(request).execute();
             if(response != null && response.isSuccessful)
-                return response.body().string()
+                return response.body()!!.string()
             else {
-                println("UPLOADFILE RESPONES FAIL: "+ response.body().string())
+                println("UPLOADFILE RESPONES FAIL: "+ response.body()!!.string())
                 Log.e("MonkeyFileService", "upload error. Unexpected code ${response.code()}")
             }
         }catch(ex: Exception){
@@ -275,7 +275,7 @@ abstract class MonkeyFileService: IntentService(TAG){
                 .header("Authorization", credentials)
                 .build()
         try {
-            val response = httpClient.newCall(request).execute().body().bytes()
+            val response = httpClient.newCall(request).execute().body()!!.bytes()
             return response
         }catch(ex: Exception){
             ex.printStackTrace()
