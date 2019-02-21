@@ -4,17 +4,10 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 
 import com.criptext.monkeychatandroid.MonkeyChat;
-import com.criptext.monkeychatandroid.models.message.MessageItem;
-
-import com.criptext.monkeykitui.recycler.MessagesList;
-
-import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
 
 /**
  * Created by gesuwall on 8/17/16.

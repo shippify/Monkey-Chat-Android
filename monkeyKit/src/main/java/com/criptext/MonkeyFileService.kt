@@ -5,8 +5,8 @@ import android.app.IntentService
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.PowerManager
-import android.support.v4.content.ContextCompat
-import android.support.v4.content.LocalBroadcastManager
+import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import android.util.Base64
 import android.util.Log
 import android.webkit.MimeTypeMap
@@ -293,7 +293,7 @@ abstract class MonkeyFileService: IntentService(TAG){
         val intent = Intent(action)
                 .putExtra(RESPONSE_KEY, response);
         mokMessage?.toIntent(intent)
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     private fun broadcastResponse(action: String, msgId: String, dateorder: Long, conversationId: String,
@@ -303,7 +303,7 @@ abstract class MonkeyFileService: IntentService(TAG){
         intent.putExtra(MOKMessage.DATESORT_KEY, dateorder)
         intent.putExtra(MOKMessage.CONVERSATION_KEY, conversationId)
         intent.putExtra(RESPONSE_KEY, if(downloadComplete) "ok" else null)
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
     /**
      * Starts an OkHttp client

@@ -1,6 +1,6 @@
 package com.criptext.monkeychatandroid.models.message;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.activeandroid.Model;
 import com.activeandroid.annotation.Column;
