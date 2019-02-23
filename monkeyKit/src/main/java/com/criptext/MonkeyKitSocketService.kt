@@ -368,7 +368,6 @@ abstract class MonkeyKitSocketService : Service() {
 
         //unregister file broadcast receivers
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver!!)
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver!!)
         //persist last time synced
         KeyStoreCriptext.setLastSync(this, lastTimeSynced)
         //unregister connectivity change receiver
