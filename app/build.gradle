@@ -65,6 +65,7 @@ dependencies {
     implementation project(':monkeyKit')
     implementation 'com.google.code.gson:gson:2.8.2'
     implementation 'com.github.shippify:Monkey-UI-Android:1.4.8'
+    implementation 'com.github.jalarrea:androidquery:0.26.14'
     //Monkey SDK makes build resolve to use appcompat 22, we need to force it to use 23 for tests
     implementation ('androidx.appcompat:appcompat:1.0.2') {
         force = true
