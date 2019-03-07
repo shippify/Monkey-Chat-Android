@@ -2,6 +2,7 @@ package com.criptext.firebase
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.preference.PreferenceManager
 import android.util.Log
 import com.criptext.ClientData
@@ -33,7 +34,11 @@ open abstract class MonkeyFirebaseListenerService: FirebaseMessagingService() {
 
         if(MonkeyKitSocketService.status == MonkeyKitSocketService.ServiceStatus.dead){
             val intent = Intent(this, socketServiceClass)
-            startService(intent)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
         }
     }
     /**
