@@ -71,7 +71,7 @@ public class MonkeyHttpClient {
         return null;
     }
 
-    public static void subscribePushHttp(String token, String sessionId, String urlUser, String urlPass, boolean override) throws JSONException,
+    public static void subscribePushHttp(String token, String sessionId, String urlUser, String urlPass, String channel, boolean override) throws JSONException,
         IOException {
         // Create a new HttpClient and Post Header
         HttpClient httpclient = newClient();
@@ -85,6 +85,8 @@ public class MonkeyHttpClient {
             localJSONObject1.put("mode","1");
             localJSONObject1.put("userid", sessionId);
             localJSONObject1.put("override", override?"1":"0");
+            localJSONObject1.put("channel", channel != null?channel:"fcm");
+
 
             params.put("data", localJSONObject1.toString());
             Log.d("subscribePushHttp", "Req: " + params.toString());
