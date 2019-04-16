@@ -71,7 +71,7 @@ open abstract class MonkeyFirebaseListenerService: FirebaseMessagingService() {
             // [END get_token]
             Log.i(TAG, "FIREBASE Registration Token: " + token);
 
-            MonkeyHttpClient.subscribePushHttp(token, monkeyId, appId, appKey, true)
+            MonkeyHttpClient.subscribePushHttp(token, monkeyId, appId, appKey, null,true)
             // You should store a boolean that indicates whether the generated token has been
             // sent to your server. If the boolean is false, send the token to your server,
             // otherwise your server should have already received the token.
